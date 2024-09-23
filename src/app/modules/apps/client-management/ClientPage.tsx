@@ -1,0 +1,34 @@
+import { Route, Routes, Outlet, Navigate } from 'react-router-dom'
+import { PageTitle } from '@metronic/layout/core'
+import { ClientCreateWrapper } from './client-create/ClientCreate'
+import { ClientListWrapper } from './clients-list/ClientList'
+
+const ClientsPage = () => {
+  return (
+    <Routes>
+      <Route element={<Outlet />}>
+        <Route
+          path='clients'
+          element={
+            <>
+              <PageTitle>Listagem de clientes</PageTitle>
+              <ClientListWrapper />
+            </>
+          }
+        />
+        <Route
+          path='create'
+          element={
+            <>
+              <PageTitle>Criar cliente</PageTitle>
+              <ClientCreateWrapper />
+            </>
+          }
+        />
+      </Route>
+      <Route index element={<Navigate to='/apps/client-management/clients' />} />
+    </Routes>
+  )
+}
+
+export default ClientsPage

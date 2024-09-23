@@ -1,0 +1,39 @@
+{
+  "AUTH": {
+    "TERMS_BUTTON": "Termos",
+    "CONTACT_BUTTON": "Contato"
+  },
+  "FORGOT_PASS": {
+    "TITLE": "Esqueceu a senha?",
+    "DISCLAIMER": "Digit seu email para recuperar a senha.",
+    "ERROR": "Desculpe, ocorreu um erro inesperado, tente novamente mais tarde.",
+    "SUCCESS": "Email de recuperação enviado. Por favor, verique seu email.",
+    "EMAIL_LABEL": "Email",
+    "SUBMIT_LABEL": "Enviar",
+    "CANCEL_LABEL": "Cancelar",
+    "LOADING": "Espere um pouco...",
+    "FORM_EMAIL_ERROR": "Não é um Email",
+    "FORM_EMAIL_MIN": "Mínimo 3 letras",
+    "FORM_EMAIL_MAX": "Máximo 50 letras",
+    "FORM_EMAIL_REQ": "Email obrigatório"
+  },
+  "LOGIN": {
+    "TITLE": "Login",
+    "FORGOT_PASSWORD": "Esqueceu a senha?",
+    "INVALID_CREDENTIALS": "As credenciais estão inválidas",
+    "FORM_EMAIL_LABEL": "Email",
+    "FORM_EMAIL_ERROR": "Não é um Email",
+    "FORM_EMAIL_MIN": "Mínimo 3 letras",
+    "FORM_EMAIL_MAX": "Máximo 50 letras",
+    "FORM_EMAIL_REQ": "Email obrigatório",
+    "FORM_PASSWORD_LABEL": "Senha",
+    "FORM_PASSWORD_MIN": "Mínimo 3 letras",
+    "FORM_PASSWORD_MAX": "Máximo 50 letras",
+    "FORM_PASSWORD_REQ": "Senha obrigatória",
+    "FORM_SUBMIT_LABEL": "Entrar",
+    "FORM_SUBMIT_LOADING": "Loading..."
+  },
+  "ORGANIZATION_SELECT": {
+    "TITLE": "Escolha uma organização"
+  }
+}

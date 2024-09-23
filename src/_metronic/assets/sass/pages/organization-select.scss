@@ -1,0 +1,26 @@
+.organization-select {
+  
+  .org-container {
+    gap: 1.25em;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 2fr));
+
+    .card {
+      cursor: pointer;
+      transition: all ease-out 0.1s;
+      
+      img {
+        display: block;
+        width: 80%;
+        margin: 0 auto;
+      }
+      
+      &:hover {
+        box-shadow: var(--bs-box-shadow-sm);
+        border: 1px solid $gray-500;
+        transform: scale(1.04);
+        transition: all ease-out 0.3s;
+      }
+    }
+  }
+}

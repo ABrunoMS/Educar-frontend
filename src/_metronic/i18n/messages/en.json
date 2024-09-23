@@ -1,0 +1,39 @@
+{
+  "AUTH": {
+    "TERMS_BUTTON": "Terms",
+    "CONTACT_BUTTON": "Contact"
+  },
+  "FORGOT_PASS": {
+    "TITLE": "Forgot your password?",
+    "DISCLAIMER": "Enter your email to reset your password.",
+    "ERROR": "Sorry, looks like there are some errors detected, please try again.",
+    "SUCCESS": "Sent password reset. Please check your email.",
+    "EMAIL_LABEL": "Email",
+    "SUBMIT_LABEL": "Submit",
+    "CANCEL_LABEL": "Cancel",
+    "LOADING": "Please wait...",
+    "FORM_EMAIL_ERROR": "Wrong email format",
+    "FORM_EMAIL_MIN": "Minimum 3 symbols",
+    "FORM_EMAIL_MAX": "Maximum 50 symbols",
+    "FORM_EMAIL_REQ": "Email is required"
+  },
+  "LOGIN": {
+    "TITLE": "Login",
+    "FORGOT_PASSWORD": "Forgot password?",
+    "INVALID_CREDENTIALS": "Invalid credentials",
+    "FORM_EMAIL_LABEL": "Email",
+    "FORM_EMAIL_ERROR": "Wrong email format",
+    "FORM_EMAIL_MIN": "Minimum 3 symbols",
+    "FORM_EMAIL_MAX": "Maximum 50 symbols",
+    "FORM_EMAIL_REQ": "Email is required",
+    "FORM_PASSWORD_LABEL": "Password",
+    "FORM_PASSWORD_MIN": "Minimum 3 symbols",
+    "FORM_PASSWORD_MAX": "Maximum 50 symbols",
+    "FORM_PASSWORD_REQ": "Password is required",
+    "FORM_SUBMIT_LABEL": "Enter",
+    "FORM_SUBMIT_LOADING": "Loading..."
+  },
+  "ORGANIZATION_SELECT": {
+    "TITLE": "Select one organization"
+  }
+}

@@ -1,0 +1,18 @@
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: nstech/cicd
+      ref: develop
+
+# Trigger builds on commits to branches
+trigger:
+  - develop
+
+# Do not trigger builds on PRs
+pr: none
+
+extends:
+  template: azure/build-templates/common-docker-node-stgaccount.yaml@templates
+  parameters:
+    environment: dev

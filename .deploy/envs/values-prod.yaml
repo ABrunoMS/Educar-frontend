@@ -1,0 +1,8 @@
+envs:
+  PORT: 8080
+  BASE_PATH: '/portal'
+  AUTH_URL: 'https://hub.nstech.com.br/auth/realms/zeus/protocol/openid-connect'
+  REACT_APP_CLIENT_URL: 'https://nstech.com.br/cadastrons/client/v1'
+  REACT_APP_ORGANIZATION_URL: 'https://nstech.com.br/cadastrons/organization/v1'
+
+secrets: {}
