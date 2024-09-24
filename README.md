@@ -1,30 +1,41 @@
-# React + TypeScript + Vite
+# Educar Odyssey Backoffice
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the backoffice application for Educar Odyssey, built using modern front-end technologies like Vite, React, and TypeScript.
 
-Currently, two official plugins are available:
+## Project Setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Prerequisites
 
-## Expanding the ESLint configuration
+Ensure that you have the following tools installed:
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+- Node.js (>= 16.x)
+- [pnpm](https://pnpm.io/motivation) (package manager)
 
-- Configure the top-level `parserOptions` property like this:
 
-```js
-   parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: __dirname,
-   },
-```
+### Getting Started
 
-- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
-- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
+- Install dependencies: run the command `pnpm i`
+- Start application in development mode: run the command `pnpm dev`, it should be available at [localhost:5000](http://localhost:5000/) by default
+
+
+### Building
+
+- To build the application run the command `pnpm build`, all the compiled files will be at the `./dist`
+- To preview the application in production mode, run the command `pnpm preview`, the prompt will display the address where the application is being served
+
+
+### Linting
+
+To run ESLint and check for code quality issues:
+
+- Run the command `pnpm lint`
+
+
+### Environment Variables
+
+- You can configure the application using environment variables inside the `.env` file at the root of your project
+- You need one `.env` file for each environment you have. Ex. if you need a staging build, add a `.env.staging` file with the correct values then create a new build command passing the `--mode staging` as a parameter
+
 
 ## API Swagger - Documentation
 
