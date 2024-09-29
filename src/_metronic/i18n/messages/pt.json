@@ -5,7 +5,7 @@
   },
   "FORGOT_PASS": {
     "TITLE": "Esqueceu a senha?",
-    "DISCLAIMER": "Digit seu email para recuperar a senha.",
+    "DISCLAIMER": "Digite seu email para recuperar a senha.",
     "ERROR": "Desculpe, ocorreu um erro inesperado, tente novamente mais tarde.",
     "SUCCESS": "Email de recuperação enviado. Por favor, verique seu email.",
     "EMAIL_LABEL": "Email",

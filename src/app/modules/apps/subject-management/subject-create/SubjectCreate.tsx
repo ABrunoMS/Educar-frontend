@@ -1,7 +1,7 @@
 import React from 'react'
-import {KTCard} from '../../../../../_metronic/helpers'
-import { ToolbarWrapper } from '../../../../../_metronic/layout/components/toolbar'
-import { Content } from '../../../../../_metronic/layout/components/content'
+import {KTCard} from '@metronic/helpers'
+import { ToolbarWrapper } from '@metronic/layout/components/toolbar'
+import { Content } from '@metronic/layout/components/content'
 import { SubjectCreateForm } from './components/SubjectCreateForm'
 
 const SubjectCreate = () => {

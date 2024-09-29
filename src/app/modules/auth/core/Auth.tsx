@@ -5,6 +5,7 @@ import { AuthModel, UserModel } from './_models'
 import * as authHelper from './AuthHelpers' // Assuming this import was missing
 import { getUserByToken } from './_requests'
 import { WithChildren } from '@metronic/helpers'
+import { useRole } from '@contexts/RoleContext'
 
 type AuthContextProps = {
   auth: AuthModel | undefined
@@ -54,8 +55,10 @@ const AuthProvider: FC<WithChildren> = ({ children }) => {
 }
 
 const AuthInit: FC<WithChildren> = ({ children }) => {
-  const { auth, currentUser, logout, setCurrentUser } = useAuth()
+  const {auth, currentUser, logout, setCurrentUser} = useAuth()
   const [showSplashScreen, setShowSplashScreen] = useState(true)
+
+  const {setRole} = useRole()
 
   useEffect(() => {
 
@@ -67,6 +70,7 @@ const AuthInit: FC<WithChildren> = ({ children }) => {
         } else {
           const user = await getUserByToken(auth.access_token)
           setCurrentUser(user.data)
+          setRole('Teacher')
         }
 
         setShowSplashScreen(false)

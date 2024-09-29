@@ -1,11 +1,31 @@
-import {lazy, FC, Suspense} from 'react'
-import {Route, Routes, Navigate} from 'react-router-dom'
-import {MasterLayout} from '../../_metronic/layout/MasterLayout'
+import { lazy, FC, Suspense } from 'react'
+import { Route, Routes, Navigate } from 'react-router-dom'
+import { MasterLayout } from '../../_metronic/layout/MasterLayout'
 import TopBarProgress from 'react-topbar-progress-indicator'
-import {DashboardWrapper} from '../pages/dashboard/DashboardWrapper'
-import {getCSSVariableValue} from '../../_metronic/assets/ts/_utils'
-import {WithChildren} from '../../_metronic/helpers'
+import { DashboardWrapper } from '../pages/dashboard/DashboardWrapper'
+import { getCSSVariableValue } from '../../_metronic/assets/ts/_utils'
+import { WithChildren } from '../../_metronic/helpers'
 import { OrganizationSelectWrapper } from '../pages/organization-select/OrganizationSelectWrapper'
+
+import { useRole, Role } from '@contexts/RoleContext'
+
+// Define the props for PrivateRoute
+interface PrivateRouteProps {
+  children: React.ReactElement
+  rolesAllowed: Role[]
+}
+
+const PrivateRoute: React.FC<PrivateRouteProps> = ({children, rolesAllowed}) => {
+  const {role} = useRole()
+
+  if (!rolesAllowed.includes(role)) {
+    return <Navigate to="/dashboard" /> // Redirect if not authorized
+  }
+
+  return children
+}
+
+export {PrivateRoute}
 
 const PrivateRoutes = () => {
   const UsersPage = lazy(() => import('../modules/apps/user-management/UsersPage'))
@@ -35,113 +55,141 @@ const PrivateRoutes = () => {
         <Route
           path='apps/user-management/*'
           element={
-            <SuspensedView>
-              <UsersPage />
-            </SuspensedView>
+            <PrivateRoute rolesAllowed={['Admin']}>
+              <SuspensedView>
+                <UsersPage />
+              </SuspensedView>
+            </PrivateRoute>
           }
         />
         <Route
           path='apps/client-management/*'
           element={
-            <SuspensedView>
-              <ClientsPage />
-            </SuspensedView>
+            <PrivateRoute rolesAllowed={['Admin']}>
+              <SuspensedView>
+                <ClientsPage />
+              </SuspensedView>
+            </PrivateRoute>
           }
         />
         <Route
           path='apps/contract-management/*'
           element={
-            <SuspensedView>
-              <ContractPage />
-            </SuspensedView>
+            <PrivateRoute rolesAllowed={['Admin']}>
+              <SuspensedView>
+                <ContractPage />
+              </SuspensedView>
+            </PrivateRoute>
           }
         />
         <Route
           path='apps/game-management/*'
           element={
-            <SuspensedView>
-              <GamePage />
-            </SuspensedView>
+            <PrivateRoute rolesAllowed={['Admin']}>
+              <SuspensedView>
+                <GamePage />
+              </SuspensedView>
+            </PrivateRoute>
           }
         />
         <Route
           path='apps/address-management/*'
           element={
-            <SuspensedView>
-              <AddressPage />
-            </SuspensedView>
+            <PrivateRoute rolesAllowed={['Admin']}>
+              <SuspensedView>
+                <AddressPage />
+              </SuspensedView>
+            </PrivateRoute>
           }
         />
         <Route
           path='apps/class-management/*'
           element={
-            <SuspensedView>
-              <ClassPage />
-            </SuspensedView>
+            <PrivateRoute rolesAllowed={['Admin']}>
+              <SuspensedView>
+                <ClassPage />
+              </SuspensedView>
+            </PrivateRoute>
           }
         />
         <Route
           path='apps/grade-management/*'
           element={
-            <SuspensedView>
-              <GradePage />
-            </SuspensedView>
+            <PrivateRoute rolesAllowed={['Admin', 'Teacher']}>
+              <SuspensedView>
+                <GradePage />
+              </SuspensedView>
+            </PrivateRoute>
           }
         />
         <Route
           path='apps/dialogue-management/*'
           element={
-            <SuspensedView>
-              <DialoguePage />
-            </SuspensedView>
+            <PrivateRoute rolesAllowed={['Admin']}>
+              <SuspensedView>
+                <DialoguePage />
+              </SuspensedView>
+            </PrivateRoute>
           }
         />
         <Route
           path='apps/item-management/*'
           element={
-            <SuspensedView>
-              <ItemPage />
-            </SuspensedView>
+            <PrivateRoute rolesAllowed={['Admin']}>
+              <SuspensedView>
+                <ItemPage />
+              </SuspensedView>
+            </PrivateRoute>
           }
         />
         <Route
           path='apps/npc-management/*'
           element={
-            <SuspensedView>
-              <NpcPage />
-            </SuspensedView>
+            <PrivateRoute rolesAllowed={['Admin']}>
+              <SuspensedView>
+                <NpcPage />
+              </SuspensedView>
+            </PrivateRoute>
           }
         />
         <Route
           path='apps/proficiency-management/*'
           element={
-            <SuspensedView>
-              <ProficiencyPage />
-            </SuspensedView>
+            <PrivateRoute rolesAllowed={['Admin']}>
+              <SuspensedView>
+                <ProficiencyPage />
+              </SuspensedView>
+            </PrivateRoute>
           }
         />
         <Route
           path='apps/school-management/*'
           element={
-            <SuspensedView>
-              <SchoolPage />
-            </SuspensedView>
+            <PrivateRoute rolesAllowed={['Admin']}>
+              <SuspensedView>
+                <SchoolPage />
+              </SuspensedView>
+            </PrivateRoute>
           }
         />
         <Route
           path='apps/subject-management/*'
           element={
-            <SuspensedView>
-              <SubjectPage />
-            </SuspensedView>
+            <PrivateRoute rolesAllowed={['Admin']}>
+              <SuspensedView>
+                <SubjectPage />
+              </SuspensedView>
+            </PrivateRoute>
           }
         />
         <Route
           path='apps/account-management/*'
           element={
-            <SuspensedView>
-              <AccountPage />
-            </SuspensedView>
+            <PrivateRoute rolesAllowed={['Admin']}>
+              <SuspensedView>
+                <AccountPage />
+              </SuspensedView>
+            </PrivateRoute>
           }
         />
         {/* Page Not Found */}

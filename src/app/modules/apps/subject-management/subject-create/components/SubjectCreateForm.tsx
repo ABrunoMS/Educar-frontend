@@ -11,6 +11,7 @@ import { toast } from 'react-toastify'
 
 type Props = {
   isUserLoading?: boolean
+  editMode?: boolean
   subject?: Subject
 }
 
@@ -19,7 +20,7 @@ const initialGame: Subject = {
   description: ''
 }
 
-const SubjectCreateForm: FC<Props> = ({ subject, isUserLoading }) => {
+const SubjectCreateForm: FC<Props> = ({ subject, isUserLoading, editMode }) => {
   const [loading, setLoading] = useState(false);
   const [subjectForEdit] = useState<Subject>({
     ...subject,

@@ -9,6 +9,7 @@ import {getUserByToken, login} from '../core/_requests'
 import {useAuth} from '../core/Auth'
 import { UserModel } from '../core/_models'
 import { toast } from 'react-toastify'
+import { useRole } from '@contexts/RoleContext'
 
 const initialValues = {
   // email: 'admin@demo.com',
@@ -28,6 +29,7 @@ export function Login() {
 
   const [loading, setLoading] = useState(false)
   const {saveAuth, setCurrentUser} = useAuth()
+  const {setRole} = useRole()
 
   const loginSchema = Yup.object().shape({
     email: Yup.string()
@@ -52,6 +54,7 @@ export function Login() {
         const {data: user} = await getUserByToken(data.access_token)
 
         toast.success(`Bem vindo, ${user.email}`)
+        setRole('Teacher')
         setCurrentUser(user)
       } catch (error) {
         console.error(error)
