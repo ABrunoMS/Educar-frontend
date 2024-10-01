@@ -15,7 +15,7 @@ type Props = {
   subject?: Subject
 }
 
-const initialGame: Subject = {
+const initialSubject: Subject = {
   name: '',
   description: ''
 }
@@ -24,8 +24,8 @@ const SubjectCreateForm: FC<Props> = ({ subject, isUserLoading, editMode }) => {
   const [loading, setLoading] = useState(false);
   const [subjectForEdit] = useState<Subject>({
     ...subject,
-    name: subject?.name || initialGame.name,
-    description: subject?.description || initialGame.description
+    name: subject?.name || initialSubject.name,
+    description: subject?.description || initialSubject.description
   })
 
   const intl = useIntl()

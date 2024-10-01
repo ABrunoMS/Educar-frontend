@@ -1,18 +1,28 @@
-import { Route, Routes, Outlet, Navigate } from 'react-router-dom'
-import { PageTitle } from '../../../../_metronic/layout/core'
-import { GradeCreateWrapper } from './grade-create/GradeCreate'
-// import { UsersListWrapper } from '../user-management/users-list/UsersList'
+import { Route, Routes, Outlet, Navigate } from 'react-router-dom';
+import { PageTitle } from '@metronic/layout/core';
+import { GradeCreateWrapper } from './grade-create/GradeCreate';
+import { GradeListWrapper } from './grade-list/GradeList';
+import { GradeEditWrapper } from './grade-edit/GradeEdit';
 
-const ContractPage = () => {
+const GradePage = () => {
   return (
     <Routes>
       <Route element={<Outlet />}>
+        <Route
+          path='grade/{id}'
+          element={
+            <>
+              <PageTitle>Editar nota</PageTitle>
+              <GradeEditWrapper />
+            </>
+          }
+        />
         <Route
           path='grades'
           element={
             <>
               <PageTitle>Listagem de notas</PageTitle>
-              {/* <UsersListWrapper /> */}
+              <GradeListWrapper />
             </>
           }
         />
@@ -20,15 +30,15 @@ const ContractPage = () => {
           path='create'
           element={
             <>
-              <PageTitle>Criar nota</PageTitle>
+              <PageTitle>Criar Nota</PageTitle>
               <GradeCreateWrapper />
             </>
           }
         />
       </Route>
-      <Route index element={<Navigate to='/apps/grade-management/clients' />} />
+      <Route index element={<Navigate to='/apps/grade-management/grades' />} />
     </Routes>
-  )
-}
+  );
+};
 
-export default ContractPage
+export default GradePage;
