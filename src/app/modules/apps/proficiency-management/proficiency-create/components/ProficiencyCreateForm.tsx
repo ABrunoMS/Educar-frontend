@@ -9,6 +9,7 @@ import BasicField from '@components/form/BasicField'
 type Props = {
   isUserLoading?: boolean
   proficiency?: Proficiency
+  editMode?: boolean
 }
 
 const initialProficiency: Proficiency = {

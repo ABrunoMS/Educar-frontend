@@ -1,19 +1,29 @@
-import { Route, Routes, Outlet, Navigate } from 'react-router-dom'
-import { PageTitle } from '../../../../_metronic/layout/core'
-import { ProficiencyCreateWrapper } from './proficiency-create/ProficiencyCreate'
+import { Route, Routes, Outlet, Navigate } from 'react-router-dom';
+import { PageTitle } from '@metronic/layout/core';
+import { ProficiencyCreateWrapper } from './proficiency-create/ProficiencyCreate';
 import { ProficiencyGroupCreateWrapper } from './proficiency-group-create/ProficiencyGroupCreate'
-// import { UsersListWrapper } from '../user-management/users-list/UsersList'
+import { ProficiencyListWrapper } from './proficiency-list/ProficiencyList';
+import { ProficiencyEditWrapper } from './proficiency-edit/ProficiencyEdit';
 
 const ProficiencyPage = () => {
   return (
     <Routes>
       <Route element={<Outlet />}>
         <Route
+          path='proficiency/{id}'
+          element={
+            <>
+              <PageTitle>Editar proficiência</PageTitle>
+              <ProficiencyEditWrapper />
+            </>
+          }
+        />
+        <Route
           path='proficiencies'
           element={
             <>
-              <PageTitle>Listagem de Proficiencies</PageTitle>
-              {/* <UsersListWrapper /> */}
+              <PageTitle>Listagem de proficiências</PageTitle>
+              <ProficiencyListWrapper />
             </>
           }
         />
@@ -21,24 +31,24 @@ const ProficiencyPage = () => {
           path='create'
           element={
             <>
-              <PageTitle>Criar Proficiency</PageTitle>
+              <PageTitle>Criar proficiência</PageTitle>
               <ProficiencyCreateWrapper />
             </>
           }
         />
-        <Route
-          path='group-create'
-          element={
-            <>
-              <PageTitle>Criar ProficiencyGroup</PageTitle>
-              <ProficiencyGroupCreateWrapper />
-            </>
-          }
-        />
       </Route>
+      <Route
+        path='group-create'
+        element={
+          <>
+            <PageTitle>Criar Grupos</PageTitle>
+            <ProficiencyGroupCreateWrapper />
+          </>
+        }
+      />
       <Route index element={<Navigate to='/apps/proficiency-management/proficiencies' />} />
     </Routes>
-  )
-}
+  );
+};
 
-export default ProficiencyPage
+export default ProficiencyPage;
