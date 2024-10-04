@@ -14,3 +14,7 @@ export function editProficiency(id: string, proficiency: Proficiency) {
 export const getProficiencyById = (id: string) => {
   return axios.get<Proficiency>(`${API_URL}/Proficiencies/${id}`);
 };
+
+export const getProficiencies = () => {
+  return axios.get<Proficiency[]>(`${API_URL}/Proficiencies`);
+};

@@ -1,70 +1,77 @@
-import React, { FC, useState} from 'react'
-import * as Yup from 'yup'
-import {useFormik} from 'formik'
-import clsx from 'clsx'
-import { useIntl } from 'react-intl'
-import { ProficiencyGroup } from '@interfaces/Proficiency'
-import { SelectOptions } from '@interfaces/Forms'
-import BasicField from '@components/form/BasicField'
-import SelectField from '@components/form/SelectField'
+import React, { FC, useState, useEffect } from 'react';
+import * as Yup from 'yup';
+import { useFormik } from 'formik';
+import { useIntl } from 'react-intl';
+import { ProficiencyGroup } from '@interfaces/Proficiency';
+import { SelectOptions } from '@interfaces/Forms';
+import BasicField from '@components/form/BasicField';
+import SelectField from '@components/form/SelectField';
+import { getProficiencies } from '@services/Proficiencies';
 
 type Props = {
-  isUserLoading?: boolean
-  proficiency?: ProficiencyGroup
-}
+  isUserLoading?: boolean;
+  proficiencyGroup?: ProficiencyGroup;
+  editMode?: boolean;
+};
 
-const initialProficiency: ProficiencyGroup = {
+const initialProficiencyGroup: ProficiencyGroup = {
   id: '',
   name: '',
   description: '',
   proficiencyIds: []
-}
+};
 
-const selectOptions: SelectOptions[] = [
-  { value: '1', label: 'Proficiency 1' },
-  { value: '2', label: 'Proficiency 2' },
-  { value: '3', label: 'Proficiency 3' },
-  { value: '4', label: 'Proficiency 4' },
-]
-
-const ProficiencyGroupCreateForm: FC<Props> = ({ proficiency, isUserLoading }) => {
+const ProficiencyGroupCreateForm: FC<Props> = ({ proficiencyGroup, isUserLoading }) => {
   const [proficiencyForEdit] = useState<ProficiencyGroup>({
-    ...initialProficiency,
-    ...proficiency
-  })
+    ...initialProficiencyGroup,
+    ...proficiencyGroup,
+  });
 
-  const intl = useIntl()
+  const [proficiencies, setProficiencies] = useState<SelectOptions[]>([]);
+  const intl = useIntl();
 
-  const editProficiencySchema = Yup.object().shape({
+  useEffect(() => {
+    // Fetch proficiencies from the API
+    getProficiencies().then((response) => {
+      const proficiencyOptions = response.data.map((proficiency: any) => ({
+        value: proficiency.id,
+        label: proficiency.name,
+      }));
+      setProficiencies(proficiencyOptions);
+    });
+  }, []);
+
+  const editProficiencyGroupSchema = Yup.object().shape({
     name: Yup.string().required('Field is required'),
     description: Yup.string().required('Field is required'),
-    proficiencyIds: Yup.array().of(Yup.string()).min(1, 'Field is required')
-  })
+    proficiencyIds: Yup.array().of(Yup.string()).min(1, 'Field is required'),
+  });
 
   const formik = useFormik({
     initialValues: proficiencyForEdit,
-    validationSchema: editProficiencySchema,
+    validationSchema: editProficiencyGroupSchema,
     validateOnChange: true,
     onSubmit: async (values, { setSubmitting }) => {
       // Handle form submission
-      console.log('Form values:', values)
-      setSubmitting(false)
-    }
-  })
+      console.log('Form values:', values);
+      setSubmitting(false);
+    },
+  });
 
   const renderBasicFieldset = (
     fieldName: string,
     label: string,
     placeholder: string | null,
     required: boolean = true
-  ) =>
-  <BasicField
-    fieldName={fieldName}
-    label={label}
-    placeholder={placeholder}
-    required={required}
-    formik={formik}
-  />
+  ) => (
+    <BasicField
+      fieldName={fieldName}
+      label={label}
+      placeholder={placeholder}
+      required={required}
+      formik={formik}
+    />
+  );
 
   const renderSelectFieldset = (
     fieldName: string,
@@ -83,15 +90,15 @@ const ProficiencyGroupCreateForm: FC<Props> = ({ proficiency, isUserLoading }) =
       options={options}
       formik={formik}
     />
-  )
+  );
 
   return (
     <>
-      <form id='kt_modal_add_proficiency_form' className='form' onSubmit={formik.handleSubmit} noValidate>
+      <form id='kt_modal_add_proficiency_group_form' className='form' onSubmit={formik.handleSubmit} noValidate>
         <div className='d-flex flex-column me-n7 pe-7'>
-          {renderBasicFieldset('name', 'Name', 'Enter proficiency name')}
-          {renderBasicFieldset('description', 'Description', 'Enter proficiency description')}
-          {renderSelectFieldset('proficiencyIds', 'Proficiencies', 'Enter proficiencies', selectOptions, true, true)}
+          {renderBasicFieldset('name', 'Name', 'Enter proficiency group name')}
+          {renderBasicFieldset('description', 'Description', 'Enter proficiency group description')}
+          {renderSelectFieldset('proficiencyIds', 'Proficiencies', 'Select proficiencies', proficiencies, true, true)}
         </div>
 
         <div className='text-center pt-15'>
@@ -111,7 +118,7 @@ const ProficiencyGroupCreateForm: FC<Props> = ({ proficiency, isUserLoading }) =
         </div>
       </form>
     </>
-  )
-}
+  );
+};
 
-export { ProficiencyGroupCreateForm }
+export { ProficiencyGroupCreateForm };
