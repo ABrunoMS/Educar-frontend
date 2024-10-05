@@ -1,18 +1,28 @@
 import { Route, Routes, Outlet, Navigate } from 'react-router-dom'
 import { PageTitle } from '../../../../_metronic/layout/core'
 import { GameCreateWrapper } from './game-create/GameCreate'
-// import { UsersListWrapper } from '../user-management/users-list/UsersList'
+import { GameListWrapper } from './game-list/GameList';
+import { GameEditWrapper } from './game-edit/GameEdit';
 
 const ContractPage = () => {
   return (
     <Routes>
       <Route element={<Outlet />}>
         <Route
+          path='game/{id}'
+          element={
+            <>
+              <PageTitle>Editar Jogo</PageTitle>
+              <GameEditWrapper />
+            </>
+          }
+        />
+        <Route
           path='games'
           element={
             <>
-              <PageTitle>Listagem de clientes</PageTitle>
-              {/* <UsersListWrapper /> */}
+              <PageTitle>Listagem de Jogos</PageTitle>
+              <GameListWrapper />
             </>
           }
         />
@@ -20,7 +30,7 @@ const ContractPage = () => {
           path='create'
           element={
             <>
-              <PageTitle>Criar cliente</PageTitle>
+              <PageTitle>Criar jogo</PageTitle>
               <GameCreateWrapper />
             </>
           }

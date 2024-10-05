@@ -1,70 +1,68 @@
-import React, { FC, useState} from 'react'
-import * as Yup from 'yup'
-import {useFormik} from 'formik'
-import Select from 'react-select'
-import Flatpickr from "react-flatpickr"
-import clsx from 'clsx'
-import { useIntl } from 'react-intl'
-import { Game } from '@interfaces/Game'
-import BasicField from '@components/form/BasicField'
-import SelectField from '@components/form/SelectField'
-import { SelectOptions } from '@interfaces/Forms'
+import React, { FC, useState, useEffect } from 'react';
+import * as Yup from 'yup';
+import { useFormik } from 'formik';
+import { useIntl } from 'react-intl';
+import { Game } from '@interfaces/Game';
+import { SelectOptions } from '@interfaces/Forms';
+import BasicField from '@components/form/BasicField';
+import SelectField from '@components/form/SelectField';
+import { getSubjects } from '@services/Subjects';
+import { getProficiencyGroups } from '@services/ProficiencyGroups';
 
 type Props = {
-  isUserLoading?: boolean
-  game?: Game
-}
+  isUserLoading?: boolean;
+  game?: Game;
+  editMode: boolean;
+};
 
 const initialGame: Game = {
+  id: '',
   name: '',
   description: '',
   lore: '',
   purpose: '',
-  proficiencyGroupIds: [],
   subjectIds: [],
-}
-
-const proficiencyOptions: SelectOptions[] = [
-  { value: '1', label: 'Group 1' },
-  { value: '2', label: 'Group 2' },
-  { value: '3', label: 'Group 3' },
-  { value: '4', label: 'Group 4' }
-]
-
-const subjectOptions: SelectOptions[] = [
-  { value: '1', label: 'Subject 1' },
-  { value: '2', label: 'Subject 2' },
-  { value: '3', label: 'Subject 3' },
-  { value: '4', label: 'Subject 4' }
-]
+  proficiencyGroupIds: []
+};
 
 const GameCreateForm: FC<Props> = ({ game, isUserLoading }) => {
   const [gameForEdit] = useState<Game>({
+    ...initialGame,
     ...game,
-    name: game?.name || initialGame.name,
-    description: game?.description || initialGame.description,
-    lore: game?.lore || initialGame.lore,
-    proficiencyGroupIds: game?.proficiencyGroupIds || initialGame.proficiencyGroupIds,
-    subjectIds: game?.subjectIds || initialGame.subjectIds,
-    purpose: game?.purpose || initialGame.purpose
-  })
+  });
 
-  const intl = useIntl()
+  const [subjects, setSubjects] = useState<SelectOptions[]>([]);
+  const [proficiencyGroups, setProficiencyGroups] = useState<SelectOptions[]>([]);
+  const intl = useIntl();
+
+  useEffect(() => {
+    // Fetch subjects from the API
+    getSubjects().then((response) => {
+      const subjectOptions = response.data.map((subject: any) => ({
+        value: subject.id,
+        label: subject.name,
+      }));
+      setSubjects(subjectOptions);
+    });
+
+    // Fetch proficiency groups from the API
+    getProficiencyGroups().then((response) => {
+      const proficiencyGroupOptions = response.data.map((group: any) => ({
+        value: group.id,
+        label: group.name,
+      }));
+      setProficiencyGroups(proficiencyGroupOptions);
+    });
+  }, []);
 
   const editGameSchema = Yup.object().shape({
-    name: Yup.string()
-      .required('Field is required'),
-    description: Yup.string()
-      .required('Field is required'),
-    lore: Yup.string()
-      .required('Field is required'),
-    purpose: Yup.string()
-      .required('Field is required'),
-    subjectIds: Yup.array().of(Yup.string())
-      .min(1, 'Field is required'),
-    proficiencyGroupIds: Yup.array().of(Yup.string())
-      .min(1, 'Field is required')
-  })
+    name: Yup.string().required('Field is required'),
+    description: Yup.string().required('Field is required'),
+    lore: Yup.string().required('Field is required'),
+    purpose: Yup.string().required('Field is required'),
+    subjectIds: Yup.array().of(Yup.string()).min(1, 'Field is required'),
+    proficiencyGroupIds: Yup.array().of(Yup.string()).min(1, 'Field is required')
+  });
 
   const formik = useFormik({
     initialValues: gameForEdit,
@@ -72,22 +70,25 @@ const GameCreateForm: FC<Props> = ({ game, isUserLoading }) => {
     validateOnChange: true,
     onSubmit: async (values, { setSubmitting }) => {
       // Handle form submission
+      console.log('Form values:', values);
+      setSubmitting(false);
     },
-  })
+  });
 
   const renderBasicFieldset = (
     fieldName: string,
     label: string,
     placeholder: string | null,
     required: boolean = true
-  ) =>
-  <BasicField
-    fieldName={fieldName}
-    label={label}
-    placeholder={placeholder}
-    required={required}
-    formik={formik}
-  />
+  ) => (
+    <BasicField
+      fieldName={fieldName}
+      label={label}
+      placeholder={placeholder}
+      required={required}
+      formik={formik}
+    />
+  );
 
   const renderSelectFieldset = (
     fieldName: string,
@@ -106,29 +107,18 @@ const GameCreateForm: FC<Props> = ({ game, isUserLoading }) => {
       options={options}
       formik={formik}
     />
-  )
+  );
 
   return (
     <>
       <form id='kt_modal_add_game_form' className='form' onSubmit={formik.handleSubmit} noValidate>
         <div className='d-flex flex-column me-n7 pe-7'>
-          {/* Name */}
-          {renderBasicFieldset('name', 'Name', 'Enter game name')}
-
-          {/* Description */}
-          {renderBasicFieldset('description', 'Description', 'Enter game description')}
-
-          {/* Lore */}
-          {renderBasicFieldset('lore', 'Lore', 'Enter game lore')}
-
-          {/* Purpose */}
-          {renderBasicFieldset('purpose', 'Purpose', 'Enter game purpose')}
-          
-          {/* Proficiency */}
-          {renderSelectFieldset('proficiencyGroupIds', 'Proficiency Group', 'Select group...', proficiencyOptions, true)}
-          
-          {/* Subjects */}
-          {renderSelectFieldset('subjectIds', 'Subject', 'Select subject...', subjectOptions, true)}
+          {renderBasicFieldset('name', 'Nome', 'Insira um nome')}
+          {renderBasicFieldset('description', 'Descrição', 'No máximo 100 caracteres')}
+          {renderBasicFieldset('lore', 'Lore', 'Insira um lore')}
+          {renderBasicFieldset('purpose', 'Propósito', 'Insira um propósito')}
+          {renderSelectFieldset('subjectIds', 'Disciplinas', 'Seleciones disciplinas', subjects, true, true)}
+          {renderSelectFieldset('proficiencyGroupIds', 'Grupos', 'Selecione os grupos', proficiencyGroups, true, true)}
         </div>
 
         <div className='text-center pt-15'>
@@ -148,7 +138,7 @@ const GameCreateForm: FC<Props> = ({ game, isUserLoading }) => {
         </div>
       </form>
     </>
-  )
-}
+  );
+};
 
-export { GameCreateForm }
+export { GameCreateForm };

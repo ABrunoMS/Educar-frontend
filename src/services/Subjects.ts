@@ -19,6 +19,9 @@ export function editSubject(id: string, subject: Subject) {
   );
 }
 
+export function getSubjects() {
+  return axios.get<Subject[]>(`${API_URL}/Subjects`);
+}
 
 export const getSubjectById = (id: string) => {
   return axios.get<Subject>(API_URL + `/Subjects/${id}`);

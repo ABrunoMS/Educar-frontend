@@ -11,6 +11,10 @@ export function editProficiencyGroup(id: string, proficiencyGroup: ProficiencyGr
   return axios.put<ProficiencyGroup>(`${API_URL}/ProficiencyGroups/${id}`, proficiencyGroup);
 }
 
+export function getProficiencyGroups() {
+  return axios.get<ProficiencyGroup[]>(`${API_URL}/ProficiencyGroups`);
+}
+
 export const getProficiencyGroupById = (id: string) => {
   return axios.get<ProficiencyGroup>(`${API_URL}/ProficiencyGroups/${id}`);
 };
