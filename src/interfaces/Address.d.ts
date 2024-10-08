@@ -6,4 +6,4 @@ export interface Address {
   country: string;
   lat: number;
   lng: number;
-  }
+}

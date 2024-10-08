@@ -1,18 +1,28 @@
 import { Route, Routes, Outlet, Navigate } from 'react-router-dom'
 import { PageTitle } from '../../../../_metronic/layout/core'
 import { ClassCreateWrapper } from './class-create/ClassCreate'
-// import { UsersListWrapper } from '../user-management/users-list/UsersList'
+import { ClassListWrapper } from './class-list/ClassList';
+import { ClassEditWrapper } from './class-edit/ClassEdit';
 
 const ClassPage = () => {
   return (
     <Routes>
       <Route element={<Outlet />}>
         <Route
+          path='class/{id}'
+          element={
+            <>
+              <PageTitle>Editar Classe</PageTitle>
+              <ClassEditWrapper />
+            </>
+          }
+        />
+        <Route
           path='classes'
           element={
             <>
               <PageTitle>Listagem de classes</PageTitle>
-              {/* <UsersListWrapper /> */}
+              <ClassListWrapper />
             </>
           }
         />

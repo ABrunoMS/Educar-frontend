@@ -1,46 +1,59 @@
-import React, { FC, useState} from 'react'
-import * as Yup from 'yup'
-import {useFormik} from 'formik'
-import { useIntl } from 'react-intl'
-import { Class } from '@interfaces/Class'
-import { SelectOptions } from '@interfaces/Forms'
-import BasicField from '@components/form/BasicField'
-import SelectField from '@components/form/SelectField'
+import React, { FC, useState, useEffect } from 'react';
+import * as Yup from 'yup';
+import { useFormik } from 'formik';
+import { useIntl } from 'react-intl';
+import { Class } from '@interfaces/Class';
+import { SelectOptions } from '@interfaces/Forms';
+import BasicField from '@components/form/BasicField';
+import SelectField from '@components/form/SelectField';
+import { getAccounts } from '@services/Accounts';
 
 type Props = {
-  isUserLoading?: boolean
-  classData?: Class
-}
+  isUserLoading?: boolean;
+  classItem?: Class;
+  editMode?: boolean;
+};
 
 const initialClass: Class = {
   id: '',
   name: '',
   description: '',
-  purpose: '',
+  purpose: 'Default',
   accountIds: []
-}
+};
 
-const selectOptions: SelectOptions[] = [
-  { value: '1', label: 'Account 1' },
-  { value: '2', label: 'Account 2' },
-  { value: '3', label: 'Account 3' },
-  { value: '4', label: 'Account 4' },
-]
+const purposeOptions: SelectOptions[] = [
+  { value: 'Default', label: 'Padrão' },
+  { value: 'Reinforcement', label: 'Reforços' },
+  { value: 'SpecialProficiencies', label: 'Habilidade especial' }
+];
 
-const ClassCreateForm: FC<Props> = ({ classData, isUserLoading }) => {
+const ClassCreateForm: FC<Props> = ({ classItem, isUserLoading }) => {
   const [classForEdit] = useState<Class>({
     ...initialClass,
-    ...classData
-  })
+    ...classItem,
+  });
 
-  const intl = useIntl()
+  const [accounts, setAccounts] = useState<SelectOptions[]>([]);
+  const intl = useIntl();
+
+  useEffect(() => {
+    // Fetch accounts from the API
+    getAccounts().then((response) => {
+      const accountOptions = response.data.map((account: any) => ({
+        value: account.id,
+        label: account.name,
+      }));
+      setAccounts(accountOptions);
+    });
+  }, []);
 
   const editClassSchema = Yup.object().shape({
     name: Yup.string().required('Field is required'),
     description: Yup.string().required('Field is required'),
-    purpose: Yup.string().required('Field is required'),
+    purpose: Yup.string().oneOf(['Reinforcement', 'Default', 'SpecialProficiencies']).required('Field is required'),
     accountIds: Yup.array().of(Yup.string()).min(1, 'Field is required')
-  })
+  });
 
   const formik = useFormik({
     initialValues: classForEdit,
@@ -48,24 +61,25 @@ const ClassCreateForm: FC<Props> = ({ classData, isUserLoading }) => {
     validateOnChange: true,
     onSubmit: async (values, { setSubmitting }) => {
       // Handle form submission
-      console.log('Form values:', values)
-      setSubmitting(false)
+      console.log('Form values:', values);
+      setSubmitting(false);
     },
-  })
+  });
 
   const renderBasicFieldset = (
     fieldName: string,
     label: string,
     placeholder: string | null,
     required: boolean = true
-  ) =>
-  <BasicField
-    fieldName={fieldName}
-    label={label}
-    placeholder={placeholder}
-    required={required}
-    formik={formik}
-  />
+  ) => (
+    <BasicField
+      fieldName={fieldName}
+      label={label}
+      placeholder={placeholder}
+      required={required}
+      formik={formik}
+    />
+  );
 
   const renderSelectFieldset = (
     fieldName: string,
@@ -84,7 +98,7 @@ const ClassCreateForm: FC<Props> = ({ classData, isUserLoading }) => {
       options={options}
       formik={formik}
     />
-  )
+  );
 
   return (
     <>
@@ -92,8 +106,8 @@ const ClassCreateForm: FC<Props> = ({ classData, isUserLoading }) => {
         <div className='d-flex flex-column me-n7 pe-7'>
           {renderBasicFieldset('name', 'Name', 'Enter class name')}
           {renderBasicFieldset('description', 'Description', 'Enter class description')}
-          {renderBasicFieldset('purpose', 'Purpose', 'Enter class purpose')}
-          {renderSelectFieldset('accountIds', 'Account IDs', 'Select account IDs', selectOptions, true, true)}
+          {renderSelectFieldset('purpose', 'Purpose', 'Select purpose', purposeOptions, false, true)}
+          {renderSelectFieldset('accountIds', 'Accounts', 'Select accounts', accounts, true, true)}
         </div>
 
         <div className='text-center pt-15'>
@@ -113,7 +127,7 @@ const ClassCreateForm: FC<Props> = ({ classData, isUserLoading }) => {
         </div>
       </form>
     </>
-  )
-}
+  );
+};
 
-export { ClassCreateForm }
+export { ClassCreateForm };
