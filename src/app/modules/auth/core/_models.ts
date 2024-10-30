@@ -63,7 +63,7 @@ export interface UserModel {
   occupation?: string
   companyName?: string
   phone?: string
-  roles?: Array<number>
+  roles?: string[]
   pic?: string
   language?: 'en' | 'de' | 'es' | 'fr' | 'ja' | 'zh' | 'ru'
   timeZone?: string

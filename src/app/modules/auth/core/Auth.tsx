@@ -69,8 +69,8 @@ const AuthInit: FC<WithChildren> = ({ children }) => {
           logout()
         } else {
           const user = await getUserByToken(auth.access_token)
-          setCurrentUser(user.data)
-          setRole('Teacher')
+          setCurrentUser(user)
+          setRole(user.roles!.filter(item => (item === 'Admin' || item === 'Teacher' || item === 'Student'))[0])
         }
 
         setShowSplashScreen(false)

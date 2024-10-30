@@ -26,6 +26,9 @@ export interface JWTUser {
   'email_verified': boolean;
   'preferred_username': string;
   email: string;
+  'realm_access': {
+    roles: string[];
+  }
 }
 
 // Server should return AuthModel
@@ -97,10 +100,13 @@ export function getUserByToken(token: string) {
     'last_name': 'José',
     email: jwtUser.email,
     username: jwtUser.preferred_username,
-    password: undefined
+    password: undefined,
+    roles: jwtUser.realm_access.roles
   }
 
-  return <AxiosResponse>{
-    data: userModel
-  }
+  return userModel;
+
+  // return <AxiosResponse>{
+  //   data: userModel
+  // }
 }

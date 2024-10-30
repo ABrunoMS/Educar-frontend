@@ -5,7 +5,7 @@ import clsx from 'clsx'
 import { useIntl } from 'react-intl'
 import { Subject } from '@interfaces/Subject'
 import BasicField from '@components/form/BasicField'
-import { createSubject } from '@services/Subjects'
+import { createSubject, editSubject } from '@services/Subjects'
 import { useNavigate } from 'react-router'
 import { toast } from 'react-toastify'
 
@@ -40,27 +40,62 @@ const SubjectCreateForm: FC<Props> = ({ subject, isUserLoading, editMode }) => {
       .required('Campo obrigatório')
   })
 
+  const create = async (values: Subject) => {
+    try {
+      const callback = await createSubject(values);
+      if (callback.status === 200) {
+        setLoading(false);
+        toast.success(`Entidade '${values.name}' criada com sucesso`)
+        navigate('/apps/subject-management/subjects');
+      }
+    } catch (error) {
+      toast.error('Ocorreu um erro ao enviar.');
+      setLoading(false)
+    }
+  }
+
+  const editEntity = async (values: Subject) => {
+    try {
+      const callback = await editSubject(values.id!, values);
+      if (callback.status === 200 || callback.status === 204) {
+        setLoading(false);
+        toast.success(`Entidade '${values.name}' criada com sucesso`)
+        navigate('/apps/subject-management/subjects');
+      }
+    } catch (error) {
+      toast.error('Ocorreu um erro ao enviar.');
+      setLoading(false)
+    }
+  }
+
+  const createEntity = async (values: Subject) => {
+    try {
+      const callback = await createSubject(values);
+      if (callback.status === 200 || callback.status === 204) {
+        setLoading(false);
+        toast.success(`Entidade '${values.name}' editada com sucesso`)
+        navigate('/apps/subject-management/subjects');
+      }
+    } catch (error) {
+      toast.error('Ocorreu um erro ao enviar.');
+      setLoading(false)
+    }
+  }
+
   const formik = useFormik({
     initialValues: subjectForEdit,
     validationSchema: editSubjectSchema,
     validateOnChange: true,
-    onSubmit: async (values, { setSubmitting }) => {
+    onSubmit: async (values) => {
       if (loading) return;
 
       setLoading(true);
 
-      try {
-        const callback = await createSubject(values);
-        if (callback.status === 200) {
-          setLoading(false);
-          toast.success(`Entidade '${values.name}' criada com sucesso`)
-          navigate('/apps/subject-management/subjects');
-        }
-      } catch (error) {
-        toast.error('Ocorreu um erro ao enviar.');
-        setSubmitting(false)
-        setLoading(false)
+      if (editMode) {
+        return editEntity(values);
       }
+
+      return createEntity(values);
     },
   })
 

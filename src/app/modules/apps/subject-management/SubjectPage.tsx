@@ -9,7 +9,7 @@ const ContractPage = () => {
     <Routes>
       <Route element={<Outlet />}>
         <Route
-          path='subject/{id}'
+          path='subject/:id'
           element={
             <>
               <PageTitle>Editar discipina</PageTitle>

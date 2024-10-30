@@ -51,10 +51,10 @@ export function Login() {
       try {
         const { data } = await login(values.email, values.password)
         saveAuth(data)
-        const {data: user} = await getUserByToken(data.access_token)
+        const user = getUserByToken(data.access_token)
 
         toast.success(`Bem vindo, ${user.email}`)
-        setRole('Teacher')
+        setRole(user.roles!.filter(item => (item === 'Admin' || item === 'Teacher' || item === 'Student'))[0])
         setCurrentUser(user)
       } catch (error) {
         console.error(error)
