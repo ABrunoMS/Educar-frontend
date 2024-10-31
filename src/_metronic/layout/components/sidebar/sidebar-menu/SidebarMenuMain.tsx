@@ -36,10 +36,32 @@ const SidebarMenuMain = () => {
         fontIcon='bi-app-indicator'
       />
 
+      <RoleBasedMenuItem rolesAllowed={['Admin', 'Teacher']}>
+        <SidebarMenuItemWithSub
+          to='/apps/grade-management/'
+          title='Notas'
+          fontIcon='bi-archive'
+          icon='award'
+        >
+          <SidebarMenuItem
+            to='/apps/grade-management/grades'
+            icon='filter-tablet'
+            title='Listagem de notas'
+            hasBullet
+          />
+          <SidebarMenuItem
+            to='/apps/grade-management/create'
+            icon='file'
+            title='Criar nota'
+            hasBullet
+          />
+        </SidebarMenuItemWithSub>
+      </RoleBasedMenuItem>
+
       <RoleBasedMenuItem rolesAllowed={['Admin']}>
         <SidebarMenuItemWithSub
           to='/apps/subject-management/'
-          title='Disciplina'
+          title='Disciplinas'
           fontIcon='bi-archive'
           icon='archive'
         >
@@ -270,28 +292,6 @@ const SidebarMenuMain = () => {
             to='/apps/school-management/create'
             icon='abstract-28'
             title='Criar escola'
-            hasBullet
-          />
-        </SidebarMenuItemWithSub>
-      </RoleBasedMenuItem>
-      
-      <RoleBasedMenuItem rolesAllowed={['Admin', 'Teacher']}>
-        <SidebarMenuItemWithSub
-          to='/apps/grade-management/'
-          title='Grade'
-          fontIcon='bi-archive'
-          icon='delete-folder'
-        >
-          <SidebarMenuItem
-            to='/apps/grade-management/grades'
-            icon='abstract-28'
-            title='Listagem de notas'
-            hasBullet
-          />
-          <SidebarMenuItem
-            to='/apps/grade-management/create'
-            icon='abstract-28'
-            title='Criar nota'
             hasBullet
           />
         </SidebarMenuItemWithSub>

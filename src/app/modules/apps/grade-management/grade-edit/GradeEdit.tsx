@@ -32,7 +32,7 @@ const GradeEdit = () => {
         {grade ? (
           <GradeCreateForm grade={grade} editMode />
         ) : (
-          <div>
+          <div className='d-flex justify-content-center'>
             <span className='indicator-progress'>
               Carregando...{' '}
               <span className='spinner-border spinner-border-sm align-middle ms-2'></span>

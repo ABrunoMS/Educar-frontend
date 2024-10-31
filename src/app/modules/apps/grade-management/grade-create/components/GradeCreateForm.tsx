@@ -4,7 +4,7 @@ import { useFormik } from 'formik';
 import { useIntl } from 'react-intl';
 import { Grade } from '@interfaces/Grade';
 import BasicField from '@components/form/BasicField';
-import { createGrade } from '@services/Grades';
+import { createGrade, editGrade } from '@services/Grades';
 import { useNavigate } from 'react-router';
 import { toast } from 'react-toastify';
 
@@ -39,6 +39,34 @@ const GradeCreateForm: FC<Props> = ({ grade, isUserLoading, editMode }) => {
       .required('Campo obrigatório'),
   });
 
+  const editEntity = async (values: Grade) => {
+    try {
+      const callback = await editGrade(values.id!, values);
+      if (callback.status === 200 || callback.status === 204) {
+        setLoading(false);
+        toast.success(`Entidade '${values.name}' editada com sucesso`)
+        navigate('/apps/grade-management/grades');
+      }
+    } catch (error) {
+      toast.error('Ocorreu um erro ao enviar.');
+      setLoading(false)
+    }
+  }
+
+  const createEntity = async (values: Grade) => {
+    try {
+      const callback = await createGrade(values);
+      if (callback.status === 200) {
+        setLoading(false);
+        toast.success(`Entidade '${values.name}' criada com sucesso`);
+        navigate('/apps/grade-management/grades');
+      }
+    } catch (error) {
+      toast.error('Ocorreu um erro ao enviar.');
+      setLoading(false);
+    }
+  }
+
   const formik = useFormik({
     initialValues: gradeForEdit,
     validationSchema: editGradeSchema,
@@ -48,18 +76,11 @@ const GradeCreateForm: FC<Props> = ({ grade, isUserLoading, editMode }) => {
 
       setLoading(true);
 
-      try {
-        const callback = await createGrade(values);
-        if (callback.status === 200) {
-          setLoading(false);
-          toast.success(`Entidade '${values.name}' criada com sucesso`);
-          navigate('/apps/grade-management/grades');
-        }
-      } catch (error) {
-        toast.error('Ocorreu um erro ao enviar.');
-        setSubmitting(false);
-        setLoading(false);
+      if (editMode) {
+        return editEntity(values);
       }
+
+      return createEntity(values);
     },
   });
 

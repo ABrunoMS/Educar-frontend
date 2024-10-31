@@ -9,7 +9,7 @@ const GradePage = () => {
     <Routes>
       <Route element={<Outlet />}>
         <Route
-          path='grade/{id}'
+          path='grade/:id'
           element={
             <>
               <PageTitle>Editar nota</PageTitle>

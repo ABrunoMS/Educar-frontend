@@ -59,7 +59,7 @@ const SubjectCreateForm: FC<Props> = ({ subject, isUserLoading, editMode }) => {
       const callback = await editSubject(values.id!, values);
       if (callback.status === 200 || callback.status === 204) {
         setLoading(false);
-        toast.success(`Entidade '${values.name}' criada com sucesso`)
+        toast.success(`Entidade '${values.name}' editada com sucesso`)
         navigate('/apps/subject-management/subjects');
       }
     } catch (error) {
@@ -73,7 +73,7 @@ const SubjectCreateForm: FC<Props> = ({ subject, isUserLoading, editMode }) => {
       const callback = await createSubject(values);
       if (callback.status === 200 || callback.status === 204) {
         setLoading(false);
-        toast.success(`Entidade '${values.name}' editada com sucesso`)
+        toast.success(`Entidade '${values.name}' criada com sucesso`)
         navigate('/apps/subject-management/subjects');
       }
     } catch (error) {
