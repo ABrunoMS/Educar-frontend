@@ -78,6 +78,37 @@ const SidebarMenuMain = () => {
             hasBullet
           />
         </SidebarMenuItemWithSub>
+        <SidebarMenuItemWithSub
+          to='/apps/proficiency-management/'
+          title='Habilidades'
+          fontIcon='bi-archive'
+          icon='delete-folder'
+        >
+          <SidebarMenuItem
+            to='/apps/proficiency-management/proficiencies'
+            icon='filter-tablet'
+            title='Listagem de Habilidades'
+            hasBullet
+          />
+          <SidebarMenuItem
+            to='/apps/proficiency-management/create'
+            icon='file'
+            title='Criar Habilidade'
+            hasBullet
+          />
+          <SidebarMenuItem
+            to='/apps/proficiency-management/groups'
+            icon='filter-tablet'
+            title='Listagem de Habilidades'
+            hasBullet
+          />
+          <SidebarMenuItem
+            to='/apps/proficiency-management/group-create'
+            icon='file'
+            title='Criar Grupo'
+            hasBullet
+          />
+        </SidebarMenuItemWithSub>
 
 
         <SidebarMenuItemWithSub
@@ -248,31 +279,6 @@ const SidebarMenuMain = () => {
             to='/apps/npc-management/create'
             icon='abstract-28'
             title='Criar npc'
-            hasBullet
-          />
-        </SidebarMenuItemWithSub>
-        <SidebarMenuItemWithSub
-          to='/apps/proficiency-management/'
-          title='Proficiency'
-          fontIcon='bi-archive'
-          icon='delete-folder'
-        >
-          <SidebarMenuItem
-            to='/apps/proficiency-management/proficiencies'
-            icon='abstract-28'
-            title='Listagem de proficiencies'
-            hasBullet
-          />
-          <SidebarMenuItem
-            to='/apps/proficiency-management/create'
-            icon='abstract-28'
-            title='Criar proficiency'
-            hasBullet
-          />
-          <SidebarMenuItem
-            to='/apps/proficiency-management/group-create'
-            icon='abstract-28'
-            title='Criar Grupo'
             hasBullet
           />
         </SidebarMenuItemWithSub>

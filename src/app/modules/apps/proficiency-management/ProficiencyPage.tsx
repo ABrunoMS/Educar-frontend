@@ -12,10 +12,10 @@ const ProficiencyPage = () => {
     <Routes>
       <Route element={<Outlet />}>
         <Route
-          path='proficiency/{id}'
+          path='proficiency/:id'
           element={
             <>
-              <PageTitle>Editar proficiência</PageTitle>
+              <PageTitle>Editar habilidade</PageTitle>
               <ProficiencyEditWrapper />
             </>
           }
@@ -24,7 +24,7 @@ const ProficiencyPage = () => {
           path='proficiencies'
           element={
             <>
-              <PageTitle>Listagem de proficiências</PageTitle>
+              <PageTitle>Listagem de habilidades</PageTitle>
               <ProficiencyListWrapper />
             </>
           }
@@ -33,14 +33,14 @@ const ProficiencyPage = () => {
           path='create'
           element={
             <>
-              <PageTitle>Criar proficiência</PageTitle>
+              <PageTitle>Criar habilidade</PageTitle>
               <ProficiencyCreateWrapper />
             </>
           }
         />
       </Route>
       <Route
-          path='proficiency-group/{id}'
+          path='proficiency-group/:id'
           element={
             <>
               <PageTitle>Editar grupo</PageTitle>
@@ -49,7 +49,7 @@ const ProficiencyPage = () => {
           }
         />
         <Route
-          path='proficiency-groups'
+          path='groups'
           element={
             <>
               <PageTitle>Listagem de grupos</PageTitle>
@@ -58,7 +58,7 @@ const ProficiencyPage = () => {
           }
         />
         <Route
-          path='create'
+          path='group-create'
           element={
             <>
               <PageTitle>Criar grupo</PageTitle>

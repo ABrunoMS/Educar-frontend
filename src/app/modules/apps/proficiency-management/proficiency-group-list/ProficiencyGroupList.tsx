@@ -25,17 +25,12 @@ const ProficiencyGroupListWrapper = () => {
       accessor: 'description',
     },
     {
-      Header: 'Proficiencies',
-      accessor: 'proficiencyIds',
-      Cell: ({ value }) => value.join(', '), // Show proficiencies as comma-separated values
-    },
-    {
       Header: '',
       id: 'actions',
       Cell: ({ ...props }) => (
         <ActionsCell
-          editPath='/apps/proficiency-group-management/proficiency-group'
-          id={props.data[props.row.index].id}
+          editPath='/apps/proficiency-management/proficiency-group'
+          id={props.data[props.row.index].id ?? ''}
           callbackFunction={deleteActionCallback}
         />
       ),

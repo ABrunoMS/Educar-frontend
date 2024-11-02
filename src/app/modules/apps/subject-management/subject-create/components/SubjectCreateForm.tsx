@@ -40,20 +40,6 @@ const SubjectCreateForm: FC<Props> = ({ subject, isUserLoading, editMode }) => {
       .required('Campo obrigatório')
   })
 
-  const create = async (values: Subject) => {
-    try {
-      const callback = await createSubject(values);
-      if (callback.status === 200) {
-        setLoading(false);
-        toast.success(`Entidade '${values.name}' criada com sucesso`)
-        navigate('/apps/subject-management/subjects');
-      }
-    } catch (error) {
-      toast.error('Ocorreu um erro ao enviar.');
-      setLoading(false)
-    }
-  }
-
   const editEntity = async (values: Subject) => {
     try {
       const callback = await editSubject(values.id!, values);

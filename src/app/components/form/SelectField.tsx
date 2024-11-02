@@ -14,6 +14,7 @@ interface FieldProps {
   label: string;
   placeholder: string | null;
   required: boolean;
+  disabled: boolean;
   multiselect: boolean;
   options: SelectOptions[];
   formik: FormikProps<any>;
@@ -24,6 +25,7 @@ const SelectField: React.FC<FieldProps> = ({
   label,
   placeholder,
   required,
+  disabled,
   formik,
   options,
   multiselect
@@ -70,7 +72,7 @@ const SelectField: React.FC<FieldProps> = ({
         name={fieldName}
         onChange={(newValue) => updateSelectValues(newValue)}
         isMulti={multiselect}
-        isDisabled={formik.isSubmitting}
+        isDisabled={formik.isSubmitting || disabled}
       />
       {formik.getFieldMeta(fieldName).touched && formik.getFieldMeta(fieldName).error && (
         <div className='fv-plugins-message-container'>

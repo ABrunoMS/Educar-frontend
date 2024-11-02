@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { Proficiency } from '@interfaces/Proficiency';
+import { PaginatedResponse } from '@contexts/PaginationContext';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -16,5 +17,5 @@ export const getProficiencyById = (id: string) => {
 };
 
 export const getProficiencies = () => {
-  return axios.get<Proficiency[]>(`${API_URL}/Proficiencies`);
+  return axios.get<PaginatedResponse<Proficiency>>(`${API_URL}/Proficiencies?page_number=1&page_size=999`);
 };
