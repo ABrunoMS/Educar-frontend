@@ -14,7 +14,7 @@ interface FieldProps {
   label: string;
   placeholder: string | null;
   required: boolean;
-  disabled: boolean;
+  disabled?: boolean;
   multiselect: boolean;
   options: SelectOptions[];
   formik: FormikProps<any>;

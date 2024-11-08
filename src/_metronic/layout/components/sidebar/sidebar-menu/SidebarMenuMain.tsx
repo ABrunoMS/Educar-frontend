@@ -82,7 +82,7 @@ const SidebarMenuMain = () => {
           to='/apps/proficiency-management/'
           title='Habilidades'
           fontIcon='bi-archive'
-          icon='delete-folder'
+          icon='book-open'
         >
           <SidebarMenuItem
             to='/apps/proficiency-management/proficiencies'

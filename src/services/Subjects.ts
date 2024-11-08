@@ -1,6 +1,7 @@
 import axios, { AxiosResponse } from 'axios';
 
 import { Subject, SubjectCreateResponse } from '@interfaces/Subject';
+import { PaginatedResponse } from '@contexts/PaginationContext';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -20,7 +21,7 @@ export function editSubject(id: string, subject: Subject) {
 }
 
 export function getSubjects() {
-  return axios.get<Subject[]>(`${API_URL}/Subjects`);
+  return axios.get<PaginatedResponse<Subject>>(`${API_URL}/Subjects?page_number=1&page_size=999`);
 }
 
 export const getSubjectById = (id: string) => {

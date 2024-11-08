@@ -9,7 +9,7 @@ const ContractPage = () => {
     <Routes>
       <Route element={<Outlet />}>
         <Route
-          path='game/{id}'
+          path='game/:id'
           element={
             <>
               <PageTitle>Editar Jogo</PageTitle>
@@ -36,7 +36,7 @@ const ContractPage = () => {
           }
         />
       </Route>
-      <Route index element={<Navigate to='/apps/client-management/clients' />} />
+      <Route index element={<Navigate to='/apps/game-management/games' />} />
     </Routes>
   )
 }

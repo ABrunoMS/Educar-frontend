@@ -21,10 +21,6 @@ const GameListWrapper = () => {
       accessor: 'name',
     },
     {
-      Header: 'Descrição',
-      accessor: 'description',
-    },
-    {
       Header: 'Lore',
       accessor: 'lore',
     },
