@@ -120,7 +120,7 @@ const ClientCreateForm: FC<Props> = ({client, isUserLoading}) => {
        } catch (ex) {
          console.error(ex)
        } finally {
-         setSubmitting(true)
+         setSubmitting(false)
           formik.resetForm()
        }
     },
