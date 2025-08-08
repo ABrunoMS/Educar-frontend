@@ -5,6 +5,8 @@ import Select from 'react-select'
 import { ClientType, ClientContactType, ClientContractType } from '../../../../../../interfaces/Client'
 import clsx from 'clsx'
 import { useIntl } from 'react-intl'
+import { createClient, updateClient } from '../../clients-list/core/_requests'
+import { isNotEmpty } from '@metronic/helpers'
 
 type Props = {
   isUserLoading?: boolean
@@ -108,19 +110,19 @@ const ClientCreateForm: FC<Props> = ({client, isUserLoading}) => {
     validationSchema: editUserSchema,
     validateOnChange: true,
     onSubmit: async (values, {setSubmitting}) => {
-      // setSubmitting(true)
-      // try {
-      //   if (isNotEmpty(values.id)) {
-      //     await updateUser(values)
-      //   } else {
-      //     await createUser(values)
-      //   }
-      // } catch (ex) {
-      //   console.error(ex)
-      // } finally {
-      //   setSubmitting(true)
-      //   cancel(true)
-      // }
+       setSubmitting(true)
+       try {
+         if (isNotEmpty(values.id)) {
+           await updateClient(values)
+         } else {
+           await createClient(values)
+         }
+       } catch (ex) {
+         console.error(ex)
+       } finally {
+         setSubmitting(true)
+          formik.resetForm()
+       }
     },
   })
 
