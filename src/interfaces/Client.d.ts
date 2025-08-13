@@ -8,8 +8,8 @@ export interface ClientType {
   validity?: string;
   signatureDate?: string;
   implantationDate?: string;
-  totalAccounts?: number;
-  remainingAccounts?: number;
+  total_accounts?: number;
+  remaining_accounts?: number;
   secretary?: string;
   subSecretary?: string;
   regional?: string;
