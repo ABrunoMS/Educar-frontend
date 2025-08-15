@@ -24,11 +24,7 @@ export const getList = async (
   return response.data;
 };
 
-// Como este arquivo é específico para a listagem, as funções de criação,
-// atualização e exclusão podem ser movidas para outros arquivos, como
-// um `_requests.ts` na pasta `client-create`.
 
-// No entanto, se você precisar delas aqui, a implementação seria:
 export const deleteClient = (clientId: ID): Promise<void> => {
   return axios.delete(`${CLIENTS_URL}/${clientId}`).then(() => {});
 };

@@ -1,6 +1,6 @@
 import {Route, Routes, Outlet, Navigate} from 'react-router-dom'
 import {PageLink, PageTitle} from '../../../../_metronic/layout/core'
-// import {AccountListWrapper} from './account-list/AccountList'
+import {UsersListWrapper} from '../user-management/users-list/UsersList'
 import {AccountCreateWrapper} from './account-create/AccountCreate'
 
 const usersBreadcrumbs: Array<PageLink> = [
@@ -27,7 +27,7 @@ const AccountPage = () => {
           element={
             <>
               <PageTitle>Listagem de contas</PageTitle>
-              {/* <AccountListWrapper /> */}
+                <UsersListWrapper />
             </>
           }
         />
