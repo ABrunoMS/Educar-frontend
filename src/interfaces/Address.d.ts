@@ -1,9 +1,10 @@
 export interface Address {
-  street: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
-  lat: number;
-  lng: number;
+  id?: string; 
+  street?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  lat?: number;
+  lng?: number;
 }

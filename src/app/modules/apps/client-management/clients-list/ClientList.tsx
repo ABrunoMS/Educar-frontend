@@ -34,7 +34,7 @@ const ClientListWrapper = () => {
       data={data?.items || []}
       columns={columnsFake}
       isLoading={isLoading}
-      totalItems={data?.totalPages || 1}
+      totalItems={data?.totalCount || 0}
     />
   )
 }
