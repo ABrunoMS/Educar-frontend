@@ -1,7 +1,9 @@
 import { Route, Routes, Outlet, Navigate } from 'react-router-dom'
 import { PageTitle } from '../../../../_metronic/layout/core'
 import { SchoolCreateWrapper } from './school-create/SchoolCreate'
-import { UsersListWrapper } from '../user-management/users-list/UsersList'
+
+import { SchoolListWrapper } from './school-list/SchoolList'
+
 
 const SchoolPage = () => {
   return (
@@ -12,7 +14,9 @@ const SchoolPage = () => {
           element={
             <>
               <PageTitle>Listagem de escolas</PageTitle>
-                <UsersListWrapper /> 
+
+              <SchoolListWrapper />
+
             </>
           }
         />

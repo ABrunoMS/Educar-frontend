@@ -1,6 +1,7 @@
 import { Route, Routes, Outlet, Navigate } from 'react-router-dom'
 import { PageTitle } from '../../../../_metronic/layout/core'
 import { AddressCreateWrapper } from './address-create/AddressCreate'
+import { AddressListWrapper } from './address-list/AddressList'  
 // import { UsersListWrapper } from '../user-management/users-list/UsersList'
 
 const AddressPage = () => {
@@ -12,7 +13,7 @@ const AddressPage = () => {
           element={
             <>
               <PageTitle>Listagem de enderenços</PageTitle>
-              {/* <UsersListWrapper /> */}
+              { <AddressListWrapper />}
             </>
           }
         />
@@ -26,7 +27,7 @@ const AddressPage = () => {
           }
         />
       </Route>
-      <Route index element={<Navigate to='/apps/client-management/clients' />} />
+      <Route index element={<Navigate to='/apps/address-management/addresses' />} />
     </Routes>
   )
 }

@@ -1,31 +1,21 @@
-import React, { FC, useState} from 'react'
+import React, { FC, useState, useEffect } from 'react'
 import * as Yup from 'yup'
 import {useFormik} from 'formik'
 import clsx from 'clsx'
 import { useIntl } from 'react-intl'
-import { School } from '@interfaces/School'
+import { School, SchoolType } from '@interfaces/School'
 import { SelectOptions } from '@interfaces/Forms'
 import BasicField from '@components/form/BasicField'
 import SelectField from '@components/form/SelectField'
+import { getClients } from '@services/Clients'
+import { getAddresses } from '@services/Addresses'
+import { createSchool } from '@services/Schools'
+import { isNotEmpty } from '@metronic/helpers'
 
 type Props = {
   isUserLoading?: boolean
   school?: School
 }
-
-const addressOptions: SelectOptions[] = [
-  { value: '1', label: 'Address 1' },
-  { value: '2', label: 'Address 2' },
-  { value: '3', label: 'Address 3' },
-  { value: '4', label: 'Address 4' },
-]
-
-const clientOptions: SelectOptions[] = [
-  { value: '1', label: 'Client 1' },
-  { value: '2', label: 'Client 2' },
-  { value: '3', label: 'Client 3' },
-  { value: '4', label: 'Client 4' },
-]
 
 const initialSchool: School = {
   id: '',
@@ -36,6 +26,8 @@ const initialSchool: School = {
 }
 
 const SchoolCreateForm: FC<Props> = ({ school, isUserLoading }) => {
+  const [clientOptions, setClientOptions] = useState<SelectOptions[]>([]);
+  const [addressOptions, setAddressOptions] = useState<SelectOptions[]>([]);
   const [dialogueForEdit] = useState<School>({
     ...school,
     name: school?.name || initialSchool.name,
@@ -46,15 +38,39 @@ const SchoolCreateForm: FC<Props> = ({ school, isUserLoading }) => {
 
   const intl = useIntl()
 
+  useEffect(() => {
+    // Buscar clientes da API
+    getClients().then((response) => {
+      const clientOptions = response.data.items.map((client: any) => ({
+        value: client.id,
+        label: client.name,
+      }));
+      setClientOptions(clientOptions);
+    }).catch((error) => {
+      console.error('Erro ao buscar clientes:', error);
+    });
+
+    // Buscar endereços da API
+    getAddresses().then((response) => {
+      const addressOptions = response.data.items.map((address: any) => ({
+        value: address.id,
+        label: `${address.street}, ${address.city} - ${address.state}`,
+      }));
+      setAddressOptions(addressOptions);
+    }).catch((error) => {
+      console.error('Erro ao buscar endereços:', error);
+    });
+  }, []);
+
   const editSchema = Yup.object().shape({
     name: Yup.string()
-      .required('Field is required'),
+      .required('Nome é obrigatório'),
     description: Yup.string()
-      .required('Field is required'),
+      .required('Descrição é obrigatória'),
     address: Yup.string()
-      .required('Field is required'),
+      .required('Endereço é obrigatório'),
     client: Yup.string()
-      .required('Field is required'),
+      .required('Cliente é obrigatório'),
   })
 
   const formik = useFormik({
@@ -62,7 +78,24 @@ const SchoolCreateForm: FC<Props> = ({ school, isUserLoading }) => {
     validationSchema: editSchema,
     validateOnChange: true,
     onSubmit: async (values, { setSubmitting }) => {
-      // Handle form submission
+      setSubmitting(true);
+      try {
+        const schoolData: SchoolType = {
+          name: values.name,
+          description: values.description,
+          addressId: values.address,
+          clientId: values.client,
+        };
+        
+        await createSchool(schoolData);
+        alert('Escola criada com sucesso!');
+        formik.resetForm();
+      } catch (ex) {
+        console.error(ex);
+        alert('Houve um erro ao salvar a escola. Por favor, tente novamente.');
+      } finally {
+        setSubmitting(false);
+      }
     },
   })
 
