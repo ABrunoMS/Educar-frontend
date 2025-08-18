@@ -10,9 +10,9 @@ import { ClientDetailsModal } from '@components/list-view/components/modals/Clie
 
 
 const clients: ClientType[] = [
-  { name: 'Cliente - Escola 1', total_accounts: 10, remaining_accounts: 3, partner: 'Parceiro 1' },
-  { name: 'Cliente - Escola 2', total_accounts: 2, remaining_accounts: 0, partner: 'Parceiro 2' },
-  { name: 'Cliente - Escola 3', total_accounts: 63, remaining_accounts: 23, partner: 'Parceiro 3' },
+  { name: 'Cliente - Escola 1', totalAccounts: 10, remainingAccounts: 3, partner: 'Parceiro 1' },
+  { name: 'Cliente - Escola 2', totalAccounts: 2, remainingAccounts: 0, partner: 'Parceiro 2' },
+  { name: 'Cliente - Escola 3', totalAccounts: 63, remainingAccounts: 23, partner: 'Parceiro 3' },
 ]
 
 const ClientListWrapper = () => {
@@ -59,8 +59,8 @@ const ClientListWrapper = () => {
       </a>
     )
   },
-    { Header: 'Total de contas', accessor: 'total_accounts' },
-    { Header: 'Contas restantes', accessor: 'remaining_accounts' },
+    { Header: 'Total de contas', accessor: 'totalAccounts' },
+    { Header: 'Contas restantes', accessor: 'remainingAccounts' },
     { Header: 'Parceiro', accessor: 'partner' },
   ]
 

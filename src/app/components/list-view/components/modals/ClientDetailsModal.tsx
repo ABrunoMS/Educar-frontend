@@ -56,11 +56,11 @@ const ClientDetailsModal: React.FC<Props> = ({ clientId, onClose }) => {
                 </div>
                 <div className='row mb-4'>
                   <div className='col-md-4 fw-bold text-muted'>Total de Contas:</div>
-                  <div className='col-md-8'>{client.total_accounts}</div>
+                  <div className='col-md-8'>{client.totalAccounts}</div>
                 </div>
                 <div className='row mb-4'>
                   <div className='col-md-4 fw-bold text-muted'>Contas Restantes:</div>
-                  <div className='col-md-8'>{client.remaining_accounts}</div>
+                  <div className='col-md-8'>{client.remainingAccounts}</div>
                 </div>
                 {/* Adicione outros campos que desejar */}
               </div>
