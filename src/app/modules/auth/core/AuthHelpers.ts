@@ -29,13 +29,13 @@ const setAuth = (auth: AuthModel) => {
     return
   }
 
-    try {
-    auth.expires_in
+  try {
     const currentTime = Math.floor(Date.now() / 1000) // current time in seconds
     const lsValue = JSON.stringify({
       ...auth,
-      expires_in: auth.expires_in! + currentTime,
-      refresh_expires_in: auth.refresh_expires_in! + currentTime,
+      // Converte a duração em segundos para um timestamp absoluto de expiração
+      expires_in: auth.expires_in ? currentTime + auth.expires_in : undefined,
+      refresh_expires_in: auth.refresh_expires_in ? currentTime + auth.refresh_expires_in : undefined,
     })
     localStorage.setItem(AUTH_LOCAL_STORAGE_KEY, lsValue)
   } catch (error) {
@@ -55,50 +55,47 @@ const removeAuth = () => {
   }
 }
 
-// Helper function to check if the access token is expired
+// Helper para verificar se o token de acesso expirou
 const isTokenExpired = (auth: AuthModel): boolean => {
-  if (!auth || !auth.expires_in) {
+  if (!auth?.expires_in) {
     return true
   }
-  const currentTime = Math.floor(Date.now() / 1000) // current time in seconds
-  return currentTime >= auth.expires_in // Assuming expires_in is in seconds
+  const currentTime = Math.floor(Date.now() / 1000)
+  return currentTime >= auth.expires_in
 }
 
-// Helper function to check if the refresh token is expired
+// Helper para verificar se o refresh token expirou
 const isRefreshTokenExpired = (auth: AuthModel): boolean => {
-  if (!auth || !auth.refresh_expires_in) {
+  if (!auth?.refresh_expires_in) {
     return true
   }
   const currentTime = Math.floor(Date.now() / 1000)
   return currentTime >= auth.refresh_expires_in
 }
 
-// Helper function to refresh the token
+// Função para renovar o token
 const refreshToken = async (auth?: AuthModel): Promise<AuthModel | undefined> => {
   try {
-    const oringinalAuth = auth || await getAuth()
+    const originalAuth = auth || getAuth()
 
-    if (oringinalAuth && oringinalAuth.refresh_token && !isRefreshTokenExpired(oringinalAuth)) {
-      const { data } = await refreshSession(oringinalAuth.refresh_token)
-      const currentTime = Math.floor(Date.now() / 1000) // current time in seconds
-
+    if (originalAuth && originalAuth.refresh_token && !isRefreshTokenExpired(originalAuth)) {
+      const { data } = await refreshSession(originalAuth.refresh_token)
+      
       const newAuth: AuthModel = {
-        ...oringinalAuth,
-        access_token: data.access_token,
-        expires_in: (data.expires_in) ? currentTime + data.expires_in : oringinalAuth.expires_in,
-        refresh_token: data.refresh_token,
-        refresh_expires_in: (data.refresh_expires_in) ? currentTime + data.refresh_expires_in : oringinalAuth.refresh_expires_in,
+        ...originalAuth, // Mantém dados antigos que não vêm na resposta de refresh
+        ...data, // Sobrescreve com os novos tokens e durações
       }
 
-      setAuth(data)
+      // Salva o objeto 'newAuth' completo, e não apenas a resposta 'data'.
+      setAuth(newAuth)
       return newAuth
     } else {
-      console.error('Refresh token expired or not available')
+      console.error('Refresh token expirado ou não disponível. Deslogando.')
       removeAuth()
       return undefined
     }
   } catch (error) {
-    console.error('Token refresh failed', error)
+    console.error('Falha ao renovar o token. Deslogando.', error)
     removeAuth()
     return undefined
   }
@@ -111,12 +108,13 @@ export function setupAxios(axios: any) {
     async (config: { headers: { Authorization: string } }) => {
       let auth = getAuth()
 
-      // Check if the access token is expired and refresh if needed
-      // if (auth && isTokenExpired(auth)) {
-      //   auth = await refreshToken()
-      // }
+      
+      if (auth && isTokenExpired(auth)) {
+        console.log('Token de acesso expirado no interceptor, renovando...')
+        auth = await refreshToken(auth)
+      }
 
-      // If auth exists and access_token is available, add it to the headers
+      // Se o auth (novo ou antigo) existir, adiciona o token ao header
       if (auth && auth.access_token) {
         config.headers.Authorization = `Bearer ${auth.access_token}`
       }
@@ -127,4 +125,4 @@ export function setupAxios(axios: any) {
   )
 }
 
-export { getAuth, setAuth, removeAuth, refreshToken, isTokenExpired, isRefreshTokenExpired, AUTH_LOCAL_STORAGE_KEY }
+export { getAuth, setAuth, removeAuth, refreshToken, isTokenExpired, isRefreshTokenExpired }

@@ -10,7 +10,9 @@ export interface ClientType {
   implantationDate?: string;
   totalAccounts?: number;
   remainingAccounts?: number;
+
   secretaryId?: string;
+
   subSecretary?: string;
   regional?: string;
 }
