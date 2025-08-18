@@ -38,5 +38,8 @@ export const getItem = (id: ID): Promise<Address> =>
 export const createItem = (item: Partial<Address>): Promise<Address> =>
   axios.post(`${GET_ADDRESS_LIST_URL}`, item).then((response) => response.data);
 
+export const createAddress = (item: Partial<Address>): Promise<{ data: { id: string } }> =>
+  axios.post(`${GET_ADDRESS_LIST_URL}`, item);
+
 export const updateItem = (id: ID, item: Partial<Address>): Promise<Address> =>
   axios.put(`${GET_ADDRESS_LIST_URL}/${id}`, item).then((response) => response.data);

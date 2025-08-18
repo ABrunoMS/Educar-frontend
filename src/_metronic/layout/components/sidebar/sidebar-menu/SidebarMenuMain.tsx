@@ -187,25 +187,7 @@ const SidebarMenuMain = () => {
             hasBullet
           />
         </SidebarMenuItemWithSub>
-        <SidebarMenuItemWithSub
-          to='/apps/address-management/'
-          title='Address'
-          fontIcon='bi-archive'
-          icon='delete-folder'
-        >
-          <SidebarMenuItem
-            to='/apps/address-management/addresses'
-            icon='abstract-28'
-            title='Listagem de endereços'
-            hasBullet
-          />
-          <SidebarMenuItem
-            to='/apps/address-management/create'
-            icon='abstract-28'
-            title='Criar endereço'
-            hasBullet
-          />
-        </SidebarMenuItemWithSub>
+
         <SidebarMenuItemWithSub
           to='/apps/class-management/'
           title='Class'
@@ -222,6 +204,25 @@ const SidebarMenuMain = () => {
             to='/apps/class-management/create'
             icon='abstract-28'
             title='Criar classe'
+            hasBullet
+          />
+        </SidebarMenuItemWithSub>
+        <SidebarMenuItemWithSub
+          to='/apps/secretary-management/'
+          title='Secretarias'
+          fontIcon='bi-archive'
+          icon='delete-folder'
+        >
+          <SidebarMenuItem
+            to='/apps/secretary-management/secretaries'
+            icon='abstract-28'
+            title='Listagem de secretarias'
+            hasBullet
+          />
+          <SidebarMenuItem
+            to='/apps/secretary-management/create'
+            icon='abstract-28'
+            title='Criar secretaria'
             hasBullet
           />
         </SidebarMenuItemWithSub>
