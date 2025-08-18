@@ -1,11 +1,13 @@
-import React, { FC, useState} from 'react'
+import React, { FC, useState, useEffect} from 'react'
 import * as Yup from 'yup'
 import {useFormik} from 'formik'
 import Select from 'react-select'
 import { ClientType, ClientContactType, ClientContractType } from '../../../../../../interfaces/Client'
+import { SelectOptions } from '@interfaces/Forms'
 import clsx from 'clsx'
 import { useIntl } from 'react-intl'
 import { createClient, updateClient } from '../../clients-list/core/_requests'
+import { getSecretaries } from '@services/Secretaries'
 import { isNotEmpty } from '@metronic/helpers'
 
 type Props = {
@@ -28,9 +30,7 @@ export const initialClient: ClientType = {
   signatureDate: '',
   implantationDate: '',
   totalAccounts: 0,
-  secretary: '',
-  subSecretary: '',
-  regional: '',
+  secretaryId: '',
 }
 
 const contacts: ClientContactType[] = [
@@ -51,6 +51,7 @@ const options: SelectOptions[] = [
 ]
 
 const ClientCreateForm: FC<Props> = ({client, isUserLoading}) => {
+  const [secretaryOptions, setSecretaryOptions] = useState<SelectOptions[]>([]);
   const [userForEdit] = useState<ClientType>({
     ...client,
     name: client?.name || initialClient.name,
@@ -62,12 +63,23 @@ const ClientCreateForm: FC<Props> = ({client, isUserLoading}) => {
     signatureDate: client?.signatureDate || initialClient.signatureDate,
     implantationDate: client?.implantationDate || initialClient.implantationDate,
     totalAccounts: client?.totalAccounts || initialClient.totalAccounts,
-    secretary: client?.secretary || initialClient.secretary,
-    subSecretary: client?.subSecretary || initialClient.subSecretary,
-    regional: client?.regional || initialClient.regional,
+    secretaryId: client?.secretaryId || initialClient.secretaryId,
   })
 
   const intl = useIntl()
+
+  useEffect(() => {
+    // Buscar secretarias da API
+    getSecretaries().then((response) => {
+      const secretaryOptions = response.data.items.map((secretary: any) => ({
+        value: secretary.id,
+        label: secretary.name,
+      }));
+      setSecretaryOptions(secretaryOptions);
+    }).catch((error) => {
+      console.error('Erro ao buscar secretarias:', error);
+    });
+  }, []);
 
   const editUserSchema = Yup.object().shape({
     name: Yup.string()
@@ -97,12 +109,8 @@ const ClientCreateForm: FC<Props> = ({client, isUserLoading}) => {
     totalAccounts: Yup.number()
       .moreThan(0, 'Bigger than zero')
       .required('Field is required'),
-    secretary: Yup.string()
-      .required('Field is required'),
-    subSecretary: Yup.string()
-      .required('Field is required'),
-    regional: Yup.string()
-      .required('Field is required'),
+    secretaryId: Yup.string()
+      .required('Secretaria é obrigatória'),
   })
 
   const formik = useFormik({
@@ -237,13 +245,38 @@ const ClientCreateForm: FC<Props> = ({client, isUserLoading}) => {
           {renderBasicFieldset('totalAccounts', 'Number of accounts', 'Accounts...', false)}
           
           {/* Secretary */}
-          {renderSelectFieldset('secretary', 'Secretary', 'Secretary...')}
+          <div className=' mb-7'>
+            <label
+              className={clsx(
+                'fw-bold fs-6 mb-2',
+                {'required': true}
+              )}
+            >Secretaria</label>
+            <Select 
+              className={clsx(
+                'react-select-styled react-select-solid mb-3 mb-lg-0',
+                {'is-invalid': formik.getFieldMeta('secretaryId').error}
+              )}
+              classNames={{
+                  control: () => ('border-danger'),
+              }}
+              classNamePrefix='react-select' 
+              options={secretaryOptions}
+              placeholder='Selecione uma secretaria...'
+              defaultValue={secretaryOptions.filter(option => option.value === formik.getFieldProps('secretaryId').value)}
+              name='secretaryId'
+              onChange={(newValue) => updateSelectValue(newValue?.value, 'secretaryId')}
+              isDisabled={formik.isSubmitting || isUserLoading}
+            />
 
-          {/* Sub secretary */}
-          {renderSelectFieldset('subSecretary', 'Sub Secretary', 'Sub Secretary...')}
-
-          {/* Regional */}
-          {renderSelectFieldset('regional', 'Regional', 'Regional...')}
+            {formik.getFieldMeta('secretaryId').touched && formik.getFieldMeta('secretaryId').error && (
+              <div className='fv-plugins-message-container'>
+                <div className='fv-help-block'>
+                  <span role='alert'>{formik.getFieldMeta('secretaryId').error}</span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className='text-center pt-15'>

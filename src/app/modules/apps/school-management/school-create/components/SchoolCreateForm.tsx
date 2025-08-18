@@ -3,6 +3,7 @@ import * as Yup from 'yup'
 import {useFormik} from 'formik'
 import clsx from 'clsx'
 import { useIntl } from 'react-intl'
+import Select from 'react-select'
 import { School, SchoolType } from '@interfaces/School'
 import { SelectOptions } from '@interfaces/Forms'
 import BasicField from '@components/form/BasicField'
@@ -11,6 +12,7 @@ import { getClients } from '@services/Clients'
 import { getAddresses } from '@services/Addresses'
 import { createSchool } from '@services/Schools'
 import { isNotEmpty } from '@metronic/helpers'
+import { AddressModal } from './AddressModal'
 
 type Props = {
   isUserLoading?: boolean
@@ -28,6 +30,7 @@ const initialSchool: School = {
 const SchoolCreateForm: FC<Props> = ({ school, isUserLoading }) => {
   const [clientOptions, setClientOptions] = useState<SelectOptions[]>([]);
   const [addressOptions, setAddressOptions] = useState<SelectOptions[]>([]);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [dialogueForEdit] = useState<School>({
     ...school,
     name: school?.name || initialSchool.name,
@@ -68,10 +71,22 @@ const SchoolCreateForm: FC<Props> = ({ school, isUserLoading }) => {
     description: Yup.string()
       .required('Descrição é obrigatória'),
     address: Yup.string()
-      .required('Endereço é obrigatório'),
+      .optional(),
     client: Yup.string()
       .required('Cliente é obrigatório'),
   })
+
+  const handleAddressCreated = (addressId: string, addressLabel: string) => {
+    // Adicionar o novo endereço às opções
+    const newAddressOption = {
+      value: addressId,
+      label: addressLabel,
+    };
+    setAddressOptions(prev => [...prev, newAddressOption]);
+    
+    // Selecionar automaticamente o novo endereço
+    formik.setFieldValue('address', addressId);
+  }
 
   const formik = useFormik({
     initialValues: dialogueForEdit,
@@ -83,7 +98,7 @@ const SchoolCreateForm: FC<Props> = ({ school, isUserLoading }) => {
         const schoolData: SchoolType = {
           name: values.name,
           description: values.description,
-          addressId: values.address,
+          addressId: values.address || null,
           clientId: values.client,
         };
         
@@ -143,7 +158,41 @@ const SchoolCreateForm: FC<Props> = ({ school, isUserLoading }) => {
           {renderBasicFieldset('description', 'Description', 'Enter description')}
 
           {/* Address */}
-          {renderSelectFieldset('address', 'Address', 'Select a address', addressOptions, false, true)}
+          <div className='fv-row mb-7'>
+            <label className='fw-semibold fs-6 mb-2'>Endereço</label>
+            <div className='d-flex gap-2'>
+              <div className='flex-grow-1'>
+                <Select 
+                  className={clsx(
+                    'react-select-styled react-select-solid mb-3 mb-lg-0',
+                    {'is-invalid': formik.getFieldMeta('address').error}
+                  )}
+                  classNamePrefix='react-select' 
+                  options={addressOptions}
+                  placeholder='Selecione um endereço'
+                  defaultValue={addressOptions.filter(option => option.value === formik.getFieldProps('address').value)}
+                  name='address'
+                  onChange={(newValue) => formik.setFieldValue('address', newValue?.value)}
+                  isDisabled={formik.isSubmitting}
+                />
+                {formik.getFieldMeta('address').touched && formik.getFieldMeta('address').error && (
+                  <div className='fv-plugins-message-container'>
+                    <div className='fv-help-block'>
+                      <span role='alert'>{formik.getFieldMeta('address').error}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <button
+                type='button'
+                className='btn btn-sm btn-light-primary'
+                onClick={() => setIsAddressModalOpen(true)}
+              >
+                <i className='fas fa-plus'></i>
+                Novo
+              </button>
+            </div>
+          </div>
 
           {/* Client */}
           {renderSelectFieldset('client', 'Client', 'Select a client', clientOptions, false, true)}
@@ -165,6 +214,13 @@ const SchoolCreateForm: FC<Props> = ({ school, isUserLoading }) => {
           </button>
         </div>
       </form>
+
+      {/* Address Modal */}
+      <AddressModal
+        isOpen={isAddressModalOpen}
+        onClose={() => setIsAddressModalOpen(false)}
+        onAddressCreated={handleAddressCreated}
+      />
     </>
   )
 }
