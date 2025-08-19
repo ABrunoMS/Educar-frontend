@@ -41,3 +41,7 @@ export const createClient = (client: ClientType): Promise<ClientType> => {
 export const updateClient = (client: ClientType): Promise<ClientType> => {
   return axios.put<ClientType>(`${CLIENTS_URL}/${client.id}`, client).then((response) => response.data);
 };
+
+export const getClientById = (clientId: ID): Promise<ClientType> => {
+  return axios.get<ClientType>(`${CLIENTS_URL}/${clientId}`).then((response) => response.data);
+};

@@ -5,6 +5,7 @@ import { jwtDecode } from "jwt-decode";
 
 const AUTH_API_URL = import.meta.env.VITE_AUTH_BASE_URL;
 const API_URL = import.meta.env.VITE_API_BASE_URL;
+const axiosAuth = axios.create();
 
 export const GET_USER_BY_ACCESSTOKEN_URL = `${AUTH_API_URL}/protocol/openid-connect/userinfo`;
 export const LOGIN_URL = `${AUTH_API_URL}/protocol/openid-connect/token`;
@@ -33,7 +34,7 @@ export interface JWTUser {
 
 // Server should return AuthModel
 export function login(email: string, password: string) {
-  const callback = axios.post<AuthModel>(LOGIN_URL, {
+  const callback = axiosAuth.post<AuthModel>(LOGIN_URL, {
     grant_type: 'password',
     username: email,
     password,
@@ -49,11 +50,11 @@ export function login(email: string, password: string) {
 }
 
 export function refreshSession(refreshToken: string) {
-  const callback = axios.post<AuthModel>(LOGIN_URL, {
+  const callback = axiosAuth.post<AuthModel>(LOGIN_URL, new URLSearchParams({
     grant_type: 'refresh_token',
     refresh_token: refreshToken,
     client_id: 'educar-frontend'
-  },
+  }),
   {
     headers: {
       "Content-type":"application/x-www-form-urlencoded"
