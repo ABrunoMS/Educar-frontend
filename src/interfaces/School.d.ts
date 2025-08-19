@@ -10,7 +10,7 @@ export interface SchoolType {
   id?: string;
   name?: string;
   description?: string;
-  addressId?: string;
+  addressId?: string | null;
   clientId?: string;
   address?: {
     id: string;

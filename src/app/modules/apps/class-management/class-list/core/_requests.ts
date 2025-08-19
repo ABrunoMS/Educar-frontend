@@ -4,7 +4,7 @@ import { Class } from '@interfaces/Class';
 import { PaginatedResponse } from '@contexts/PaginationContext';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const GET_CLASS_LIST_URL = `${API_URL}/Classes`;
+const GET_CLASS_LIST_URL = `${API_URL}/api/Classes`;
 
 export const getList = async (
   page: number,
@@ -17,7 +17,7 @@ export const getList = async (
   const response: AxiosResponse<PaginatedResponse<Class>> = await axios.get(
     `${GET_CLASS_LIST_URL}`,
     {
-      params: { page_number: page, page_size: pageSize },
+      params: { PageNumber: page, PageSize: pageSize },
     }
   );
   return { ...response.data, pageNumber: page };

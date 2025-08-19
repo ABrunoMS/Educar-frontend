@@ -2,8 +2,7 @@ import React, { FC, useState, useEffect} from 'react'
 import * as Yup from 'yup'
 import {useFormik} from 'formik'
 import Select from 'react-select'
-import { ClientType, ClientContactType, ClientContractType } from '../../../../../../interfaces/Client'
-import { SelectOptions } from '@interfaces/Forms'
+import { ClientType } from '../../../../../../interfaces/Client'
 import clsx from 'clsx'
 import { useIntl } from 'react-intl'
 import { createClient, updateClient } from '../../clients-list/core/_requests'
@@ -18,6 +17,16 @@ type Props = {
 type SelectOptions = {
   value: string;
   label: string;
+}
+
+type ClientContactType = {
+  name: string;
+  id: string;
+}
+
+type ClientContractType = {
+  name: string;
+  id: string;
 }
 
 export const initialClient: ClientType = {
