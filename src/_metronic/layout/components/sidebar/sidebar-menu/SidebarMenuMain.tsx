@@ -110,26 +110,25 @@ const SidebarMenuMain = () => {
           />
         </SidebarMenuItemWithSub>
 
-
+        {/* CLIENTS RENOMEADO PARA SECRETARIAS NO SIDEBAR */}
         <SidebarMenuItemWithSub
           to='/apps/client-management/'
-          title='Clients'
+          title='Secretarias'
           fontIcon='bi-archive'
           icon='delete-folder'
         >
           <SidebarMenuItem
             to='/apps/client-management/clients'
-            // icon='abstract-28'
-            title='Listagem de cliente'
+            title='Listagem de secretarias'
             hasBullet
           />
           <SidebarMenuItem
             to='/apps/client-management/create'
-            // icon='abstract-28'
-            title='Criar cliente'
+            title='Criar secretaria'
             hasBullet
           />
         </SidebarMenuItemWithSub>
+
         <SidebarMenuItemWithSub
           to='/apps/account-management/'
           title='Accounts'
@@ -207,25 +206,7 @@ const SidebarMenuMain = () => {
             hasBullet
           />
         </SidebarMenuItemWithSub>
-        <SidebarMenuItemWithSub
-          to='/apps/secretary-management/'
-          title='Secretarias'
-          fontIcon='bi-archive'
-          icon='delete-folder'
-        >
-          <SidebarMenuItem
-            to='/apps/secretary-management/secretaries'
-            icon='abstract-28'
-            title='Listagem de secretarias'
-            hasBullet
-          />
-          <SidebarMenuItem
-            to='/apps/secretary-management/create'
-            icon='abstract-28'
-            title='Criar secretaria'
-            hasBullet
-          />
-        </SidebarMenuItemWithSub>
+
         <SidebarMenuItemWithSub
           to='/apps/dialogue-management/'
           title='Dialogue'
@@ -310,18 +291,6 @@ const SidebarMenuMain = () => {
         title='Selecionar organização'
         fontIcon='bi-layers'
       />
-      {/* <div className='menu-item'>
-        <a
-          target='_blank'
-          className='menu-link'
-          href={import.meta.env.VITE_APP_PREVIEW_DOCS_URL + '/changelog'}
-        >
-          <span className='menu-icon'>
-            <KTIcon iconName='code' className='fs-2' />
-          </span>
-          <span className='menu-title'>Changelog {import.meta.env.VITE_APP_VERSION}</span>
-        </a>
-      </div> */}
     </>
   )
 }
