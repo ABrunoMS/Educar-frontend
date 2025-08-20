@@ -1,12 +1,7 @@
 import React from "react"
 import clsx from "clsx";
 import { FormikProps } from "formik";
-import Select, {
-  OnChangeValue,
-  SingleValue,
-  MultiValue
-} from "react-select"
-
+import Select from "react-select"
 import { SelectOptions } from '@interfaces/Forms'
 
 interface FieldProps {
@@ -16,6 +11,7 @@ interface FieldProps {
   required: boolean;
   disabled?: boolean;
   multiselect: boolean;
+  onChange?: (value: string | string[]) => void; // Tipagem mais específica
   options: SelectOptions[];
   formik: FormikProps<any>;
 }
@@ -28,32 +24,41 @@ const SelectField: React.FC<FieldProps> = ({
   disabled,
   formik,
   options,
-  multiselect
+  multiselect,
+  onChange // <-- Recebendo a prop
 }) => {
-  const getDefaultSelectValues = (name: string): SelectOptions[] => {
-    const initialValues = formik.getFieldProps(name).value
-    return options.filter(option => initialValues.includes(option.value))
-  }
-
-  const updateSelectValue = (newValue: SingleValue<SelectOptions> | MultiValue<SelectOptions>) => {
-    const option = newValue as SelectOptions;
-    formik.setFieldValue(fieldName, option.value)
-  }
-
-  const updateMultiSelectValue = (newValue: MultiValue<SelectOptions>) => {
-    formik.setFieldValue(fieldName, newValue!.map(option => option.value))
-  }
-
-  const updateSelectValues = (newValue: MultiValue<SelectOptions> | SingleValue<SelectOptions>) => {
-    if (Array.isArray(newValue) && multiselect) {
-      return updateMultiSelectValue(newValue)
+  // Esta função agora será usada para a prop 'value'
+  const getCurrentValues = (): SelectOptions | SelectOptions[] | null => {
+    const formikValue = formik.getFieldProps(fieldName).value;
+    if (multiselect) {
+      // Para multiselect, formikValue é um array de strings (ex: ['id1', 'id2'])
+      return options.filter(option => formikValue.includes(option.value));
     }
-  
-    return updateSelectValue(newValue)
+    // Para select único, formikValue é uma única string (ex: 'id1')
+    return options.find(option => option.value === formikValue) || null;
+  }
+
+  const handleUpdate = (newValue: any) => {
+    let finalValue: string | string[];
+
+    // Lógica para extrair o(s) valor(es) para o Formik
+    if (multiselect) {
+      finalValue = newValue ? newValue.map((option: SelectOptions) => option.value) : [];
+    } else {
+      finalValue = newValue ? newValue.value : '';
+    }
+
+    // 1. Atualiza o Formik
+    formik.setFieldValue(fieldName, finalValue);
+
+    // 2. (CORREÇÃO DO BUG) Chama a função onChange customizada, se ela existir
+    if (onChange) {
+      onChange(finalValue);
+    }
   }
 
   return (
-    <div className=' mb-7'>
+    <div className='mb-7'>
       <label
         className={clsx(
           'fw-bold fs-6 mb-2',
@@ -63,14 +68,15 @@ const SelectField: React.FC<FieldProps> = ({
       <Select 
         className={clsx(
           'react-select-styled react-select-solid mb-3 mb-lg-0',
-          {'is-invalid': formik.getFieldMeta(fieldName).error}
+          {'is-invalid': formik.getFieldMeta(fieldName).touched && formik.getFieldMeta(fieldName).error}
         )}
         classNamePrefix='react-select' 
         options={options}
         placeholder={placeholder}
-        defaultValue={getDefaultSelectValues(fieldName)}
+        // MELHORIA: Usando 'value' para ser um componente controlado
+        value={getCurrentValues()}
         name={fieldName}
-        onChange={(newValue) => updateSelectValues(newValue)}
+        onChange={handleUpdate} // Usando a nova função unificada
         isMulti={multiselect}
         isDisabled={formik.isSubmitting || disabled}
       />

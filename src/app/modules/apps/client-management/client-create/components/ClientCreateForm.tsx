@@ -1,6 +1,8 @@
 import React, { FC, useState, useEffect } from 'react'
 import * as Yup from 'yup'
-import { useFormik } from 'formik'
+import {useFormik} from 'formik'
+import Select from 'react-select'
+import { ClientType } from '../../../../../../interfaces/Client'
 import clsx from 'clsx'
 import { useIntl } from 'react-intl'
 import Select from 'react-select'
@@ -16,6 +18,18 @@ type Props = {
   isUserLoading?: boolean
   client?: ClientType
 }
+
+
+type SelectOptions = {
+  value: string;
+  label: string;
+}
+
+type ClientContactType = {
+  name: string;
+  id: string;
+}
+
 
 export const initialClient: ClientType = {
   id: '',

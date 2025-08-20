@@ -15,6 +15,24 @@ export const getSchoolById = (id: string): Promise<{ data: SchoolType }> => {
   return axios.get(`${SCHOOLS_URL}/${id}`);
 };
 
+// ===============================================
+// ## NOVA FUNÇÃO ADICIONADA AQUI ##
+// ===============================================
+/**
+ * Busca a lista de escolas que pertencem a uma SECRETARIA (Cliente) específica.
+ * @param clientId O ID da Secretaria (Cliente)
+ * @returns Uma lista de escolas.
+ */
+export const getSchoolsByClient = (
+  clientId: string,
+  // PageSize alto para carregar todas as escolas no dropdown
+): Promise<{ data: PaginatedResponse<SchoolType> }> => { // <-- 1. TIPO DE RESPOSTA CORRIGIDO
+  return axios.get(`${SCHOOLS_URL}/client/${clientId}`, {
+    // 2. PARÂMETROS DE PAGINAÇÃO ADICIONADOS
+    params: { PageNumber: 1, PageSize: 1000},
+  });
+};
+
 export const createSchool = (school: SchoolType): Promise<{ data: { id: string } }> => {
   return axios.post(SCHOOLS_URL, school);
 };
