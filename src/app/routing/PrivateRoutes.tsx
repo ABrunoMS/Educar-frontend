@@ -33,7 +33,6 @@ const PrivateRoutes = () => {
   const ContractPage = lazy(() => import('../modules/apps/contract-management/ContractPage'))
   const GamePage = lazy(() => import('../modules/apps/game-management/GamePage'))
   const ClassPage = lazy(() => import('../modules/apps/class-management/ClassPage'))
-  const SecretaryPage = lazy(() => import('../modules/apps/secretary-management/SecretaryPage'))
   const GradePage = lazy(() => import('../modules/apps/grade-management/GradePage'))
   const DialoguePage = lazy(() => import('../modules/apps/dialogue-management/DialoguePage'))
   const ItemPage = lazy(() => import('../modules/apps/item-management/ItemPage'))
@@ -62,6 +61,8 @@ const PrivateRoutes = () => {
             </PrivateRoute>
           }
         />
+
+        {/* Client (no sidebar aparecerá como Secretarias) */}
         <Route
           path='apps/client-management/*'
           element={
@@ -72,6 +73,7 @@ const PrivateRoutes = () => {
             </PrivateRoute>
           }
         />
+
         <Route
           path='apps/contract-management/*'
           element={
@@ -92,7 +94,6 @@ const PrivateRoutes = () => {
             </PrivateRoute>
           }
         />
-
         <Route
           path='apps/class-management/*'
           element={
@@ -103,16 +104,9 @@ const PrivateRoutes = () => {
             </PrivateRoute>
           }
         />
-        <Route
-          path='apps/secretary-management/*'
-          element={
-            <PrivateRoute rolesAllowed={['Admin']}>
-              <SuspensedView>
-                <SecretaryPage />
-              </SuspensedView>
-            </PrivateRoute>
-          }
-        />
+
+        {/* rota de secretary-management removida */}
+
         <Route
           path='apps/grade-management/*'
           element={

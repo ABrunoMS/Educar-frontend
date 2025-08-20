@@ -8,6 +8,7 @@ interface FieldProps {
   placeholder: string | null;
   required: boolean;
   formik: FormikProps<any>;
+    type?: 'text' | 'number' | 'password';
 }
 
 const BasicField: React.FC<FieldProps> = ({
@@ -15,7 +16,8 @@ const BasicField: React.FC<FieldProps> = ({
   label,
   placeholder,
   required,
-  formik
+  formik,
+   type = 'text',
 }) => (
   <div className='fv-row mb-7'>
     <label
@@ -27,7 +29,7 @@ const BasicField: React.FC<FieldProps> = ({
     <input
       placeholder={placeholder || undefined}
       {...formik.getFieldProps(fieldName)}
-      type='text'
+      type={type}
       name={fieldName}
       className={clsx(
         'form-control form-control-solid mb-3 mb-lg-0',

@@ -162,18 +162,57 @@ const SchoolCreateForm: FC<Props> = ({ school, isUserLoading }) => {
             <label className='fw-semibold fs-6 mb-2'>Endereço</label>
             <div className='d-flex gap-2'>
               <div className='flex-grow-1'>
-                <Select 
+                <Select
                   className={clsx(
                     'react-select-styled react-select-solid mb-3 mb-lg-0',
                     {'is-invalid': formik.getFieldMeta('address').error}
                   )}
-                  classNamePrefix='react-select' 
+                  classNamePrefix='react-select'
                   options={addressOptions}
                   placeholder='Selecione um endereço'
-                  defaultValue={addressOptions.filter(option => option.value === formik.getFieldProps('address').value)}
+                  value={addressOptions.find(option => option.value === formik.values.address)}
                   name='address'
-                  onChange={(newValue) => formik.setFieldValue('address', newValue?.value)}
+                  onChange={newValue => formik.setFieldValue('address', newValue?.value)}
                   isDisabled={formik.isSubmitting}
+                  styles={{
+                    container: base => ({ ...base, width: '100%' }),
+                    control: base => ({
+                      ...base,
+                      minHeight: '38px',
+                      backgroundColor: 'var(--bs-input-bg, #f5f8fa)',
+                      borderColor: formik.getFieldMeta('address').error ? 'var(--bs-danger, #f1416c)' : 'var(--bs-input-border, #e4e6ef)',
+                      boxShadow: 'none',
+                      '&:hover': { borderColor: formik.getFieldMeta('address').error ? 'var(--bs-danger, #f1416c)' : 'var(--bs-primary, #009ef7)' },
+                    }),
+                    singleValue: base => ({ ...base, color: 'var(--bs-input-color, #181c32)' }),
+                    menu: base => ({ ...base, zIndex: 9999, backgroundColor: 'var(--bs-input-bg, #fff)' }),
+                    option: (base, state) => ({
+                      ...base,
+                      backgroundColor: state.isSelected
+                        ? 'var(--bs-primary, #009ef7)'
+                        : state.isFocused
+                        ? 'var(--bs-primary-light, #e7f1ff)'
+                        : 'var(--bs-input-bg, #fff)',
+                      color: state.isSelected ? 'var(--bs-white, #fff)' : 'var(--bs-input-color, #181c32)',
+                      fontWeight: state.isSelected ? 600 : 400,
+                    }),
+                    placeholder: base => ({ ...base, color: 'var(--bs-input-placeholder-color, #b5b5c3)' }),
+                    dropdownIndicator: base => ({ ...base, color: 'var(--bs-primary, #009ef7)' }),
+                    indicatorSeparator: base => ({ ...base, backgroundColor: 'var(--bs-input-border, #e4e6ef)' }),
+                  }}
+                  theme={theme => ({
+                    ...theme,
+                    borderRadius: 6,
+                    colors: {
+                      ...theme.colors,
+                      primary25: 'var(--bs-primary-light, #e7f1ff)',
+                      primary: 'var(--bs-primary, #009ef7)',
+                      neutral0: 'var(--bs-input-bg, #fff)',
+                      neutral20: 'var(--bs-input-border, #e4e6ef)',
+                      neutral30: 'var(--bs-primary, #009ef7)',
+                      neutral80: 'var(--bs-input-color, #181c32)',
+                    },
+                  })}
                 />
                 {formik.getFieldMeta('address').touched && formik.getFieldMeta('address').error && (
                   <div className='fv-plugins-message-container'>

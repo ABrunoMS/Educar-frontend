@@ -11,7 +11,7 @@ const ClientsPage = () => {
           path='clients'
           element={
             <>
-              <PageTitle>Listagem de clientes</PageTitle>
+              <PageTitle>Listagem de secretarias</PageTitle>
               <ClientListWrapper />
             </>
           }
@@ -20,7 +20,7 @@ const ClientsPage = () => {
           path='create'
           element={
             <>
-              <PageTitle>Criar cliente</PageTitle>
+              <PageTitle>Criar secretaria</PageTitle>
               <ClientCreateWrapper />
             </>
           }
