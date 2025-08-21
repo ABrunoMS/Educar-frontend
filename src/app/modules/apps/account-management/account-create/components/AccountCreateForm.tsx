@@ -1,4 +1,4 @@
-import React, { FC, useState} from 'react'
+import React, { FC, useState, useEffect} from 'react'
 import * as Yup from 'yup'
 import {useFormik} from 'formik'
 import Select from 'react-select'
@@ -8,12 +8,17 @@ import { useIntl } from 'react-intl'
 import BasicField from '@components/form/BasicField'
 import { SelectField } from '@components/form'
 import { SelectOptions } from '@interfaces/Forms'
+import { getClients } from '@services/Clients';
+import { getSchoolsByClient } from '@services/Schools';
+import { getClassesBySchools } from '@services/Classes';
+import { createAccount } from '@services/Accounts';
 
 type Props = {
   isUserLoading?: boolean
   account?: Account
   schoolOptions?: { value: string; label: string }[]
   classOptions?: { value: string; label: string }[]
+  onFormSubmit: () => void
 }
 
 const initialAccount: Account = {
@@ -25,39 +30,24 @@ const initialAccount: Account = {
   eventAverageScore: 0,
   stars: 0,
   clientId: '',
-  role: 'Student', // Default role
-  schoolId: '',
+  role: 'Student',
+  schoolIds: [], 
   classIds: []
 }
 
-const clientOptions: SelectOptions[] = [
-  { value: '1', label: 'Client 1' },
-  { value: '2', label: 'Client 2' },
-  { value: '3', label: 'Client 3' },
-  { value: '4', label: 'Client 4' },
-]
-
-const schoolOptions: SelectOptions[] = [
-  { value: '1', label: 'Escola 1' },
-  { value: '2', label: 'Escola 2' },
-  { value: '3', label: 'Escola 3' },
-  { value: '4', label: 'Escola 4' },
-]
-
-const classOptions: SelectOptions[] = [
-  { value: '1', label: 'Classe 1' },
-  { value: '2', label: 'Classe 2' },
-  { value: '3', label: 'Classe 3' },
-  { value: '4', label: 'Classe 4' },
-]
 
 const AccountCreateForm: FC<Props> = ({ account, isUserLoading }) => {
   const [accountForEdit] = useState<Account>({
     ...initialAccount,
     ...account
   })
-
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(account?.clientId || null);
+  const [selectedSchoolIds, setSelectedSchoolIds] = useState<string[]>(account?.schoolIds || [])
+  const [clientOptions, setClientOptions] = useState<SelectOptions[]>([])
+  const [schoolOptions, setSchoolOptions] = useState<SelectOptions[]>([])
+  const [classOptions, setClassOptions] = useState<SelectOptions[]>([])
   const intl = useIntl()
+
 
   const editAccountSchema = Yup.object().shape({
     name: Yup.string().required('Field is required'),
@@ -68,20 +58,28 @@ const AccountCreateForm: FC<Props> = ({ account, isUserLoading }) => {
     stars: Yup.number().min(0, 'Must be 0 or higher').required('Field is required'),
     clientId: Yup.string().required('Field is required'),
     role: Yup.string().required('Field is required'),
-    schoolId: Yup.string().required('Field is required'),
-    classIds: Yup.array().of(Yup.string()).min(1, 'Field is required')
+    schoolIds: Yup.array().of(Yup.string()).min(1,'Field is required'),
+    classIds: Yup.array().of(Yup.string()).optional()
   })
 
   const formik = useFormik({
     initialValues: accountForEdit,
     validationSchema: editAccountSchema,
-    validateOnChange: true,
-    onSubmit: async (values, { setSubmitting }) => {
-      // Handle form submission
-      console.log('Form values:', values)
-      setSubmitting(false)
-    }
-  })
+    enableReinitialize: true,
+    onSubmit: async (values, { setSubmitting, resetForm }) => {
+      setSubmitting(true);
+      try {
+        await createAccount(values);
+        alert('Usuário criado com sucesso!');
+        resetForm();
+      } catch (ex) {
+        console.error(ex);
+        alert('Houve um erro ao salvar o usuário.');
+      } finally {
+        setSubmitting(false);
+      }
+    },
+  });
 
   const renderBasicFieldset = (
     fieldName: string,
@@ -116,6 +114,35 @@ const AccountCreateForm: FC<Props> = ({ account, isUserLoading }) => {
     />
   )
 
+  useEffect(() => {
+    getClients().then((res) => {
+      const options = res.data.items.map((c: any) => ({ value: c.id, label: c.name }));
+      setClientOptions(options);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (selectedClientId) {
+      getSchoolsByClient(selectedClientId).then((res) => {
+        const options = res.data.items.map((s: any) => ({ value: s.id, label: s.name }));
+        setSchoolOptions(options);
+      });
+    } else {
+      setSchoolOptions([]);
+    }
+  }, [selectedClientId]);
+
+  useEffect(() => {
+    if (selectedSchoolIds && selectedSchoolIds.length > 0) {
+      getClassesBySchools(selectedSchoolIds).then((res) => {
+        const options = res.data.map((c: any) => ({ value: c.id, label: c.name }));
+        setClassOptions(options);
+      });
+    } else {
+      setClassOptions([]);
+    }
+  }, [selectedSchoolIds]);
+
   return (
     <>
       <form id='kt_modal_add_account_form' className='form' onSubmit={formik.handleSubmit} noValidate>
@@ -123,12 +150,60 @@ const AccountCreateForm: FC<Props> = ({ account, isUserLoading }) => {
           {renderBasicFieldset('name', 'Name', 'Enter account name')}
           {renderBasicFieldset('email', 'Email', 'Enter email address')}
           {renderBasicFieldset('registrationNumber', 'Registration Number', 'Enter registration number')}
-          {renderSelectFieldset('clientId', 'Client', 'Escolha uma cliente', clientOptions)}
+          {/*{renderSelectFieldset('clientId', 'Client', 'Escolha uma cliente', clientOptions)}*/}
           {renderBasicFieldset('averageScore', 'Average Score', 'Enter average score')}
           {renderBasicFieldset('eventAverageScore', 'Event Average Score', 'Enter event average score')}
           {renderBasicFieldset('stars', 'Stars', 'Enter stars')}
-          {renderSelectFieldset('schoolId', 'School', 'Escolha uma escola', schoolOptions)}
-          {renderSelectFieldset('classIds', 'Classes', 'Escolha pelo menos uma classe', classOptions, true)}
+          {/*{renderSelectFieldset('schoolId', 'School', 'Escolha uma escola', schoolOptions)}*/}
+          {/*{renderSelectFieldset('classIds', 'Classes', 'Escolha pelo menos uma classe', classOptions, true)}*/}
+                 
+          <SelectField
+            fieldName='clientId'
+            label='Secretaria'
+            placeholder='Selecione uma secretaria'
+            options={clientOptions}
+            formik={formik}
+            multiselect={false}
+            required={true}
+            onChange={(value) => {
+              if (typeof value === 'string') {
+                setSelectedClientId(value);
+                formik.setFieldValue('schoolIds', []);
+                formik.setFieldValue('classIds', []);
+                setSelectedSchoolIds([]);
+              }
+            }}
+          />
+
+          <SelectField
+            fieldName='schoolIds'
+            label='Escolas'
+            placeholder={selectedClientId ? 'Selecione uma ou mais escolas' : 'Selecione uma secretaria primeiro'}
+            options={schoolOptions}
+            formik={formik}
+            multiselect={true}
+            disabled={!selectedClientId}
+            required={false}
+            onChange={(value) => {
+              if (Array.isArray(value)) {
+                setSelectedSchoolIds(value);
+                formik.setFieldValue('classIds', []);
+              }
+            }}
+          />
+
+          <SelectField
+            fieldName='classIds'
+            label='Turmas (Opcional)'
+            placeholder={selectedSchoolIds.length > 0 ? 'Selecione uma ou mais turmas' : 'Selecione uma escola primeiro'}
+            options={classOptions}
+            formik={formik}
+            multiselect={true}
+            required={false}
+            disabled={selectedSchoolIds.length === 0}
+          />
+
+
           <div className='mb-7'>
             <label className='required fw-bold fs-6 mb-5'>Role</label>
             <div className='d-flex fv-row'>
