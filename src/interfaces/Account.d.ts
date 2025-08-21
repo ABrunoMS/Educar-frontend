@@ -8,6 +8,6 @@ export interface Account {
   stars: 0;
   clientId: string;
   role: 'Admin' | 'Teacher' | 'Student';
-  schoolId: string;
+  schoolIds: string[];
   classIds: string[];
 }

@@ -6,7 +6,10 @@ type Props = {
   title: string
   placeholder: string
   onClose: () => void
-  onCreate: (value: string) => void
+  onCreate: (value: string, label?: string ) => void
+  subsecretariaOptions?: { value: string; label: string }[]
+  selectedSubsecretaria?: string
+  onSelectSubsecretaria?: (value: string) => void
 }
 
 const CreateOptionModal: React.FC<Props> = ({ show, title, placeholder, onClose, onCreate }) => {

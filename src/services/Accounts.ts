@@ -40,3 +40,7 @@ export function getAccountsByClient(clientId: string, page = 1, pageSize = 1000)
     params: { PageNumber: page, PageSize: pageSize },
   });
 }
+
+export const createAccount = (accountData: Account): Promise<any> => {
+  return axios.post(ACCOUNTS_URL, accountData);
+};
