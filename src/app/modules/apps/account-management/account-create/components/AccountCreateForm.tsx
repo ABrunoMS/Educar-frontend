@@ -58,7 +58,11 @@ const AccountCreateForm: FC<Props> = ({ account, isUserLoading }) => {
     stars: Yup.number().min(0, 'Must be 0 or higher').required('Field is required'),
     clientId: Yup.string().required('Field is required'),
     role: Yup.string().required('Field is required'),
-    schoolIds: Yup.array().of(Yup.string()).min(1,'Field is required'),
+    schoolIds: Yup.array().of(Yup.string()).when('role', {
+    is: (role: string) => role !== 'Admin',
+    then: (schema) => schema.min(1, 'Field is required'),
+    otherwise: (schema) => schema.optional(),
+  }),
     classIds: Yup.array().of(Yup.string()).optional()
   })
 

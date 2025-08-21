@@ -5,7 +5,7 @@ const API_URL = import.meta.env.VITE_API_BASE_URL;
 const CLASSES_URL = `${API_URL}/api/Classes`;
 
 export function createClass(classItem: Class) {
-  return axios.post<Class>(`${CLASSES_URL}/Classes`, classItem);
+  return axios.post<Class>(`${CLASSES_URL}`, classItem);
 }
 
 export function editClass(id: string, classItem: Class) {
