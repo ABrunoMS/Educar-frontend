@@ -10,4 +10,6 @@ export interface Account {
   role: 'Admin' | 'Teacher' | 'Student';
   schoolIds: string[];
   classIds: string[];
+  password?: string;
+  confirmPassword?: string;
 }

@@ -25,6 +25,8 @@ const initialAccount: Account = {
   avatar: '',
   name: '',
   email: '',
+  password: '',
+  confirmPassword: '',
   registrationNumber: '',
   averageScore: 0,
   eventAverageScore: 0,
@@ -51,6 +53,12 @@ const AccountCreateForm: FC<Props> = ({ account, isUserLoading }) => {
 
   const editAccountSchema = Yup.object().shape({
     name: Yup.string().required('Field is required'),
+    password: Yup.string()
+    .min(8, 'A senha deve ter no mínimo 8 caracteres')
+    .required('A senha é obrigatória'),
+    confirmPassword: Yup.string()
+    .oneOf([Yup.ref('password')], 'As senhas devem ser iguais')
+    .required('A confirmação de senha é obrigatória'),
     email: Yup.string().email('Invalid email').required('Field is required'),
     registrationNumber: Yup.string().required('Field is required'),
     averageScore: Yup.number().min(0, 'Must be 0 or higher').required('Field is required'),
@@ -89,7 +97,8 @@ const AccountCreateForm: FC<Props> = ({ account, isUserLoading }) => {
     fieldName: string,
     label: string,
     placeholder: string | null,
-    required: boolean = true
+    required: boolean = true,
+    type: 'text' | 'password' | 'number' = 'text'
   ) =>
   <BasicField
     fieldName={fieldName}
@@ -97,6 +106,7 @@ const AccountCreateForm: FC<Props> = ({ account, isUserLoading }) => {
     placeholder={placeholder}
     required={required}
     formik={formik}
+    type={type}
   />
 
   const renderSelectFieldset = (
@@ -158,6 +168,8 @@ const AccountCreateForm: FC<Props> = ({ account, isUserLoading }) => {
           {renderBasicFieldset('averageScore', 'Average Score', 'Enter average score')}
           {renderBasicFieldset('eventAverageScore', 'Event Average Score', 'Enter event average score')}
           {renderBasicFieldset('stars', 'Stars', 'Enter stars')}
+          {renderBasicFieldset('password', 'Senha', 'Insira a senha', true, 'password')}
+          {renderBasicFieldset('confirmPassword', 'Confirmar Senha', 'Confirme a senha', true, 'password')}
           {/*{renderSelectFieldset('schoolId', 'School', 'Escolha uma escola', schoolOptions)}*/}
           {/*{renderSelectFieldset('classIds', 'Classes', 'Escolha pelo menos uma classe', classOptions, true)}*/}
                  
