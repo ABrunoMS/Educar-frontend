@@ -1,6 +1,7 @@
 export interface Account {
   avatar?: string;
   name: string;
+  lastName: string;
   email: string;
   registrationNumber: string;
   averageScore: 0;

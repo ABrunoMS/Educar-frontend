@@ -24,6 +24,7 @@ type Props = {
 const initialAccount: Account = {
   avatar: '',
   name: '',
+  lastName: '',
   email: '',
   password: '',
   confirmPassword: '',
@@ -53,6 +54,7 @@ const AccountCreateForm: FC<Props> = ({ account, isUserLoading }) => {
 
   const editAccountSchema = Yup.object().shape({
     name: Yup.string().required('Field is required'),
+    lastName: Yup.string().required('Field is required'),
     password: Yup.string()
     .min(8, 'A senha deve ter no mínimo 8 caracteres')
     .required('A senha é obrigatória'),
@@ -162,6 +164,7 @@ const AccountCreateForm: FC<Props> = ({ account, isUserLoading }) => {
       <form id='kt_modal_add_account_form' className='form' onSubmit={formik.handleSubmit} noValidate>
         <div className='d-flex flex-column me-n7 pe-7'>
           {renderBasicFieldset('name', 'Name', 'Enter account name')}
+          {renderBasicFieldset('lastName', 'Sobrenome', 'Insira o sobrenome')}
           {renderBasicFieldset('email', 'Email', 'Enter email address')}
           {renderBasicFieldset('registrationNumber', 'Registration Number', 'Enter registration number')}
           {/*{renderSelectFieldset('clientId', 'Client', 'Escolha uma cliente', clientOptions)}*/}
