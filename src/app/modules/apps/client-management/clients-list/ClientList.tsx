@@ -6,7 +6,7 @@ import { Column } from 'react-table'
 import { deleteClient, getList } from './core/_requests'
 import { PaginatedResponse, usePagination } from '@contexts/PaginationContext'
 import { useState } from 'react'
-import { ClientDetailsModal } from '@components/list-view/components/modals/ClientDetailsModal'
+import ClientDetailsModal from '@components/list-view/components/modals/ClientDetailsModal'
 
 
 const clients: ClientType[] = [

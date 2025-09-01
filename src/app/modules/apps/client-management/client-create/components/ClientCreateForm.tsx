@@ -42,30 +42,41 @@ export const initialClient: ClientType = {
   signatureDate: '',
   implantationDate: '',
   totalAccounts: 0,
-  secretaryId: '',
   subSecretary: '',
   regional: '',
 }
 
 const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
-  const [subsecretariaOptions, setSubsecretariaOptions] = useState<SelectOptions[]>([])
-  const [regionalOptions, setRegionalOptions] = useState<SelectOptions[]>([])
+  // Estrutura hierárquica dinâmica
+  const [subsecretarias, setSubsecretarias] = useState<{
+    value: string
+    label: string
+    regionais: { value: string; label: string }[]
+  }[]>([])
   const [showSubsecretariaModal, setShowSubsecretariaModal] = useState(false)
   const [showRegionalModal, setShowRegionalModal] = useState(false)
-  const [newSubsecretaria, setNewSubsecretaria] = useState('')
-  const [newRegional, setNewRegional] = useState('')
+  const [regionalModalSubsecretaria, setRegionalModalSubsecretaria] = useState<string>('')
 
   const intl = useIntl()
 
   useEffect(() => {
-    // Mock inicial de opções (pode ser substituído por chamadas de API)
-    setSubsecretariaOptions([
-      { value: '1', label: 'Subsecretaria 1' },
-      { value: '2', label: 'Subsecretaria 2' },
-    ])
-    setRegionalOptions([
-      { value: '1', label: 'Regional 1' },
-      { value: '2', label: 'Regional 2' },
+    // Mock inicial de opções hierárquicas
+    setSubsecretarias([
+      {
+        value: '1',
+        label: 'Subsecretaria 1',
+        regionais: [
+          { value: '1-1', label: 'Regional 1-1' },
+          { value: '1-2', label: 'Regional 1-2' },
+        ],
+      },
+      {
+        value: '2',
+        label: 'Subsecretaria 2',
+        regionais: [
+          { value: '2-1', label: 'Regional 2-1' },
+        ],
+      },
     ])
   }, [])
 
@@ -80,8 +91,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     signatureDate: client?.signatureDate || initialClient.signatureDate,
     implantationDate: client?.implantationDate || initialClient.implantationDate,
     totalAccounts: client?.totalAccounts || initialClient.totalAccounts,
-    secretaryId: client?.secretaryId || initialClient.secretaryId,
-    subSecretary: client?.subSecretary || initialClient.subSecretary,
+    subSecretary: client?.id || initialClient.id,
     regional: client?.regional || initialClient.regional,
   }
 
@@ -103,6 +113,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     validationSchema: editSchema,
     validateOnChange: true,
     onSubmit: async (values, { setSubmitting, resetForm }) => {
+      console.log('SUBMIT DEBUG', { values, errors: formik.errors, touched: formik.touched });
       setSubmitting(true)
       try {
         if (isNotEmpty(values.id)) {
@@ -122,17 +133,41 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
   })
 
   const handleCreateSubsecretaria = (subsecretariaValue: string, subsecretariaLabel: string) => {
-    const newOption = { value: subsecretariaValue, label: subsecretariaLabel }
-    setSubsecretariaOptions(prev => [...prev, newOption])
+    setSubsecretarias(prev => [
+      ...prev,
+      { value: subsecretariaValue, label: subsecretariaLabel, regionais: [] }
+    ])
+    // Atualiza o campo subSecretary do formik
     formik.setFieldValue('subSecretary', subsecretariaValue)
     setShowSubsecretariaModal(false)
   }
 
-  const handleCreateRegional = (regionalValue: string, regionalLabel: string) => {
-    const newOption = { value: regionalValue, label: regionalLabel }
-    setRegionalOptions(prev => [...prev, newOption])
+  // Adiciona regional à subsecretaria selecionada
+  // Adiciona regional à subsecretaria escolhida no modal
+  const handleCreateRegional = (regionalValue: string, regionalLabel: string, subsecretariaValue: string) => {
+    setSubsecretarias(prev => prev.map(sub =>
+      sub.value === subsecretariaValue
+        ? { ...sub, regionais: [...sub.regionais, { value: regionalValue, label: regionalLabel }] }
+        : sub
+    ))
+    // Atualiza o campo regional do formik
     formik.setFieldValue('regional', regionalValue)
     setShowRegionalModal(false)
+    setRegionalModalSubsecretaria('')
+  }
+
+  // Remover subsecretaria
+  const handleRemoveSubsecretaria = (subValue: string) => {
+    setSubsecretarias(prev => prev.filter(sub => sub.value !== subValue))
+  }
+
+  // Remover regional
+  const handleRemoveRegional = (subValue: string, regValue: string) => {
+    setSubsecretarias(prev => prev.map(sub =>
+      sub.value === subValue
+        ? { ...sub, regionais: sub.regionais.filter(reg => reg.value !== regValue) }
+        : sub
+    ))
   }
 
   const renderBasicFieldset = (
@@ -171,88 +206,53 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     />
   )
 
-  const renderSelectFieldWithModal = (
-    fieldName: string,
-    label: string,
-    placeholder: string | null,
-    options: SelectOptions[],
-    onOpenModal: () => void
-  ) => (
-    <div className='fv-row mb-7'>
-      <label className='fw-semibold fs-6 mb-2'>{label}</label>
-      <div className='d-flex gap-2'>
-        <div className='flex-grow-1'>
-          <Select
-            className={clsx(
-              'react-select-styled react-select-solid mb-3 mb-lg-0',
-              {'is-invalid': formik.getFieldMeta(fieldName).error}
-            )}
-            classNamePrefix='react-select'
-            options={options}
-            placeholder={placeholder}
-            value={options.find(option => option.value === formik.values[fieldName as keyof typeof formik.values])}
-            name={fieldName}
-            onChange={newValue => formik.setFieldValue(fieldName, newValue?.value)}
-            isDisabled={formik.isSubmitting || isUserLoading}
-            styles={{
-              container: base => ({ ...base, width: '100%' }),
-              control: base => ({
-                ...base,
-                minHeight: '38px',
-                backgroundColor: 'var(--bs-input-bg, #f5f8fa)',
-                borderColor: formik.getFieldMeta(fieldName).error ? 'var(--bs-danger, #f1416c)' : 'var(--bs-input-border, #e4e6ef)',
-                boxShadow: 'none',
-                '&:hover': { borderColor: formik.getFieldMeta(fieldName).error ? 'var(--bs-danger, #f1416c)' : 'var(--bs-primary, #009ef7)' },
-              }),
-              singleValue: base => ({ ...base, color: 'var(--bs-input-color, #181c32)' }),
-              menu: base => ({ ...base, zIndex: 9999, backgroundColor: 'var(--bs-input-bg, #fff)' }),
-              option: (base, state) => ({
-                ...base,
-                backgroundColor: state.isSelected
-                  ? 'var(--bs-primary, #009ef7)'
-                  : state.isFocused
-                  ? 'var(--bs-primary-light, #e7f1ff)'
-                  : 'var(--bs-input-bg, #fff)',
-                color: state.isSelected ? 'var(--bs-white, #fff)' : 'var(--bs-input-color, #181c32)',
-                fontWeight: state.isSelected ? 600 : 400,
-              }),
-              placeholder: base => ({ ...base, color: 'var(--bs-input-placeholder-color, #b5b5c3)' }),
-              dropdownIndicator: base => ({ ...base, color: 'var(--bs-primary, #009ef7)' }),
-              indicatorSeparator: base => ({ ...base, backgroundColor: 'var(--bs-input-border, #e4e6ef)' }),
-            }}
-            theme={theme => ({
-              ...theme,
-              borderRadius: 6,
-              colors: {
-                ...theme.colors,
-                primary25: 'var(--bs-primary-light, #e7f1ff)',
-                primary: 'var(--bs-primary, #009ef7)',
-                neutral0: 'var(--bs-input-bg, #fff)',
-                neutral20: 'var(--bs-input-border, #e4e6ef)',
-                neutral30: 'var(--bs-primary, #009ef7)',
-                neutral80: 'var(--bs-input-color, #181c32)',
-              },
-            })}
-          />
-          {formik.getFieldMeta(fieldName).touched && formik.getFieldMeta(fieldName).error && (
-            <div className='fv-plugins-message-container'>
-              <div className='fv-help-block'>
-                <span role='alert'>{formik.getFieldMeta(fieldName).error}</span>
+  // Renderiza campos dinâmicos de subsecretarias e regionais
+    const renderSubsecretariasRegionais = () => {
+      return (
+        <div className='mb-7'>
+          <div className='d-flex justify-content-between align-items-center mb-4'>
+            <label className='fw-bold fs-4 mb-0'>Subsecretarias</label>
+            <button type='button' className='btn btn-sm btn-primary' onClick={() => setShowSubsecretariaModal(true)}>
+              <i className='fas fa-plus me-1'></i> Nova subsecretaria
+            </button>
+          </div>
+          <div className='row g-4'>
+            {subsecretarias.map((sub: { value: string; label: string; regionais: { value: string; label: string }[] }) => (
+              <div key={sub.value} className='col-12 col-md-6'>
+                <div className='card shadow-sm h-100 border border-primary'>
+                  <div className='card-header d-flex justify-content-between align-items-center bg-primary bg-opacity-10'>
+                    <span className='fw-semibold fs-5 text-primary'>{sub.label}</span>
+                    <button type='button' className='btn btn-icon btn-sm btn-light-danger' title='Remover subsecretaria' onClick={() => handleRemoveSubsecretaria(sub.value)}>
+                      <i className='fas fa-trash'></i>
+                    </button>
+                  </div>
+                  <div className='card-body'>
+                    <div className='mb-2 fw-semibold text-gray-700'>Regionais vinculadas:</div>
+                    {sub.regionais.length === 0 && (
+                      <div className='text-gray-500 mb-2'>Nenhuma regional cadastrada.</div>
+                    )}
+                    <ul className='list-group mb-3'>
+                      {sub.regionais.map((reg: { value: string; label: string }) => (
+                        <li key={reg.value} className='list-group-item d-flex justify-content-between align-items-center px-2 py-1 border-0 bg-light bg-opacity-75'>
+                          <span className='text-gray-800'>{reg.label}</span>
+                          <button type='button' className='btn btn-icon btn-xs btn-light-danger' title='Remover regional' onClick={() => handleRemoveRegional(sub.value, reg.value)}>
+                            <i className='fas fa-trash'></i>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    <button type='button' className='btn btn-sm btn-light-primary w-100' onClick={() => { setShowRegionalModal(true); setRegionalModalSubsecretaria(sub.value) }}>
+                      <i className='fas fa-plus me-1'></i> Adicionar regional
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+            ))}
+          </div>
         </div>
-        <button
-          type='button'
-          className='btn btn-sm btn-light-primary'
-          onClick={onOpenModal}
-        >
-          <i className='fas fa-plus'></i>
-          Novo
-        </button>
-      </div>
-    </div>
-  )
+      )
+    }
+
 
   return (
     <>
@@ -268,20 +268,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
           {renderBasicFieldset('implantationDate', 'Implantation date', 'Date')}
           {renderBasicFieldset('totalAccounts', 'Number of accounts', 'Accounts...', false, 'number')}
 
-          {renderSelectFieldWithModal(
-            'subSecretary',
-            'Subsecretaria',
-            'Selecione uma subsecretaria...',
-            subsecretariaOptions,
-            () => setShowSubsecretariaModal(true)
-          )}
-          {renderSelectFieldWithModal(
-            'regional',
-            'Regional',
-            'Selecione uma regional...',
-            regionalOptions,
-            () => setShowRegionalModal(true)
-          )}
+          {renderSubsecretariasRegionais()}
         </div>
 
         <div className='text-center pt-15'>
@@ -309,12 +296,21 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
         onCreate={(newValue) => handleCreateSubsecretaria(newValue, newValue)}
       />
 
+      {/* Modal de criar regional agora recebe as subsecretarias para seleção */}
       <CreateOptionModal
         show={showRegionalModal}
         title='Criar nova regional'
         placeholder='Nome da regional'
-        onClose={() => setShowRegionalModal(false)}
-        onCreate={(newValue) => handleCreateRegional(newValue, newValue)}
+        subsecretariaOptions={subsecretarias.map(sub => ({ value: sub.value, label: sub.label }))}
+        selectedSubsecretaria={regionalModalSubsecretaria || subsecretarias[0]?.value || ''}
+        onSelectSubsecretaria={(value: string) => setRegionalModalSubsecretaria(value ?? '')}
+        onClose={() => { setShowRegionalModal(false); setRegionalModalSubsecretaria('') }}
+        onCreate={(regionalValue, regionalLabel = '') => {
+        const subValue: string = (regionalModalSubsecretaria && typeof regionalModalSubsecretaria === 'string')
+          ? regionalModalSubsecretaria
+          : (subsecretarias[0]?.value || '')
+        handleCreateRegional(regionalValue, regionalLabel, subValue)
+        }}
       />
     </>
   )
