@@ -1,23 +1,28 @@
-
 import { ListView } from '@components/list-view/ListView'
 import { ClientType } from '@interfaces/Client'
-import { useMutation, useQuery, UseQueryResult } from 'react-query'
+import { useQuery, UseQueryResult } from 'react-query'
 import { Column } from 'react-table'
-import { deleteClient, getList } from './core/_requests'
-import { PaginatedResponse, usePagination } from '@contexts/PaginationContext'
+import { getList } from './core/_requests'
+import { usePagination } from '@contexts/PaginationContext'
 import { useState } from 'react'
 import { ClientDetailsModal } from '@components/list-view/components/modals/ClientDetailsModal'
+import { Link } from 'react-router-dom'
 
-
-const clients: ClientType[] = [
-  { name: 'Cliente - Escola 1', totalAccounts: 10, remainingAccounts: 3, partner: 'Parceiro 1' },
-  { name: 'Cliente - Escola 2', totalAccounts: 2, remainingAccounts: 0, partner: 'Parceiro 2' },
-  { name: 'Cliente - Escola 3', totalAccounts: 63, remainingAccounts: 23, partner: 'Parceiro 3' },
-]
+// Definimos uma interface para a resposta do Metronic
+interface MetronicResponse<T> {
+  data: T[];
+  payload: {
+    pagination: {
+      totalCount: number;
+    };
+  };
+}
 
 const ClientListWrapper = () => {
   const {page, pageSize, sortBy, sortOrder, filter, search} = usePagination()
-  const {data, isLoading}: UseQueryResult<PaginatedResponse<ClientType>> = useQuery(
+  
+  // A chamada useQuery agora espera o tipo MetronicResponse
+  const {data, isLoading}: UseQueryResult<MetronicResponse<ClientType>> = useQuery(
     ['client-list', page, sortBy, sortOrder, filter, search],
     () => getList(page, pageSize, sortBy, sortOrder, filter, search),
     {
@@ -26,21 +31,20 @@ const ClientListWrapper = () => {
   )
   
   const [isModalOpen, setIsModalOpen] = useState(false)
-  
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
   
-  const handleOpenModal = (cLientId: string) => {
-    setSelectedClientId(cLientId)
+  const handleOpenModal = (clientId: string) => {
+    setSelectedClientId(clientId)
     setIsModalOpen(true)
   }
   
   const handleCloseModal = () => {
-    console.log("A função handleCloseModal FOI CHAMADA!");
     setSelectedClientId(null)
     setIsModalOpen(false)
   }
   
-  const columnsFake: Column<ClientType>[] = [
+  // As colunas usam camelCase, que é o formato dentro do array 'data'
+  const columns: Column<ClientType>[] = [
   { 
     Header: 'Nome', 
     accessor: 'name',
@@ -66,13 +70,15 @@ const ClientListWrapper = () => {
 
   return (
     <>
-    <ListView 
-    data={data?.items || []}
-      columns={columnsFake}
-      isLoading={isLoading}
-      totalItems={data?.totalCount || 0}
-    />
-     {isModalOpen && (
+      <ListView 
+        // 1. CORREÇÃO: Buscando a lista de 'data.data'
+        data={data?.data || []}
+        columns={columns}
+        isLoading={isLoading}
+        // 2. CORREÇÃO: Buscando o total de 'data.payload.pagination.totalCount'
+        totalItems={data?.payload?.pagination?.totalCount || 0}
+      />
+      {isModalOpen && (
         <ClientDetailsModal
           clientId={selectedClientId!} 
           onClose={handleCloseModal}

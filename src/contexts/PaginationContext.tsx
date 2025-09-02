@@ -22,14 +22,20 @@ interface PaginationProviderProps {
   initialPageSize?: 10 | 30 | 50 | 100;
 }
 
-export interface PaginatedResponse<T> {
-  items: T[];
-  totalCount?: number;
-  totalPages: number;
+export interface PaginationState {
   pageNumber: number;
-  pageSize?: number;
-  hasPreviousPage?: boolean;
-  hasNextPage?: boolean;
+  totalPages: number;
+  totalCount: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+}
+
+// Esta é a nova estrutura da resposta da API
+export interface PaginatedResponse<T> {
+  data: T[];
+  payload: {
+    pagination: PaginationState;
+  };
 }
 
 export const PaginationProvider = ({children, initialPageSize = 10}: PaginationProviderProps) => {

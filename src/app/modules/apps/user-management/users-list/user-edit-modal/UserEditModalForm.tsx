@@ -12,6 +12,7 @@ import {useQueryResponse} from '../core/QueryResponseProvider'
 type Props = {
   isUserLoading: boolean
   user: User
+  onClose: () => void
 }
 
 const editUserSchema = Yup.object().shape({
@@ -30,14 +31,14 @@ const UserEditModalForm: FC<Props> = ({user, isUserLoading}) => {
   const {setItemIdForUpdate} = useListView()
   const {refetch} = useQueryResponse()
 
-  const [userForEdit] = useState<User>({
-    ...user,
-    avatar: user.avatar || initialUser.avatar,
-    role: user.role || initialUser.role,
-    position: user.position || initialUser.position,
-    name: user.name || initialUser.name,
-    email: user.email || initialUser.email,
-  })
+ const userForEdit: User = {
+    ...initialUser, // Começa com um objeto limpo
+    ...user, // Preenche com os dados da API
+    // Agora, sobrescrevemos os campos de seleção com os IDs
+    clientId: user.client?.id || '',
+    schoolIds: user.schools?.map(school => school.id) || [],
+    classIds: user.classes?.map(cls => cls.id) || [],
+  }
 
   const cancel = (withRefresh?: boolean) => {
     if (withRefresh) {
@@ -52,6 +53,7 @@ const UserEditModalForm: FC<Props> = ({user, isUserLoading}) => {
   const formik = useFormik({
     initialValues: userForEdit,
     validationSchema: editUserSchema,
+    enableReinitialize: true,
     onSubmit: async (values, {setSubmitting}) => {
       setSubmitting(true)
       try {
@@ -103,7 +105,7 @@ const UserEditModalForm: FC<Props> = ({user, isUserLoading}) => {
               {/* end::Preview existing avatar */}
 
               {/* begin::Label */}
-              {/* <label
+               <label
               className='btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow'
               data-kt-image-input-action='change'
               data-bs-toggle='tooltip'
@@ -113,29 +115,29 @@ const UserEditModalForm: FC<Props> = ({user, isUserLoading}) => {
 
               <input type='file' name='avatar' accept='.png, .jpg, .jpeg' />
               <input type='hidden' name='avatar_remove' />
-            </label> */}
+            </label> 
               {/* end::Label */}
 
               {/* begin::Cancel */}
-              {/* <span
+               <span
               className='btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow'
               data-kt-image-input-action='cancel'
               data-bs-toggle='tooltip'
               title='Cancel avatar'
             >
               <i className='bi bi-x fs-2'></i>
-            </span> */}
+            </span> 
               {/* end::Cancel */}
 
               {/* begin::Remove */}
-              {/* <span
+               <span
               className='btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow'
               data-kt-image-input-action='remove'
               data-bs-toggle='tooltip'
               title='Remove avatar'
             >
               <i className='bi bi-x fs-2'></i>
-            </span> */}
+            </span> 
               {/* end::Remove */}
             </div>
             {/* end::Image input */}

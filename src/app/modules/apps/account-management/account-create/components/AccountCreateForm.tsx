@@ -132,7 +132,7 @@ const AccountCreateForm: FC<Props> = ({ account, isUserLoading }) => {
 
   useEffect(() => {
     getClients().then((res) => {
-      const options = res.data.items.map((c: any) => ({ value: c.id, label: c.name }));
+      const options = res.data.data.map((c: any) => ({ value: c.id, label: c.name }));
       setClientOptions(options);
     });
   }, []);
@@ -140,7 +140,7 @@ const AccountCreateForm: FC<Props> = ({ account, isUserLoading }) => {
   useEffect(() => {
     if (selectedClientId) {
       getSchoolsByClient(selectedClientId).then((res) => {
-        const options = res.data.items.map((s: any) => ({ value: s.id, label: s.name }));
+        const options = res.data.data.map((s: any) => ({ value: s.id, label: s.name }));
         setSchoolOptions(options);
       });
     } else {

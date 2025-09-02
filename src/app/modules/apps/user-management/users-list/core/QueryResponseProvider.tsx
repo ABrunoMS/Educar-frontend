@@ -34,7 +34,7 @@ const QueryResponseProvider: FC<WithChildren> = ({children}) => {
   } = useQuery(
     `${QUERIES.USERS_LIST}-${query}`,
     () => {
-      return getUsers(query)
+      return getUsers(state.page, state.items_per_page)
     },
     {cacheTime: 0, keepPreviousData: true, refetchOnWindowFocus: false}
   )

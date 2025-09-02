@@ -32,10 +32,10 @@ const SchoolListWrapper = () => {
 
   return (
     <ListView 
-      data={data?.items || []}
+      data={data?.data || []}
       columns={columns}
       isLoading={isLoading}
-      totalItems={data?.totalCount || 0}
+      totalItems={data?.payload.pagination.totalCount || 0}
     />
   )
 }
