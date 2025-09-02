@@ -1,45 +1,60 @@
 import React from 'react'
-import { useQuery, UseQueryResult } from 'react-query'
-import { getClientById } from '../../../../modules/apps/client-management/clients-list/core/_requests' 
+import { useState, useEffect } from 'react'
+import { getClientById } from '../../../../modules/apps/client-management/clients-list/core/_requests'
 import { ClientType } from '@interfaces/Client'
-import { KTIcon } from '@metronic/helpers' 
 
+// O tipo Props não precisa de um export, pois é usado apenas localmente.
 type Props = {
   clientId: string
   onClose: () => void
 }
 
 const ClientDetailsModal: React.FC<Props> = ({ clientId, onClose }) => {
-  const { 
-    data: client, 
-    isLoading, 
-    error 
-  }: UseQueryResult<ClientType, Error> = useQuery(
-    ['clientDetails', clientId],
-    () => getClientById(clientId),
-    {
-      // A query só será executada se houver um clientId
-      enabled: !!clientId, 
-    }
+  const [client, setClient] = useState<ClientType | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!clientId) return;
+    setIsLoading(true);
+    setError(null);
+    getClientById(clientId)
+      .then((data: ClientType) => {
+        setClient(data);
+        setIsLoading(false);
+      })
+      .catch((e: any) => {
+        setError('Ocorreu um erro ao carregar os dados.');
+        setIsLoading(false);
+      });
+  }, [clientId]);
+
+  // Um ícone SVG simples para substituir o KTIcon
+  const CrossIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <rect opacity="0.5" x="6" y="17.3137" width="16" height="2" rx="1" transform="rotate(-45 6 17.3137)" fill="currentColor" />
+      <rect x="7.41422" y="6" width="16" height="2" rx="1" transform="rotate(45 7.41422 6)" fill="currentColor" />
+    </svg>
   )
 
   return (
-
     <div className='modal fade show d-block' tabIndex={-1}>
       <div className='modal-dialog modal-dialog-centered mw-650px'>
         <div className='modal-content'>
+
           <div className='modal-header d-flex justify-content-between align-items-center'>
             <h2 className='fw-bolder'>Detalhes do Cliente</h2>
+
             <div
               className='btn btn-icon btn-sm btn-active-icon-primary'
               onClick={onClose}
             >
-              <KTIcon iconName='cross' className='fs-1' />
+              <CrossIcon />
             </div>
           </div>
           <div className='modal-body py-10 px-lg-17'>
             {isLoading && <div>Carregando...</div>}
-            {error && <div>Ocorreu um erro: {error.message}</div>}
+            {error && <div>Ocorreu um erro: {error}</div>}
             {client && (
               <div>
                 <div className='row mb-4'>
@@ -55,6 +70,14 @@ const ClientDetailsModal: React.FC<Props> = ({ clientId, onClose }) => {
                   <div className='col-md-8'>{client.partner || 'N/A'}</div>
                 </div>
                 <div className='row mb-4'>
+                  <div className='col-md-4 fw-bold text-muted'>Regional:</div>
+                  <div className='col-md-8'>{client.regional || 'N/A'}</div>
+                </div>
+                <div className='row mb-4'>
+                  <div className='col-md-4 fw-bold text-muted'>Subsecretaria:</div>
+                  <div className='col-md-8'>{client.subSecretary || 'N/A'}</div>
+                </div>
+                <div className='row mb-4'>
                   <div className='col-md-4 fw-bold text-muted'>Total de Contas:</div>
                   <div className='col-md-8'>{client.totalAccounts}</div>
                 </div>
@@ -62,7 +85,6 @@ const ClientDetailsModal: React.FC<Props> = ({ clientId, onClose }) => {
                   <div className='col-md-4 fw-bold text-muted'>Contas Restantes:</div>
                   <div className='col-md-8'>{client.remainingAccounts}</div>
                 </div>
-                {/* Adicione outros campos que desejar */}
               </div>
             )}
           </div>
@@ -72,11 +94,9 @@ const ClientDetailsModal: React.FC<Props> = ({ clientId, onClose }) => {
             </button>
           </div>
         </div>
-      {/* Fundo escuro do modal */}
-      {/*<div className='modal-backdrop fade show'></div>*/}
       </div>
     </div>
   )
 }
 
-export { ClientDetailsModal }
+export default ClientDetailsModal
