@@ -21,7 +21,7 @@ type Props = {
   onFormSubmit: () => void
 }
 
-const initialAccount: Account = {
+export const initialAccount: Account = {
   avatar: '',
   name: '',
   lastName: '',

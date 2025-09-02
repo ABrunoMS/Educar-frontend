@@ -17,8 +17,8 @@ export function getAccounts(page = 1, pageSize = 10) {
 /**
  * Busca uma única conta pelo seu ID.
  */
-export function getAccountById(id: string) {
-  return axios.get<Account>(`${ACCOUNTS_URL}/${id}`);
+export function getAccountById(id: string): Promise<Account> {
+  return axios.get<Account>(`${ACCOUNTS_URL}/${id}`).then(res => res.data);
 }
 
 /**
