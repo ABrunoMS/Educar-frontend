@@ -1,32 +1,22 @@
 import {useMemo} from 'react'
 import {useTable, ColumnInstance, Row} from 'react-table'
-// import {CustomHeaderColumn} from './columns/CustomHeaderColumn'
+import {CustomHeaderColumn} from './columns/CustomHeaderColumn'
 import {CustomRow} from './columns/CustomRow'
-// import {useQueryResponseData, useQueryResponseLoading} from '../core/QueryResponseProvider'
-// import {usersColumns} from './columns/_columns'
+import {useQueryResponseData, useQueryResponseLoading} from '../core/QueryResponseProvider'
+import {usersColumns} from './columns/_columns'
 import {User} from '../core/_models'
-// import {UsersListLoading} from '../components/loading/UsersListLoading'
-// import {UsersListPagination} from '../components/pagination/UsersListPagination'
+import {UsersListLoading} from '../components/loading/UsersListLoading'
+import {UsersListPagination} from '../components/pagination/UsersListPagination'
 import {KTCardBody} from '../../../../../../_metronic/helpers'
 import {Column} from 'react-table'
 
 
-const columnsFake: Column<User>[] = [
-  { Header: 'ID', accessor: 'id' },
-  { Header: 'Nome', accessor: 'name' },
-  { Header: 'Role', accessor: 'role' },
-  { Header: 'Email', accessor: 'email' },
-]
 
 const UsersTable = () => {
-  const users: User[] = [
-    { name: 'anderson', role: 'Admin', email: 'a@a.com', id: 1 },
-    { name: 'Gilberto silva', role: 'Teacher', email: 'a@a.com', id: 2 },
-    { name: 'Jão Sem Braço', role: 'Student', email: 'a@a.com', id: 3 },
-  ]
-  const isLoading = false;
+  const users = useQueryResponseData()
+  const isLoading = useQueryResponseLoading()
   const data = useMemo(() => users, [users])
-  const columns = useMemo(() => columnsFake, [])
+  const columns = useMemo(() => usersColumns, [])
   const {getTableProps, getTableBodyProps, headers, rows, prepareRow} = useTable({
     columns,
     data,
@@ -43,14 +33,8 @@ const UsersTable = () => {
           <thead>
             <tr className='text-start text-muted fw-bolder fs-7 text-uppercase gs-0'>
               {headers.map((column: ColumnInstance<User>) => (
-                // <CustomHeaderColumn key={column.id} column={column} />
-                <>
-                  {
-                    column.Header && typeof column.Header === 'string' ?
-                    <th {...column.getHeaderProps()}>{column.render('Header')}</th> :
-                    column.render('Header')
-                  }
-                </>
+                 <CustomHeaderColumn key={column.id} column={column} />
+              
               ))}
             </tr>
           </thead>
@@ -73,8 +57,8 @@ const UsersTable = () => {
           </tbody>
         </table>
       </div>
-      {/* <UsersListPagination />
-      {isLoading && <UsersListLoading />} */}
+      <UsersListPagination />
+      {isLoading && <UsersListLoading />}
     </KTCardBody>
   )
 }

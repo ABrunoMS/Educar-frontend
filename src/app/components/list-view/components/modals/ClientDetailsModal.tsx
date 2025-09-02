@@ -41,8 +41,10 @@ const ClientDetailsModal: React.FC<Props> = ({ clientId, onClose }) => {
     <div className='modal fade show d-block' tabIndex={-1}>
       <div className='modal-dialog modal-dialog-centered mw-650px'>
         <div className='modal-content'>
-          <div className='modal-header'>
-            <h2 className='fw-bolder'>Detalhes da Secretaria</h2>
+
+          <div className='modal-header d-flex justify-content-between align-items-center'>
+            <h2 className='fw-bolder'>Detalhes do Cliente</h2>
+
             <div
               className='btn btn-icon btn-sm btn-active-icon-primary'
               onClick={onClose}

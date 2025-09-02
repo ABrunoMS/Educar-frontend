@@ -44,7 +44,7 @@ const SchoolCreateForm: FC<Props> = ({ school, isUserLoading }) => {
   useEffect(() => {
     // Buscar clientes da API
     getClients().then((response) => {
-      const clientOptions = response.data.items.map((client: any) => ({
+      const clientOptions = response.data.data.map((client: any) => ({
         value: client.id,
         label: client.name,
       }));
@@ -55,7 +55,7 @@ const SchoolCreateForm: FC<Props> = ({ school, isUserLoading }) => {
 
     // Buscar endereços da API
     getAddresses().then((response) => {
-      const addressOptions = response.data.items.map((address: any) => ({
+      const addressOptions = response.data.data.map((address: any) => ({
         value: address.id,
         label: `${address.street}, ${address.city} - ${address.state}`,
       }));

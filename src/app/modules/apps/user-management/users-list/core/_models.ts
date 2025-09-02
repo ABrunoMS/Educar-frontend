@@ -14,6 +14,16 @@ export type User = {
     label: string
     state: string
   }
+
+    client?: { 
+    id: string
+    name: string
+  }
+  clientId?: string
+  classIds?: string[]
+  schoolIds?: string[]
+  schools?: Array<{id: string, name: string}> 
+  classes?: Array<{id: string, name: string}>
 }
 
 export type UsersQueryResponse = Response<Array<User>>
