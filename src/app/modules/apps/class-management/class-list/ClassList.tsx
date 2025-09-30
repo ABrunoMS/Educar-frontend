@@ -80,10 +80,10 @@ const ClassListWrapper = () => {
   return (
     <>
       <ListView
-        data={data?.items || []}
+        data={data?.data|| []}
         columns={columns}
         isLoading={isLoading}
-        totalItems={data?.totalPages || 1}
+        totalItems={data?.payload.pagination.totalPages || 1}
       />
       <DeleteDialog
         open={showDeleteDialog}

@@ -44,3 +44,7 @@ export function getAccountsByClient(clientId: string, page = 1, pageSize = 1000)
 export const createAccount = (accountData: Account): Promise<any> => {
   return axios.post(ACCOUNTS_URL, accountData);
 };
+
+export const updateAccount = ( accountData: Account): Promise<any> => {
+  return axios.put(`${ACCOUNTS_URL}/${accountData.id}`, accountData);
+}

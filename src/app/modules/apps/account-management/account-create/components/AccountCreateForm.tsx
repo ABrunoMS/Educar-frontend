@@ -11,7 +11,8 @@ import { SelectOptions } from '@interfaces/Forms'
 import { getClients } from '@services/Clients';
 import { getSchoolsByClient } from '@services/Schools';
 import { getClassesBySchools } from '@services/Classes';
-import { createAccount } from '@services/Accounts';
+import { createAccount, updateAccount } from '@services/Accounts';
+import { isNotEmpty } from '@metronic/helpers';
 
 type Props = {
   isUserLoading?: boolean
@@ -39,7 +40,7 @@ export const initialAccount: Account = {
 }
 
 
-const AccountCreateForm: FC<Props> = ({ account, isUserLoading }) => {
+const AccountCreateForm: FC<Props> = ({ account, isUserLoading, onFormSubmit }) => {
   const [accountForEdit] = useState<Account>({
     ...initialAccount,
     ...account
@@ -83,9 +84,18 @@ const AccountCreateForm: FC<Props> = ({ account, isUserLoading }) => {
     onSubmit: async (values, { setSubmitting, resetForm }) => {
       setSubmitting(true);
       try {
-        await createAccount(values);
-        alert('Usuário criado com sucesso!');
+        // AQUI ESTÁ A LÓGICA DE DECISÃO
+        if (isNotEmpty(values.id)) {
+          // Se o ID existe, atualizamos o usuário
+          await updateAccount(values);
+          alert('Usuário atualizado com sucesso!');
+        } else {
+          // Se não houver ID, criamos um novo
+          await createAccount(values);
+          alert('Usuário criado com sucesso!');
+        }
         resetForm();
+        onFormSubmit(); // Fecha o modal
       } catch (ex) {
         console.error(ex);
         alert('Houve um erro ao salvar o usuário.');
