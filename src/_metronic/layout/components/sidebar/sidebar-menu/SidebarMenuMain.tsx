@@ -110,28 +110,28 @@ const SidebarMenuMain = () => {
           />
         </SidebarMenuItemWithSub>
 
-        {/* CLIENTS RENOMEADO PARA SECRETARIAS NO SIDEBAR */}
+        
         <SidebarMenuItemWithSub
           to='/apps/client-management/'
-          title='Secretarias'
+          title='Clientes'
           fontIcon='bi-archive'
           icon='delete-folder'
         >
           <SidebarMenuItem
             to='/apps/client-management/clients'
-            title='Listagem de secretarias'
+            title='Listagem de Clientes'
             hasBullet
           />
           <SidebarMenuItem
             to='/apps/client-management/create'
-            title='Criar secretaria'
+            title='Criar Cliente'
             hasBullet
           />
         </SidebarMenuItemWithSub>
 
         <SidebarMenuItemWithSub
           to='/apps/account-management/'
-          title='Accounts'
+          title='Contas'
           fontIcon='bi-archive'
           icon='delete-folder'
         >
@@ -189,20 +189,20 @@ const SidebarMenuMain = () => {
 
         <SidebarMenuItemWithSub
           to='/apps/class-management/'
-          title='Class'
+          title='Turmas'
           fontIcon='bi-archive'
           icon='delete-folder'
         >
           <SidebarMenuItem
             to='/apps/class-management/classes'
             icon='abstract-28'
-            title='Listagem de classes'
+            title='Listagem de Turmas'
             hasBullet
           />
           <SidebarMenuItem
             to='/apps/class-management/create'
             icon='abstract-28'
-            title='Criar classe'
+            title='Criar Turma'
             hasBullet
           />
         </SidebarMenuItemWithSub>
@@ -266,7 +266,7 @@ const SidebarMenuMain = () => {
         </SidebarMenuItemWithSub>
         <SidebarMenuItemWithSub
           to='/apps/school-management/'
-          title='School'
+          title='Escolas'
           fontIcon='bi-archive'
           icon='delete-folder'
         >

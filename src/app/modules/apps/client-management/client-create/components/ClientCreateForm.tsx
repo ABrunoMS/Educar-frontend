@@ -41,6 +41,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
   }[]>([])
   const [showSubsecretariaModal, setShowSubsecretariaModal] = useState(false)
   const [showRegionalModal, setShowRegionalModal] = useState(false)
+  // Este estado guarda o ID da subsecretaria cujo botão "Adicionar regional" foi clicado
   const [regionalModalSubsecretaria, setRegionalModalSubsecretaria] = useState<string>('')
 
   const intl = useIntl()
@@ -48,21 +49,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
   useEffect(() => {
     // Mock inicial de opções hierárquicas
     setSubsecretarias([
-      {
-        value: '1',
-        label: 'Subsecretaria 1',
-        regionais: [
-          { value: '1-1', label: 'Regional 1-1' },
-          { value: '1-2', label: 'Regional 1-2' },
-        ],
-      },
-      {
-        value: '2',
-        label: 'Subsecretaria 2',
-        regionais: [
-          { value: '2-1', label: 'Regional 2-1' },
-        ],
-      },
+      
     ])
   }, [])
 
@@ -129,7 +116,6 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
   }
 
   // Adiciona regional à subsecretaria selecionada
-  // Adiciona regional à subsecretaria escolhida no modal
   const handleCreateRegional = (regionalValue: string, regionalLabel: string, subsecretariaValue: string) => {
     setSubsecretarias(prev => prev.map(sub =>
       sub.value === subsecretariaValue
@@ -282,20 +268,25 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
         onCreate={(newValue) => handleCreateSubsecretaria(newValue, newValue)}
       />
 
-      {/* Modal de criar regional agora recebe as subsecretarias para seleção */}
+      {/* Modal de criar regional: **Corrigido para vincular diretamente** à subsecretaria clicada. */}
       <CreateOptionModal
         show={showRegionalModal}
-        title='Criar nova regional'
+        title={`Criar nova regional para: ${subsecretarias.find(s => s.value === regionalModalSubsecretaria)?.label || 'Subsecretaria'}`}
         placeholder='Nome da regional'
-        subsecretariaOptions={subsecretarias.map(sub => ({ value: sub.value, label: sub.label }))}
-        selectedSubsecretaria={regionalModalSubsecretaria || subsecretarias[0]?.value || ''}
-        onSelectSubsecretaria={(value: string) => setRegionalModalSubsecretaria(value ?? '')}
+        // REMOVIDOS os props de seleção: subsecretariaOptions, selectedSubsecretaria, onSelectSubsecretaria
         onClose={() => { setShowRegionalModal(false); setRegionalModalSubsecretaria('') }}
-        onCreate={(regionalValue, regionalLabel = '') => {
-        const subValue: string = (regionalModalSubsecretaria && typeof regionalModalSubsecretaria === 'string')
-          ? regionalModalSubsecretaria
-          : (subsecretarias[0]?.value || '')
-        handleCreateRegional(regionalValue, regionalLabel, subValue)
+        // CORREÇÃO: regionalValue é usado como valor e label. O subValue vem do estado pre-definido.
+        onCreate={(regionalValue: string) => {
+          const subValue: string = regionalModalSubsecretaria || subsecretarias[0]?.value || ''
+
+          // Verifica se há uma subsecretaria válida antes de criar
+          if (!subValue) {
+            alert('Erro: Nenhuma subsecretaria selecionada para vincular a regional.')
+            return;
+          }
+
+          // regionalValue é usado como valor E label.
+          handleCreateRegional(regionalValue, regionalValue, subValue)
         }}
       />
     </>
