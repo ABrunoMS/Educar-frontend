@@ -6,17 +6,16 @@ import { DashboardWrapper } from '../pages/dashboard/DashboardWrapper'
 import { getCSSVariableValue } from '../../_metronic/assets/ts/_utils'
 import { WithChildren } from '../../_metronic/helpers'
 import { OrganizationSelectWrapper } from '../pages/organization-select/OrganizationSelectWrapper'
-
 import { useRole, Role } from '@contexts/RoleContext'
 
-// Define the props for PrivateRoute
+
 interface PrivateRouteProps {
   children: React.ReactElement
   rolesAllowed: Role[]
 }
 
-const PrivateRoute: React.FC<PrivateRouteProps> = ({children, rolesAllowed}) => {
-  const {role} = useRole()
+const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, rolesAllowed }) => {
+  const { role } = useRole()
 
   if (!rolesAllowed.includes(role)) {
     return <Navigate to="/dashboard" /> // Redirect if not authorized
@@ -25,7 +24,7 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({children, rolesAllowed}) => 
   return children
 }
 
-export {PrivateRoute}
+export { PrivateRoute }
 
 const PrivateRoutes = () => {
   const UsersPage = lazy(() => import('../modules/apps/user-management/UsersPage'))
@@ -42,6 +41,9 @@ const PrivateRoutes = () => {
   const SubjectPage = lazy(() => import('../modules/apps/subject-management/SubjectPage'))
   const AccountPage = lazy(() => import('../modules/apps/account-management/AccountPage'))
 
+  // O seu import para a página de aulas
+  const LessonPage = lazy(() => import('../modules/apps/lesson-management/LessonPage'))
+
   return (
     <Routes>
       <Route element={<MasterLayout />}>
@@ -49,7 +51,7 @@ const PrivateRoutes = () => {
         <Route path='auth/*' element={<Navigate to='/dashboard' />} />
         {/* Pages */}
         <Route path='dashboard' element={<DashboardWrapper />} />
-      
+
         {/* Lazy Modules */}
         <Route
           path='apps/user-management/*'
@@ -100,6 +102,19 @@ const PrivateRoutes = () => {
             <PrivateRoute rolesAllowed={['Admin']}>
               <SuspensedView>
                 <ClassPage />
+              </SuspensedView>
+            </PrivateRoute>
+          }
+        />
+
+        {/* Rota para Gerenciamento de Aulas: CORREÇÃO APLICADA AQUI */}
+        <Route
+          path='apps/lesson-management/*'
+          element={
+            <PrivateRoute rolesAllowed={['Admin', 'Teacher']}>
+              <SuspensedView>
+                {/* Usando o componente LessonPage carregado via lazy */}
+                <LessonPage />
               </SuspensedView>
             </PrivateRoute>
           }
@@ -190,7 +205,7 @@ const PrivateRoutes = () => {
         {/* Page Not Found */}
         <Route path='*' element={<Navigate to='/error/404' />} />
       </Route>
-      
+
       {/* Routes that sould not have the Sidebar component */}
       <Route element={<MasterLayout hasSidebar={false} />}>
         <Route path='select-organization' element={<OrganizationSelectWrapper />} />
@@ -199,7 +214,7 @@ const PrivateRoutes = () => {
   )
 }
 
-const SuspensedView: FC<WithChildren> = ({children}) => {
+const SuspensedView: FC<WithChildren> = ({ children }) => {
   const baseColor = getCSSVariableValue('--bs-primary')
   TopBarProgress.config({
     barColors: {
@@ -211,4 +226,4 @@ const SuspensedView: FC<WithChildren> = ({children}) => {
   return <Suspense fallback={<TopBarProgress />}>{children}</Suspense>
 }
 
-export {PrivateRoutes}
+export { PrivateRoutes }

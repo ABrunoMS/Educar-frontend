@@ -208,6 +208,26 @@ const SidebarMenuMain = () => {
         </SidebarMenuItemWithSub>
 
         <SidebarMenuItemWithSub
+          to='/apps/lesson-management/'
+          title='Aulas'
+          fontIcon='bi-archive'
+          icon='book-open'
+        >
+          <SidebarMenuItem
+            to='/apps/lesson-management/lessons'
+            icon='abstract-28'
+            title='Minhas aulas'
+            hasBullet
+          />
+          <SidebarMenuItem
+            to='/apps/lesson-management/create'
+            icon='abstract-28'
+            title='Nova Aula'
+            hasBullet
+          />
+        </SidebarMenuItemWithSub>
+
+        <SidebarMenuItemWithSub
           to='/apps/dialogue-management/'
           title='Dialogue'
           fontIcon='bi-archive'

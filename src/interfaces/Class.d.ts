@@ -5,5 +5,8 @@ export interface Class {
   clientId: string;
   schoolId: string;
   purpose: 'Reinforcement' | 'Default' | 'SpecialProficiencies';
-  accountIds: string[]
+  accountIds: string[];
+  isActive: string;
+  schoolYear: string;
+  schoolShift: string;
 }

@@ -50,6 +50,7 @@ const SelectField: React.FC<FieldProps> = ({
 
     // 1. Atualiza o Formik
     formik.setFieldValue(fieldName, finalValue);
+    formik.setFieldTouched(fieldName, true); // Garante que o campo seja tocado para validação
 
     // 2. (CORREÇÃO DO BUG) Chama a função onChange customizada, se ela existir
     if (onChange) {
@@ -91,4 +92,4 @@ const SelectField: React.FC<FieldProps> = ({
   )
 }
 
-export default SelectField
+export default SelectField;

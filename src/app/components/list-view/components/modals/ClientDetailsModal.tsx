@@ -99,4 +99,4 @@ const ClientDetailsModal: React.FC<Props> = ({ clientId, onClose }) => {
   )
 }
 
-export default ClientDetailsModal
+export { ClientDetailsModal }
