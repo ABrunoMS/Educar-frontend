@@ -97,7 +97,7 @@ const PrivateRoutes = () => {
         <Route
           path='apps/class-management/*'
           element={
-            <PrivateRoute rolesAllowed={['Admin']}>
+            <PrivateRoute rolesAllowed={['Admin', 'Teacher']}>
               <SuspensedView>
                 <ClassPage />
               </SuspensedView>

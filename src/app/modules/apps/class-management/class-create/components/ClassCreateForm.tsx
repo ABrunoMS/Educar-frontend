@@ -5,11 +5,13 @@ import { Class } from '@interfaces/Class';
 import { SelectOptions } from '@interfaces/Forms';
 import BasicField from '@components/form/BasicField';
 import SelectField from '@components/form/SelectField';
-import { useAuth } from '../../../../auth';
+import AsyncSelectField from '@components/form/AsyncSelectField';
+import { useAuth } from '../../../../auth'; // Hook para pegar o usuário logado
+import { getSchoolsByClient } from '@services/Schools';
 import { getAccountsBySchool } from '@services/Accounts';
 import { createClass, updateClass } from '@services/Classes';
 import { isNotEmpty } from '@metronic/helpers';
-import AsyncSelectField from '@components/form/AsyncSelectField';
+import { getSchools } from '@services/Schools';
 
 type Props = {
   isUserLoading?: boolean;
@@ -118,19 +120,34 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
   });
 
   // Efeito para carregar as escolas do usuário logado
-  useEffect(() => {
-    if (currentUser?.schools && currentUser.schools.length > 0) {
-      const options = currentUser.schools.map((school) => ({
-        value: school.id,
-        label: school.name,
-      }));
-      setSchoolOptions(options);
+   useEffect(() => {
+    if (!currentUser) return; // Se não houver usuário, não faz nada
 
-      if (options.length === 1 && !formik.values.schoolId) {
-        formik.setFieldValue('schoolId', options[0].value);
+    if (currentUser.roles?.includes( 'Admin')) {
+      // SE FOR ADMIN: Busca todas as escolas da API
+      getSchools().then((response) => {
+        const options = response.data.data.map((school: any) => ({
+          value: school.id,
+          label: school.name,
+        }));
+        setSchoolOptions(options);
+      });
+    } else {
+      // SE NÃO FOR ADMIN (EX: TEACHER): Usa apenas as escolas do próprio usuário
+      if (currentUser.schools && currentUser.schools.length > 0) {
+        const options = currentUser.schools.map((school) => ({
+          value: school.id,
+          label: school.name,
+        }));
+        setSchoolOptions(options);
+
+        // Auto-seleciona se houver apenas uma escola
+        if (options.length === 1 && !formik.values.schoolId) {
+          formik.setFieldValue('schoolId', options[0].value);
+        }
       }
     }
-  }, [currentUser, formik]);
+  }, [currentUser])
 
   // Função que busca professores sob demanda para o autocomplete
   const loadTeachers = (inputValue: string, callback: (options: SelectOptions[]) => void) => {

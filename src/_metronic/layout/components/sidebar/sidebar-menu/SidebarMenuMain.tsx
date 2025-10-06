@@ -56,6 +56,26 @@ const SidebarMenuMain = () => {
             hasBullet
           />
         </SidebarMenuItemWithSub>
+        
+         <SidebarMenuItemWithSub
+          to='/apps/class-management/'
+          title='Class'
+          fontIcon='bi-archive'
+          icon='delete-folder'
+        >
+          <SidebarMenuItem
+            to='/apps/class-management/classes'
+            icon='abstract-28'
+            title='Listagem de classes'
+            hasBullet
+          />
+          <SidebarMenuItem
+            to='/apps/class-management/create'
+            icon='abstract-28'
+            title='Criar classe'
+            hasBullet
+          />
+        </SidebarMenuItemWithSub>
       </RoleBasedMenuItem>
 
       <RoleBasedMenuItem rolesAllowed={['Admin']}>
@@ -187,25 +207,7 @@ const SidebarMenuMain = () => {
           />
         </SidebarMenuItemWithSub>
 
-        <SidebarMenuItemWithSub
-          to='/apps/class-management/'
-          title='Class'
-          fontIcon='bi-archive'
-          icon='delete-folder'
-        >
-          <SidebarMenuItem
-            to='/apps/class-management/classes'
-            icon='abstract-28'
-            title='Listagem de classes'
-            hasBullet
-          />
-          <SidebarMenuItem
-            to='/apps/class-management/create'
-            icon='abstract-28'
-            title='Criar classe'
-            hasBullet
-          />
-        </SidebarMenuItemWithSub>
+
 
         <SidebarMenuItemWithSub
           to='/apps/dialogue-management/'
