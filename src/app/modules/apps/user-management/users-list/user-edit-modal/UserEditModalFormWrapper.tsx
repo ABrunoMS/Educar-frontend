@@ -1,30 +1,34 @@
 import {useQuery} from 'react-query'
-import {UserEditModalForm} from './UserEditModalForm'
-import {isNotEmpty, QUERIES} from '../../../../../../_metronic/helpers'
+import {ID, isNotEmpty, QUERIES} from '../../../../../../_metronic/helpers'
 import {useListView} from '../core/ListViewProvider'
-import {getUserById} from '../core/_requests'
+// 1. IMPORTE a função e tipos corretos
 import { getAccountById } from '@services/Accounts'
-import { AccountCreateForm } from '../../../account-management/account-create/components/AccountCreateForm'
+import { Account } from '@interfaces/Account' 
 import { initialAccount } from '../../../account-management/account-create/components/AccountCreateForm'
-import {User} from '../core/_models'
-// 1. Defina as props que o componente espera receber
+import { AccountCreateForm } from '../../../account-management/account-create/components/AccountCreateForm'
+
 type Props = {
-  id?: string | null
+  id?: ID
   onClose: () => void
 }
 
 const UserEditModalFormWrapper = ({id, onClose}: Props) => {
   const {setItemIdForUpdate} = useListView()
   
+  // 2. A query agora espera retornar um 'Account'
   const {isLoading, data: account, error} = useQuery(
-    `${QUERIES.USERS_LIST}-account-${id}`,
+    `${QUERIES.USERS_LIST}-account-${id}`, // Chave da query atualizada
     () => {
-      // O '!' garante ao TypeScript que 'id' não será nulo aqui
-      return getAccountById(id!) 
+      // Adicione uma verificação para garantir que o id é uma string
+      if (typeof id === 'string') {
+        // 3. CHAMAMOS A FUNÇÃO CORRETA que busca o 'Account' completo
+        return getAccountById(id) 
+      }
+      return Promise.resolve(undefined)
     },
     {
       cacheTime: 0,
-      enabled: isNotEmpty(id), // A query só roda se 'id' existir
+      enabled: isNotEmpty(id),
       onError: (err) => {
         setItemIdForUpdate(undefined)
         console.error(err)
@@ -33,12 +37,21 @@ const UserEditModalFormWrapper = ({id, onClose}: Props) => {
   )
 
   if (isLoading) {
-    return <div>Carregando...</div>
+    return (
+        <div className='modal-content'>
+            <div className='modal-body'>Carregando...</div>
+        </div>
+    )
   }
-
-  // Se for modo de criação (sem id) ou se os dados já carregaram (com id)
-  // renderiza o formulário.
-  return <AccountCreateForm isUserLoading={isLoading} account={account|| initialAccount} onFormSubmit={onClose} />
+  
+  return (
+    <AccountCreateForm 
+      isUserLoading={isLoading} 
+      // 4. Passamos o 'account' (que agora é do tipo certo) ou o 'initialAccount'
+      account={account || initialAccount} 
+      onFormSubmit={onClose} 
+    />
+  )
 }
 
 export {UserEditModalFormWrapper}

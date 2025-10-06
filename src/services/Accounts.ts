@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import { Account } from '@interfaces/Account';
 import { PaginatedResponse } from '@contexts/PaginationContext'; // Importe a interface de paginação
 
@@ -25,11 +25,21 @@ export function getAccountById(id: string): Promise<Account> {
  * CORRIGIDO: Busca uma lista paginada de contas que pertencem a uma ESCOLA específica.
  * A URL agora é `/api/Accounts/school/{schoolId}`.
  */
-export function getAccountsBySchool(schoolId: string, page = 1, pageSize = 10) {
+export const getAccountsBySchool = (
+  schoolId: string, 
+  page: number, 
+  pageSize: number, 
+  search: string
+): Promise<PaginatedResponse<Account>> => {
   return axios.get<PaginatedResponse<Account>>(`${ACCOUNTS_URL}/school/${schoolId}`, {
-    params: { PageNumber: page, PageSize: pageSize },
-  });
-}
+    params: { 
+      PageNumber: page, 
+      PageSize: pageSize,
+      Search: search
+    },
+  })
+  .then((response: AxiosResponse<PaginatedResponse<Account>>) => response.data);
+};
 
 /**
  * NOVO: Busca uma lista paginada de contas que pertencem a uma SECRETARIA (Cliente) específica.

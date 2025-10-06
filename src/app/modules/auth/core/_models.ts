@@ -52,12 +52,27 @@ export interface UserSocialNetworksModel {
   instagram: string
 }
 
+export interface School {
+  id: string;
+  name: string;
+}
+
+export interface Class {
+  id: string;
+  name: string;
+}
+
+export interface Client {
+  id: string;
+  name: string;
+}
+
 export interface UserModel {
   id: number | string
   username: string
   password: string | undefined
   email: string
-  first_name: string
+  name: string
   last_name: string
   fullname?: string
   occupation?: string
@@ -73,4 +88,8 @@ export interface UserModel {
   communication?: UserCommunicationModel
   address?: UserAddressModel
   socialNetworks?: UserSocialNetworksModel
+  client?: Client
+  schools?: School[]
+  classes?: Class[]
 }
+ 
