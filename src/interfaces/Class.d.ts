@@ -2,11 +2,14 @@ export interface Class {
   id: string;
   name: string;
   description: string;
-  clientId: string;
+  //clientId: string;
   schoolId: string;
   purpose: 'Reinforcement' | 'Default' | 'SpecialProficiencies';
   accountIds: string[];
-  isActive: string;
+  isActive: boolean;
   schoolYear: string;
-  schoolShift: string;
+  schoolShift: 'morning' | 'afternoon' | 'night' | '';
+  content: string[];
+  teacherIds?: string[];
+  studentIds?: string[];
 }

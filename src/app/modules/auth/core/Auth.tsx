@@ -55,35 +55,50 @@ const AuthProvider: FC<WithChildren> = ({ children }) => {
 }
 
 const AuthInit: FC<WithChildren> = ({ children }) => {
-  const {auth, currentUser, logout, setCurrentUser} = useAuth()
-  const [showSplashScreen, setShowSplashScreen] = useState(true)
-
-  const {setRole} = useRole()
+  const { auth, logout, setCurrentUser } = useAuth();
+  const [showSplashScreen, setShowSplashScreen] = useState(true);
+  const { setRole } = useRole();
 
   useEffect(() => {
-
     const initAuth = async () => {
-      if (auth && auth.access_token) {
-        // Check if access token is expired and refresh if needed
-        if (authHelper.isTokenExpired(auth)) {
-          logout()
+      try {
+        if (auth?.access_token) {
+          // 1. CHAMADA CORRIGIDA: Não passamos mais o token como argumento
+          const user = await getUserByToken();
+
+          if (user?.roles) {
+            setCurrentUser(user);
+
+            // 2. LÓGICA DE PERFIL ROBUSTA
+            const roles = user.roles.map(r => r.toLowerCase());
+            let userRole: 'Admin' | 'Teacher' | 'Student' = 'Student';
+
+            if (roles.includes('admin')) {
+              userRole = 'Admin';
+            } else if (roles.includes('teacher')) {
+              userRole = 'Teacher';
+            }
+            
+            setRole(userRole);
+          } else {
+            // Se getUserByToken não retornar um usuário, fazemos logout
+            logout();
+          }
         } else {
-          const user = await getUserByToken(auth.access_token)
-          setCurrentUser(user)
-          setRole(user.roles!.filter(item => (item === 'Admin' || item === 'Teacher' || item === 'Student'))[0])
+          logout();
         }
-
-        setShowSplashScreen(false)
-      } else {
-        logout()
-        setShowSplashScreen(false)
+      } catch (error) {
+        console.error(error);
+        logout();
+      } finally {
+        setShowSplashScreen(false);
       }
-    }
-  
-    initAuth()
-  }, [])
+    };
 
-  return showSplashScreen ? <LayoutSplashScreen /> : <> {children}</>
-}
+    initAuth();
+  }, []);
 
-export { AuthProvider, AuthInit, useAuth }
+  return showSplashScreen ? <LayoutSplashScreen /> : <>{children}</>;
+};
+
+export { AuthProvider, AuthInit, useAuth };

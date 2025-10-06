@@ -6,7 +6,7 @@ import { getList } from './core/_requests'
 import { usePagination } from '@contexts/PaginationContext'
 import { useState } from 'react'
 
-import { ClientDetailsModal } from '@components/list-view/components/modals/ClientDetailsModal'
+import  ClientDetailsModal  from '../../../../components/list-view/components/modals/ClientDetailsModal'
 import { Link } from 'react-router-dom'
 
 
