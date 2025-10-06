@@ -24,9 +24,16 @@ export const getSchoolById = (id: string): Promise<{ data: SchoolType }> => {
  * @returns Uma lista de escolas.
  */
 export const getSchoolsByClient = (
-  clientId: string,
+  clientId: string | null | undefined,
   // PageSize alto para carregar todas as escolas no dropdown
-): Promise<{ data: PaginatedResponse<SchoolType> }> => { // <-- 1. TIPO DE RESPOSTA CORRIGIDO
+): Promise<{ data: PaginatedResponse<SchoolType> }> => { 
+  if (!clientId) {
+    // Se não houver ID, retorna uma promessa com uma resposta vazia
+    // sem fazer uma chamada de API desnecessária.
+    return Promise.resolve({ 
+      data: { data: [], payload: { pagination: { totalCount: 0 } } } as any 
+    });
+  }
   return axios.get(`${SCHOOLS_URL}/client/${clientId}`, {
     // 2. PARÂMETROS DE PAGINAÇÃO ADICIONADOS
     params: { PageNumber: 1, PageSize: 1000},

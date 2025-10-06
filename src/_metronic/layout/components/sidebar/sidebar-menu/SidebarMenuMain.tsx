@@ -56,6 +56,26 @@ const SidebarMenuMain = () => {
             hasBullet
           />
         </SidebarMenuItemWithSub>
+        
+         <SidebarMenuItemWithSub
+          to='/apps/class-management/'
+          title='Class'
+          fontIcon='bi-archive'
+          icon='delete-folder'
+        >
+          <SidebarMenuItem
+            to='/apps/class-management/classes'
+            icon='abstract-28'
+            title='Listagem de classes'
+            hasBullet
+          />
+          <SidebarMenuItem
+            to='/apps/class-management/create'
+            icon='abstract-28'
+            title='Criar classe'
+            hasBullet
+          />
+        </SidebarMenuItemWithSub>
       </RoleBasedMenuItem>
 
       <RoleBasedMenuItem rolesAllowed={['Admin']}>
@@ -187,45 +207,7 @@ const SidebarMenuMain = () => {
           />
         </SidebarMenuItemWithSub>
 
-        <SidebarMenuItemWithSub
-          to='/apps/class-management/'
-          title='Turmas'
-          fontIcon='bi-archive'
-          icon='delete-folder'
-        >
-          <SidebarMenuItem
-            to='/apps/class-management/classes'
-            icon='abstract-28'
-            title='Listagem de Turmas'
-            hasBullet
-          />
-          <SidebarMenuItem
-            to='/apps/class-management/create'
-            icon='abstract-28'
-            title='Criar Turma'
-            hasBullet
-          />
-        </SidebarMenuItemWithSub>
 
-        <SidebarMenuItemWithSub
-          to='/apps/lesson-management/'
-          title='Aulas'
-          fontIcon='bi-archive'
-          icon='book-open'
-        >
-          <SidebarMenuItem
-            to='/apps/lesson-management/lessons'
-            icon='abstract-28'
-            title='Minhas aulas'
-            hasBullet
-          />
-          <SidebarMenuItem
-            to='/apps/lesson-management/create'
-            icon='abstract-28'
-            title='Nova Aula'
-            hasBullet
-          />
-        </SidebarMenuItemWithSub>
 
         <SidebarMenuItemWithSub
           to='/apps/dialogue-management/'
