@@ -5,30 +5,32 @@ import { Class } from '@interfaces/Class';
 import { SelectOptions } from '@interfaces/Forms';
 import BasicField from '@components/form/BasicField';
 import SelectField from '@components/form/SelectField';
-// Importe as funções de busca da API que já criamos
-import { getClients } from '@services/Clients';
-import { getSchoolsByClient } from '@services/Schools';
-import { getAccountsByClient } from '@services/Accounts'; // Usaremos esta agora!
-import { createClass } from '@services/Classes';
+import { useAuth } from '../../../../auth';
+import { getAccountsBySchool } from '@services/Accounts';
+import { createClass, updateClass } from '@services/Classes';
+import { isNotEmpty } from '@metronic/helpers';
+import AsyncSelectField from '@components/form/AsyncSelectField';
 
 type Props = {
   isUserLoading?: boolean;
   classItem?: Class;
-  editMode?: boolean;
+  onFormSubmit: () => void;
 };
 
-// 1. Atualize a interface e o objeto inicial para incluir o Cliente (Secretaria)
+// Objeto inicial simplificado
 const initialClass: Class = {
   id: '',
   name: '',
   description: '',
   purpose: 'Default',
-  clientId: '',
   schoolId: '',
   accountIds: [],
-  isActive: 'true', // novo campo
-  schoolYear: '',   // novo campo
-  schoolShift: '',  // novo campo
+  isActive: true,
+  schoolYear: '',
+  schoolShift: '',
+  content: [],
+  teacherIds: [], // Adicione para o estado inicial
+  studentIds: [],
 };
 
 const purposeOptions: SelectOptions[] = [
@@ -60,218 +62,251 @@ const activeOptions: SelectOptions[] = [
   { value: 'false', label: 'Não' },
 ];
 
-const ClassCreateForm: FC<Props> = ({ classItem, isUserLoading }) => {
-  const [classForEdit] = useState<Class>({
-    ...initialClass,
-    ...classItem,
-  });
+const contentOptions = [
+  'Odisséia', 'Educação financeira', 'Saeb', 'Empreendedorismo', 'Enem', 'Jornada do trabalho'
+]
 
-  // 2. Estados para gerenciar as opções dos dropdowns em cascata
-  const [clients, setClients] = useState<SelectOptions[]>([]);
-  const [schools, setSchools] = useState<SelectOptions[]>([]);
-  const [accounts, setAccounts] = useState<SelectOptions[]>([]);
-  
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(classForEdit.clientId || null);
+const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, onFormSubmit }) => {
+  const { currentUser } = useAuth();
 
-  // 3. Efeito para buscar as Secretarias (Clientes) quando o componente carregar
-  useEffect(() => {
-    getClients().then((response) => {
-      const clientOptions = response.data.data.map((client: any) => ({
-        value: client.id,
-        label: client.name,
-      }));
-      setClients(clientOptions);
-    });
-  }, []);
+  // Estados para as opções dos dropdowns dinâmicos
+  const [schoolOptions, setSchoolOptions] = useState<SelectOptions[]>([]);
 
-  // 4. Efeito para buscar Escolas E Alunos quando uma Secretaria for selecionada
-  useEffect(() => {
-    if (selectedClientId) {
-      // Limpa as listas anteriores
-      setSchools([]);
-      setAccounts([]);
-      
-      // Busca as escolas da secretaria selecionada
-      getSchoolsByClient(selectedClientId).then((response) => {
-        const schoolOptions = response.data.data.map((school: any) => ({
-          value: school.id,
-          label: school.name,
-        }));
-        setSchools(schoolOptions);
-      });
-
-      // Busca os alunos da secretaria selecionada
-      getAccountsByClient(selectedClientId).then((response) => {
-        const accountOptions = response.data.data.map((account: any) => ({
-          value: account.id,
-          label: account.name,
-        }));
-        setAccounts(accountOptions);
-      });
-    } else {
-      // Se nenhuma secretaria for selecionada, limpa as listas dependentes
-      setSchools([]);
-      setAccounts([]);
-    }
-  }, [selectedClientId]); // Este efeito depende do 'selectedClientId'
-
-  // 5. Atualizar o schema de validação
+  // Schema de validação com Yup
   const editClassSchema = Yup.object().shape({
     name: Yup.string().required('O nome da turma é obrigatório'),
-    isActive: Yup.string().required('O campo Ativo é obrigatório'),
-    clientId: Yup.string().required('A escola é obrigatória'),
+    isActive: Yup.boolean().required('O campo Ativo é obrigatório'),
     schoolId: Yup.string().required('A escola é obrigatória'),
     schoolYear: Yup.string().required('O ano escolar é obrigatório'),
     schoolShift: Yup.string().required('O turno escolar é obrigatório'),
-    description: Yup.string(),
-    purpose: Yup.string().oneOf(['Reinforcement', 'Default', 'SpecialProficiencies']).required('O propósito é obrigatório'),
-    accountIds: Yup.array().of(Yup.string()).optional(),
+    description: Yup.string().optional(),
+    content: Yup.array().of(Yup.string()).optional(),
+    teacherIds: Yup.array().of(Yup.string()).optional(),
+    studentIds: Yup.array().of(Yup.string()).optional(),
   });
 
+  // Configuração do Formik
   const formik = useFormik({
-    initialValues: classForEdit,
+    initialValues: classItem,
     validationSchema: editClassSchema,
-    validateOnChange: true,
-    onSubmit: async (values, { setSubmitting, resetForm }) => {
+    enableReinitialize: true,
+    onSubmit: async (values, { setSubmitting }) => {
+      // Antes de enviar, junta os IDs de professores e alunos em 'accountIds'
+      const finalValues = {
+        ...values,
+        accountIds: [...(values.teacherIds || []), ...(values.studentIds || [])],
+      };
+      
       setSubmitting(true);
       try {
-        await createClass(values);
-        alert('Turma criada com sucesso!');
-        resetForm();
-      } catch (ex) {
+        if (isNotEmpty(finalValues.id)) {
+          await updateClass(finalValues.id, finalValues);
+          alert('Turma atualizada com sucesso!');
+        } else {
+          await createClass(finalValues);
+          alert('Turma criada com sucesso!');
+        }
+        onFormSubmit(); // Fecha o modal
+      } catch (ex) { 
         console.error(ex);
-        alert('Houve um erro ao salvar a turma. Por favor, tente novamente.');
-      } finally {
+        alert('Ocorreu um erro ao salvar a turma.');
+      } 
+      finally { 
         setSubmitting(false);
       }
     },
   });
 
-  // Funções 'render'
-  const renderBasicFieldset =  (
-    fieldName: string,
-    label: string,
-    placeholder: string | null,
-    required: boolean = true
-  ) => (
-    <BasicField
-      fieldName={fieldName}
-      label={label}
-      placeholder={placeholder}
-      required={required}
-      formik={formik}
-    />
-  )
-  const renderSelectFieldset = (
-    fieldName: string,
-    label: string,
-    placeholder: string | null,
-    options: SelectOptions[],
-    multiselect: boolean = false,
-    required: boolean = true,
-    disabled: boolean = false,
-    // Define o tipo explícito para o parâmetro do onChange
-    onChange?: (value: string | string[]) => void
-  ) => (
-    <SelectField
-      fieldName={fieldName}
-      label={label}
-      placeholder={placeholder}
-      required={required}
-      multiselect={multiselect}
-      options={options}
-      formik={formik}
-      disabled={disabled}
-      onChange={onChange}
-    />
-  )
+  // Efeito para carregar as escolas do usuário logado
+  useEffect(() => {
+    if (currentUser?.schools && currentUser.schools.length > 0) {
+      const options = currentUser.schools.map((school) => ({
+        value: school.id,
+        label: school.name,
+      }));
+      setSchoolOptions(options);
+
+      if (options.length === 1 && !formik.values.schoolId) {
+        formik.setFieldValue('schoolId', options[0].value);
+      }
+    }
+  }, [currentUser, formik]);
+
+  // Função que busca professores sob demanda para o autocomplete
+  const loadTeachers = (inputValue: string, callback: (options: SelectOptions[]) => void) => {
+    const schoolId = formik.values.schoolId;
+    if (!schoolId || inputValue.length < 2) {
+      return callback([]);
+    }
+    getAccountsBySchool(schoolId, 1, 50, inputValue).then((res) => {
+      const allAccounts = res.data.map((acc: any) => ({ value: acc.id, label: acc.name, role: acc.role }));
+      const teachers = allAccounts.filter(acc => acc.role === 'Teacher');
+      callback(teachers);
+    });
+  };
+
+  // Função que busca alunos sob demanda para o autocomplete
+  const loadStudents = (inputValue: string, callback: (options: SelectOptions[]) => void) => {
+    const schoolId = formik.values.schoolId;
+    if (!schoolId || inputValue.length < 2) {
+      return callback([]);
+    }
+    getAccountsBySchool(schoolId, 1, 50, inputValue).then((res) => {
+      const allAccounts = res.data.map((acc: any) => ({ value: acc.id, label: acc.name, role: acc.role }));
+      const students = allAccounts.filter(acc => acc.role === 'Student');
+      callback(students);
+    });
+  };
 
   return (
-    <form id='kt_modal_add_class_form' className='form' onSubmit={formik.handleSubmit} noValidate>
-      <div className='d-flex flex-column me-n7 pe-7'>
-        <div className='row mb-3'>
+    <form onSubmit={formik.handleSubmit} noValidate>
+      <div className='card-body'>
+        <div className='row'>
+          {/* Coluna da Esquerda */}
           <div className='col-md-8'>
-            {renderBasicFieldset('name', 'Nome da turma *', 'Nome da turma')}
-          </div>
-          <div className='col-md-4'>
-            {renderSelectFieldset('isActive', 'Ativo *', 'Selecione', activeOptions, false, true)}
-          </div>
-        </div>
-        <div className='row mb-3'>
-          <div className='col-md-4'>
-            <SelectField
-              fieldName='schoolId'
-              label='Escola *'
-              placeholder='--- Selecione ---'
-              required={true}
-              options={schools}
-              formik={formik}
-              multiselect={false}
-              onChange={(value) => {
-                if (typeof value === 'string') {
-                  setSelectedClientId(value);
-                  formik.setFieldValue('schoolId', '');
-                  formik.setFieldValue('accountIds', []);
-                }
-              }}
-            />
-          </div>
-          <div className='col-md-4'>
-            {renderSelectFieldset('schoolYear', 'Ano escolar *', '--- Selecione ---', schoolYearOptions, false, true)}
-          </div>
-          <div className='col-md-4'>
-            {renderSelectFieldset('schoolShift', 'Turno escolar *', '--- Selecione ---', schoolShiftOptions, false, true)}
-          </div>
-        </div>
-        <div className='row mb-3'>
-          <div className='col-md-12'>
-            {renderBasicFieldset('description', 'Descrição da turma', 'Descrição da turma', false)}
-          </div>
-        </div>
-        <div className='row mb-3'>
-          <div className='col-md-12'>
-            <div className='fw-bold mb-2'>Professores</div>
-            <div className='mb-2'>
-              <button type='button' className='btn btn-sm btn-light me-2'>Adicionar</button>
-              <button type='button' className='btn btn-sm btn-light me-2'>Editar</button>
-              <button type='button' className='btn btn-sm btn-light me-2'>Excluir</button>
-              <button type='button' className='btn btn-sm btn-light'>Visualizar</button>
+            {/* Nome e Ativo */}
+            <div className='row mb-7'>
+              <div className='col-md-10'>
+                <label className='form-label required'>Nome da turma</label>
+                <input
+                  type='text'
+                  className='form-control'
+                  placeholder='Insira o nome da turma'
+                  {...formik.getFieldProps('name')}
+                />
+              </div>
+              <div className='col-md-2'>
+                <label className='form-label required'>Ativo</label>
+                <div className='form-check form-switch form-check-solid form-check-custom mt-2'>
+                  <input
+                    className='form-check-input'
+                    type='checkbox'
+                    {...formik.getFieldProps('isActive')}
+                    checked={formik.values.isActive}
+                  />
+                </div>
+              </div>
             </div>
-            <table className='table table-bordered'>
-              <thead>
-                <tr>
-                  <th>idusuario</th>
-                  <th>Usuário</th>
-                  <th>Disciplina</th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* Aqui será renderizada a lista de professores vinculados */}
-              </tbody>
-            </table>
+
+            {/* Escola, Ano e Turno */}
+            <div className='row mb-7'>
+              <div className='col-md-4'>
+                <SelectField
+                  label='Escola'
+                  required={true}
+                  placeholder='Selecione...'
+                  options={schoolOptions}
+                  formik={formik}
+                  fieldName='schoolId'
+                  multiselect={false}
+                  onChange={() => {
+                    formik.setFieldValue('teacherIds', []);
+                    formik.setFieldValue('studentIds', []);
+                  }}
+                />
+              </div>
+              <div className='col-md-4'>
+                <SelectField
+                  label='Ano escolar'
+                  required={true}
+                  placeholder='Selecione...'
+                  options={schoolYearOptions}
+                  formik={formik}
+                  fieldName='schoolYear'
+                  multiselect={false}
+                />
+              </div>
+              <div className='col-md-4'>
+                <SelectField
+                  label='Turno escolar'
+                  required={true}
+                  placeholder='Selecione...'
+                  options={schoolShiftOptions}
+                  formik={formik}
+                  fieldName='schoolShift'
+                  multiselect={false}
+                />
+              </div>
+            </div>
+
+            {/* Descrição */}
+            <div className='row mb-7'>
+              <div className='col-md-12'>
+                <label className='form-label'>Descrição</label>
+                <textarea
+                  className='form-control'
+                  rows={3}
+                  placeholder='Insira a descrição da turma'
+                  {...formik.getFieldProps('description')}
+                ></textarea>
+              </div>
+            </div>
+
+            {/* Listas de Professores e Alunos com Autocomplete */}
+            <div className='row mb-7'>
+              <div className='col-md-6'>
+                <AsyncSelectField
+                  label="Professores"
+                  fieldName="teacherIds"
+                  isMulti={true}
+                  placeholder="Digite para buscar..."
+                  loadOptions={loadTeachers}
+                  formik={formik}
+                />
+              </div>
+              <div className='col-md-6'>
+                <AsyncSelectField
+                  label="Alunos"
+                  fieldName="studentIds"
+                  isMulti={true}
+                  placeholder="Digite para buscar..."
+                  loadOptions={loadStudents}
+                  formik={formik}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Coluna da Direita */}
+          <div className='col-md-4'>
+            <div className='mb-7'>
+              <label className='form-label'>Conteúdo</label>
+              {contentOptions.map(content => (
+                <div className='form-check form-check-solid mb-3' key={content}>
+                  <input
+                    className='form-check-input'
+                    type='checkbox'
+                    name='content'
+                    value={content}
+                    checked={formik.values.content.includes(content)}
+                    onChange={formik.handleChange}
+                  />
+                  <label className='form-check-label'>{content}</label>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-        <div className='row mb-3'>
-          <div className='col-md-12'>
-            <div className='alert alert-info py-2 px-3'>Salve a turma antes de vincular as aulas e alunos</div>
-          </div>
+
+        {/* Botões */}
+        <div className='card-footer d-flex justify-content-end py-6 px-9'>
+          <button type='button' className='btn btn-light me-2' onClick={onFormSubmit}>
+            Cancelar
+          </button>
+          <button
+            type='submit'
+            className='btn btn-primary'
+            disabled={isUserLoading || formik.isSubmitting || !formik.isValid}
+          >
+            <span className='indicator-label'>Salvar</span>
+            {formik.isSubmitting && (
+              <span className='indicator-progress'>
+                Aguarde...{' '}
+                <span className='spinner-border spinner-border-sm align-middle ms-2'></span>
+              </span>
+            )}
+          </button>
         </div>
-      </div>
-      <div className='text-center pt-15'>
-        <button
-          type='submit'
-          className='btn btn-primary me-2'
-          data-kt-users-modal-action='submit'
-        >
-          <span className='indicator-label'>Salvar</span>
-          {(formik.isSubmitting || isUserLoading) && (
-            <span className='indicator-progress'>
-              Aguarde...{' '}
-              <span className='spinner-border spinner-border-sm align-middle ms-2'></span>
-            </span>
-          )}
-        </button>
-        <button type='button' className='btn btn-light'>Voltar</button>
       </div>
     </form>
   );

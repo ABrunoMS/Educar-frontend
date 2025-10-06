@@ -10,6 +10,8 @@ import {useAuth} from '../core/Auth'
 import { UserModel } from '../core/_models'
 import { toast } from 'react-toastify'
 import { useRole } from '@contexts/RoleContext'
+import { setupAxios } from '../core/AuthHelpers'
+import axios from 'axios'
 
 const initialValues = {
   // email: 'admin@demo.com',
@@ -49,11 +51,35 @@ export function Login() {
     onSubmit: async (values, {setStatus, setSubmitting}) => {
       setLoading(true)
       try {
-        const { data } = await login(values.email, values.password)
-        saveAuth(data)
-        const user = getUserByToken(data.access_token)
+        const { data: auth } = await login(values.email, values.password)
+        saveAuth(auth)
+        setupAxios(axios)
+        const user = await getUserByToken()
+        console.log(user)
+        if (user) {
+        setCurrentUser(user)
+        // A lógica de Role agora funciona com o objeto 'user' real
+        const role = user.roles?.find(item => ['Admin', 'Teacher', 'Student'].includes(item))
+        if(role) setRole(role as 'Admin' | 'Teacher' | 'Student')
+        
+        toast.success(`Bem vindo, ${user.name}`) // Use user.name que vem da API
+      } else {
+        throw new Error("Não foi possível obter os dados do usuário após o login.")
+      }
 
-        toast.success(`Bem vindo, ${user.email}`)
+    } catch (error) {
+      console.error(error)
+      saveAuth(undefined)
+      setStatus('As credenciais de login estão incorretas ou o servidor está indisponível.')
+      toast.error('As credenciais de login estão incorretas.');
+    } finally {
+      setSubmitting(false)
+      setLoading(false)
+    }
+  },
+})
+
+       /* toast.success(`Bem vindo, ${user.email}`)
         setRole(user.roles!.filter(item => (item === 'Admin' || item === 'Teacher' || item === 'Student'))[0])
         setCurrentUser(user)
       } catch (error) {
@@ -65,7 +91,7 @@ export function Login() {
         setLoading(false)
       }
     },
-  })
+  })*/
 
   return (
     <form

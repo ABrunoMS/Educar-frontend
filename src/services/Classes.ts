@@ -26,3 +26,7 @@ export const getClassesBySchools = (schoolIds: string[]): Promise<{ data: Class[
   // Usamos um POST para enviar a lista de IDs no corpo da requisição
   return axios.post(`${CLASSES_URL}/by-schools`, { schoolIds });
 };
+
+export const updateClass = (id: string, classItem: Class) => {
+  return axios.put<Class>(`${CLASSES_URL}/${id}`, classItem);
+};

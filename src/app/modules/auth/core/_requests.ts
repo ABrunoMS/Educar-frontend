@@ -88,7 +88,7 @@ export function resetPassword(email: string) {
   });
 }
 
-export function getUserByToken(token: string) {
+/*export function getUserByToken(token: string) {
   // return axios.post<UserModel>(GET_USER_BY_ACCESSTOKEN_URL, {
   //   client_id: 'educar-frontend'
   // });
@@ -110,4 +110,28 @@ export function getUserByToken(token: string) {
   // return <AxiosResponse>{
   //   data: userModel
   // }
+}*/
+
+export function getMe() {
+  // O token de autenticação será adicionado automaticamente pelo interceptor do Axios
+  return axios.get<UserModel>(`${API_URL}/api/Accounts/me`);
+}
+
+
+export async function getUserByToken(): Promise<UserModel | undefined> {
+  try {
+    // Chama a função getMe diretamente, sem import
+    const { data: userFromApi } = await getMe();
+
+    const userModel: UserModel = {
+      ...userFromApi,
+      username: userFromApi.email, // Adapta o formato se necessário
+    };
+    
+    return userModel;
+
+  } catch (error) {
+    console.error("Não foi possível buscar os dados do usuário.", error);
+    return undefined;
+  }
 }
