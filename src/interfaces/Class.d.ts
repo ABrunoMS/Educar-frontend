@@ -6,7 +6,6 @@ export interface Class {
   schoolId: string;
   purpose: 'Reinforcement' | 'Default' | 'SpecialProficiencies';
   accountIds: string[];
-
   isActive: boolean;
   schoolYear: string;
   schoolShift: 'morning' | 'afternoon' | 'night' | '';
