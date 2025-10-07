@@ -36,7 +36,7 @@ const SidebarMenuMain = () => {
         fontIcon='bi-app-indicator'
       />
 
-      <RoleBasedMenuItem rolesAllowed={['Admin', 'Teacher']}>
+      <RoleBasedMenuItem rolesAllowed={['Teacher']}>
         <SidebarMenuItemWithSub
           to='/apps/grade-management/'
           title='Notas'
@@ -56,29 +56,110 @@ const SidebarMenuMain = () => {
             hasBullet
           />
         </SidebarMenuItemWithSub>
-        
-         <SidebarMenuItemWithSub
+
+        <SidebarMenuItemWithSub
           to='/apps/class-management/'
-          title='Class'
+          title='Turmas'
           fontIcon='bi-archive'
           icon='delete-folder'
         >
           <SidebarMenuItem
             to='/apps/class-management/classes'
             icon='abstract-28'
-            title='Listagem de classes'
+            title='Listagem de Turmas'
             hasBullet
           />
           <SidebarMenuItem
             to='/apps/class-management/create'
             icon='abstract-28'
-            title='Criar classe'
+            title='Criar Turma'
             hasBullet
           />
         </SidebarMenuItemWithSub>
+        
       </RoleBasedMenuItem>
 
       <RoleBasedMenuItem rolesAllowed={['Admin']}>
+        
+        <SidebarMenuItemWithSub
+          to='/apps/grade-management/'
+          title='Notas'
+          fontIcon='bi-archive'
+          icon='award'
+        >
+          <SidebarMenuItem
+            to='/apps/grade-management/grades'
+            icon='filter-tablet'
+            title='Listagem de notas'
+            hasBullet
+          />
+          <SidebarMenuItem
+            to='/apps/grade-management/create'
+            icon='file'
+            title='Criar nota'
+            hasBullet
+          />
+        </SidebarMenuItemWithSub>
+
+        <SidebarMenuItemWithSub
+          to='/apps/client-management/'
+          title='Clientes'
+          fontIcon='bi-archive'
+          icon='delete-folder'
+        >
+          <SidebarMenuItem
+            to='/apps/client-management/clients'
+            title='Listagem de Clientes'
+            hasBullet
+          />
+          <SidebarMenuItem
+            to='/apps/client-management/create'
+            title='Criar Cliente'
+            hasBullet
+          />
+        </SidebarMenuItemWithSub>
+
+        <SidebarMenuItemWithSub
+          to='/apps/school-management/'
+          title='Escolas'
+          fontIcon='bi-archive'
+          icon='delete-folder'
+         >
+          <SidebarMenuItem
+            to='/apps/school-management/schools'
+            icon='abstract-28'
+            title='Listagem de escolas'
+            hasBullet
+          />
+          <SidebarMenuItem
+            to='/apps/school-management/create'
+            icon='abstract-28'
+            title='Criar escola'
+            hasBullet
+          />
+        </SidebarMenuItemWithSub>
+
+        <SidebarMenuItemWithSub
+          to='/apps/class-management/'
+          title='Turmas'
+          fontIcon='bi-archive'
+          icon='delete-folder'
+         >
+          <SidebarMenuItem
+            to='/apps/class-management/classes'
+            icon='abstract-28'
+            title='Listagem de Turmas'
+            hasBullet
+          />
+          <SidebarMenuItem
+            to='/apps/class-management/create'
+            icon='abstract-28'
+            title='Criar Turma'
+            hasBullet
+          />
+        </SidebarMenuItemWithSub>
+
+
         <SidebarMenuItemWithSub
           to='/apps/subject-management/'
           title='Disciplinas'
@@ -130,21 +211,22 @@ const SidebarMenuMain = () => {
           />
         </SidebarMenuItemWithSub>
 
-        
         <SidebarMenuItemWithSub
-          to='/apps/client-management/'
-          title='Clientes'
+          to='/apps/lesson-management/'
+          title='Aulas'
           fontIcon='bi-archive'
-          icon='delete-folder'
+          icon='book-open'
         >
           <SidebarMenuItem
-            to='/apps/client-management/clients'
-            title='Listagem de Clientes'
+            to='/apps/lesson-management/lessons'
+            icon='abstract-28'
+            title='Minhas aulas'
             hasBullet
           />
           <SidebarMenuItem
-            to='/apps/client-management/create'
-            title='Criar Cliente'
+            to='/apps/lesson-management/create'
+            icon='abstract-28'
+            title='Nova Aula'
             hasBullet
           />
         </SidebarMenuItemWithSub>
@@ -208,46 +290,6 @@ const SidebarMenuMain = () => {
         </SidebarMenuItemWithSub>
 
         <SidebarMenuItemWithSub
-          to='/apps/class-management/'
-          title='Turmas'
-          fontIcon='bi-archive'
-          icon='delete-folder'
-        >
-          <SidebarMenuItem
-            to='/apps/class-management/classes'
-            icon='abstract-28'
-            title='Listagem de Turmas'
-            hasBullet
-          />
-          <SidebarMenuItem
-            to='/apps/class-management/create'
-            icon='abstract-28'
-            title='Criar Turma'
-            hasBullet
-          />
-        </SidebarMenuItemWithSub>
-
-        <SidebarMenuItemWithSub
-          to='/apps/lesson-management/'
-          title='Aulas'
-          fontIcon='bi-archive'
-          icon='book-open'
-        >
-          <SidebarMenuItem
-            to='/apps/lesson-management/lessons'
-            icon='abstract-28'
-            title='Minhas aulas'
-            hasBullet
-          />
-          <SidebarMenuItem
-            to='/apps/lesson-management/create'
-            icon='abstract-28'
-            title='Nova Aula'
-            hasBullet
-          />
-        </SidebarMenuItemWithSub>
-
-        <SidebarMenuItemWithSub
           to='/apps/dialogue-management/'
           title='Dialogue'
           fontIcon='bi-archive'
@@ -304,25 +346,7 @@ const SidebarMenuMain = () => {
             hasBullet
           />
         </SidebarMenuItemWithSub>
-        <SidebarMenuItemWithSub
-          to='/apps/school-management/'
-          title='Escolas'
-          fontIcon='bi-archive'
-          icon='delete-folder'
-        >
-          <SidebarMenuItem
-            to='/apps/school-management/schools'
-            icon='abstract-28'
-            title='Listagem de escolas'
-            hasBullet
-          />
-          <SidebarMenuItem
-            to='/apps/school-management/create'
-            icon='abstract-28'
-            title='Criar escola'
-            hasBullet
-          />
-        </SidebarMenuItemWithSub>
+
       </RoleBasedMenuItem>
 
       <SidebarMenuItem
