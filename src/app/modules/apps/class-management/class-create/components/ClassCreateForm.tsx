@@ -180,7 +180,7 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
       <div className='card-body'>
         <div className='row'>
           {/* Coluna da Esquerda */}
-          <div className='col-md-8'>
+          <div className='col-md-8'> 
             {/* Nome e Ativo */}
             <div className='row mb-7'>
               <div className='col-md-10'>
