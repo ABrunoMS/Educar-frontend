@@ -1,89 +1,107 @@
-import React from 'react';
+import React, { FC } from 'react';
 import AsyncSelect from 'react-select/async';
 import { SelectOptions } from '@interfaces/Forms';
 import { FormikProps } from 'formik';
+import { ThemeModeComponent } from '../../../_metronic/assets/ts/layout/ThemeMode';
 
-type Props = {
+interface AsyncSelectFieldProps {
   label: string;
   fieldName: string;
-  placeholder?: string;
   isMulti?: boolean;
+  placeholder?: string;
   loadOptions: (inputValue: string, callback: (options: SelectOptions[]) => void) => void;
   formik: FormikProps<any>;
-};
+  isDisabled?: boolean;
+  defaultOptions?: SelectOptions[]; // 💡 Mostra lista completa antes de digitar
+}
 
-const AsyncSelectField: React.FC<Props> = ({
+const AsyncSelectField: FC<AsyncSelectFieldProps> = ({
   label,
   fieldName,
-  placeholder,
   isMulti = false,
+  placeholder,
   loadOptions,
   formik,
+  isDisabled = false,
+  defaultOptions = [],
 }) => {
-  // 1. Pegamos as funções e estados que precisamos diretamente do 'formik'
-  const { setFieldValue, getFieldMeta, values } = formik;
-
-  // 2. Usamos 'getFieldMeta' para obter 'touched' e 'error'
-  const { touched, error } = getFieldMeta(fieldName);
+  const themeMode = ThemeModeComponent.getMode();
+  const currentTheme =
+    themeMode === 'system' ? ThemeModeComponent.getSystemMode() : themeMode;
+  const theme: 'light' | 'dark' = currentTheme as 'light' | 'dark';
 
   const customStyles = {
     control: (provided: any) => ({
       ...provided,
-      // Usamos 'touched' e 'error' que pegamos do getFieldMeta
-      borderColor: touched && error ? 'red' : provided.borderColor,
+      backgroundColor: theme === 'dark' ? '#1e1e2f' : '#fff',
+      borderColor: theme === 'dark' ? '#555' : '#ccc',
+      color: theme === 'dark' ? '#fff' : '#000',
+    }),
+    menu: (provided: any) => ({
+      ...provided,
+      backgroundColor: theme === 'dark' ? '#1e1e2f' : '#fff',
+      color: theme === 'dark' ? '#fff' : '#000',
+    }),
+    singleValue: (provided: any) => ({
+      ...provided,
+      color: theme === 'dark' ? '#fff' : '#000',
+    }),
+    multiValue: (provided: any) => ({
+      ...provided,
+      backgroundColor: theme === 'dark' ? '#333' : '#eee',
+    }),
+    multiValueLabel: (provided: any) => ({
+      ...provided,
+      color: theme === 'dark' ? '#fff' : '#000',
+    }),
+    input: (provided: any) => ({
+      ...provided,
+      color: theme === 'dark' ? '#fff' : '#000',
+    }),
+    placeholder: (provided: any) => ({
+      ...provided,
+      color: theme === 'dark' ? '#aaa' : '#666',
     }),
   };
 
-  const handleChange = (selectedOption: any) => {
-    const value = isMulti
-      ? selectedOption ? selectedOption.map((option: SelectOptions) => option.value) : []
-      : selectedOption ? selectedOption.value : '';
-    // Usamos 'setFieldValue' do formik
-    setFieldValue(fieldName, value);
-  };
-
-  // Lógica para encontrar as opções selecionadas atualmente para exibir no campo
-  const findSelectedValue = () => {
-    const currentValue = values[fieldName];
-    if (isMulti) {
-        // Se for multi-select, precisamos de um array de objetos de opção
-        if (!Array.isArray(currentValue)) return [];
-        // Esta é uma simplificação. O ideal seria ter acesso a todas as opções para encontrar o 'label'.
-        // Por agora, vamos exibir o próprio valor como label se a opção não for encontrada.
-        return currentValue.map(v => ({ value: v, label: v }));
-    }
-    // Se for single-select
-    if (currentValue) {
-        return { value: currentValue, label: currentValue };
-    }
-    return null;
-  }
-
   return (
-    <div className='mb-7'>
-      <label className='form-label fw-bold'>{label}</label>
+    <div>
+      <label className="form-label">{label}</label>
       <AsyncSelect
-        name={fieldName} // <-- Conectado ao Formik
-        value={findSelectedValue()} // <-- Exibe o valor atual
         isMulti={isMulti}
-        cacheOptions
-        defaultOptions
-        loadOptions={loadOptions}
         placeholder={placeholder}
-        onChange={handleChange}
+        loadOptions={loadOptions}
+        defaultOptions={defaultOptions} // 💡 Lista completa antes de digitar
+        isDisabled={isDisabled}
+        onChange={(selected: any) =>
+          formik.setFieldValue(
+            fieldName,
+            isMulti ? selected?.map((s: any) => s.value) || [] : selected?.value || ''
+          )
+        }
+        value={
+          isMulti
+            ? formik.values[fieldName]?.map((val: string) => {
+                const option = defaultOptions.find((o) => o.value === val);
+                return option || { value: val, label: val };
+              }) || []
+            : formik.values[fieldName]
+            ? defaultOptions.find((o) => o.value === formik.values[fieldName]) || {
+                value: formik.values[fieldName],
+                label: formik.values[fieldName],
+              }
+            : null
+        }
         styles={customStyles}
-        getOptionValue={(option: any) => option.value} // Tipagem para 'any' para evitar erro
-        getOptionLabel={(option: any) => option.label}
-        noOptionsMessage={() => 'Nenhuma opção encontrada'}
-        loadingMessage={() => 'Buscando...'}
+        theme={(baseTheme) => ({
+          ...baseTheme,
+          colors: {
+            ...baseTheme.colors,
+            primary25: theme === 'dark' ? '#444' : '#ddd',
+            primary: theme === 'dark' ? '#6666ff' : '#2684FF',
+          },
+        })}
       />
-      {touched && error && (
-        <div className='fv-plugins-message-container'>
-          <div className='fv-help-block'>
-            <span role='alert'>{error}</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
