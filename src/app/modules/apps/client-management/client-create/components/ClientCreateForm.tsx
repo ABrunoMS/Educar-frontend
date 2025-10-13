@@ -1,4 +1,4 @@
-import React, { FC, useState, useEffect } from 'react'
+import React, { FC, useState, useEffect, useMemo } from 'react'
 import * as Yup from 'yup'
 import { useFormik } from 'formik'
 import clsx from 'clsx'
@@ -30,7 +30,32 @@ export const initialClient: ClientType = {
   totalAccounts: 0,
   subSecretary: '',
   regional: '',
+  selectedProducts: [],
+  selectedContents: [],
 }
+
+const products = [
+  'Odisseia Educacional',
+  'Odisseia Dungeons',
+  'Jornada do Saber (ENEM)',
+  'Jornada do Saber (SAEB)',
+  'Trilha para o Futuro',
+  'Jornada do Trabalho',
+  'Realidade Mágica',
+];
+
+const contentCompatibility: { [key: string]: string[] } = {
+  'Odisseia Educacional': ['BNCC', 'SAEB', 'ENEM', 'Jornada do Trabalho', 'Educação Financeira', 'Empreendedorismo'],
+  'Odisseia Dungeons': ['BNCC', 'SAEB', 'ENEM', 'Jornada do Trabalho', 'Educação Financeira', 'Empreendedorismo'],
+  'Jornada do Saber (ENEM)': ['ENEM'],
+  'Jornada do Saber (SAEB)': ['SAEB'],
+  'Trilha para o Futuro': ['Educação Financeira', 'Empreendedorismo'],
+  'Jornada do Trabalho': ['Jornada do Trabalho'],
+  'Realidade Mágica': ['BNCC'],
+};
+
+// Lista de todos os conteúdos possíveis
+const allContents = ['BNCC', 'SAEB', 'ENEM', 'Jornada do Trabalho', 'Educação Financeira', 'Empreendedorismo'];
 
 const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
   // Estrutura hierárquica dinâmica
@@ -66,6 +91,8 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     totalAccounts: client?.totalAccounts || initialClient.totalAccounts,
     subSecretary: client?.id || initialClient.id,
     regional: client?.regional || initialClient.regional,
+    selectedProducts: client?.selectedProducts || [],
+    selectedContents: client?.selectedContents || [],
   }
 
   const editSchema = Yup.object().shape({
@@ -79,6 +106,9 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     totalAccounts: Yup.number().moreThan(0).required('Número de contas é obrigatório'),
     subSecretary: Yup.string().required('Subsecretaria é obrigatória'),
     regional: Yup.string().required('Regional é obrigatória'),
+    selectedProducts: Yup.array().of(Yup.string()).min(1, 'Selecione pelo menos um produto'),
+    selectedContents: Yup.array().of(Yup.string()).min(1, 'Selecione pelo menos um conteúdo'),
+
   })
 
   const formik = useFormik({
@@ -104,6 +134,17 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
       }
     },
   })
+
+  const availableContents = useMemo(() => {
+    const contents = new Set<string>();
+    
+    formik.values.selectedProducts.forEach(product => {
+      const compatible = contentCompatibility[product] || [];
+      compatible.forEach(content => contents.add(content));
+    });
+    
+    return Array.from(contents);
+  }, [formik.values.selectedProducts]);
 
   const handleCreateSubsecretaria = (subsecretariaValue: string, subsecretariaLabel: string) => {
     setSubsecretarias(prev => [
@@ -225,6 +266,58 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
       )
     }
 
+    const renderContentFieldset = () => {
+      return (
+        <>
+        <div className='separator my-5'></div>
+      <div className='row'>
+        {/* Coluna de Produtos */}
+        <div className='col-md-6'>
+          <label className='form-label fw-bold required'>Produtos</label>
+          {products.map(product => (
+            <div className='form-check form-check-solid mb-3' key={product}>
+              <input
+                className='form-check-input'
+                type='checkbox'
+                name='selectedProducts'
+                value={product}
+                checked={formik.values.selectedProducts.includes(product)}
+                onChange={formik.handleChange}
+              />
+              <label className='form-check-label'>{product}</label>
+            </div>
+          ))}
+        </div>
+
+        {/* Coluna de Conteúdos (renderização condicional) */}
+        <div className='col-md-6'>
+          <label className='form-label fw-bold required'>Conteúdos</label>
+          
+          {/* Mostra apenas os conteúdos compatíveis */}
+          {availableContents.map(content => (
+            <div className='form-check form-check-solid mb-3' key={content}>
+              <input
+                className='form-check-input'
+                type='checkbox'
+                name='selectedContents'
+                value={content}
+                checked={formik.values.selectedContents.includes(content)}
+                onChange={formik.handleChange}
+              />
+              <label className='form-check-label'>{content}</label>
+            </div>
+          ))}
+
+          {/* Mensagem de ajuda se nenhum produto for selecionado */}
+          {formik.values.selectedProducts.length === 0 && (
+            <div className='text-muted fs-7'>Selecione um produto para ver os conteúdos disponíveis.</div>
+          )}
+        </div>
+      </div>
+      </>
+      )
+    }
+
 
   return (
     <>
@@ -239,6 +332,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
           {renderBasicFieldset('signatureDate', 'Signature date', 'Date')}
           {renderBasicFieldset('implantationDate', 'Implantation date', 'Date')}
           {renderBasicFieldset('totalAccounts', 'Number of accounts', 'Accounts...', false, 'number')}
+          {renderContentFieldset()}
 
           {renderSubsecretariasRegionais()}
         </div>

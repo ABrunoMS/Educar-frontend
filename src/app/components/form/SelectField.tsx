@@ -7,7 +7,7 @@ import { SelectOptions } from '@interfaces/Forms';
 interface FieldProps {
   fieldName: string;
   label: string;
-  placeholder?: string;
+  placeholder?: string | null;
   required?: boolean;
   loading?: boolean;
   isDisabled?: boolean;

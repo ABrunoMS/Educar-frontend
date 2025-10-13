@@ -13,4 +13,6 @@ export interface ClientType {
   secretaryId?: string;
   subSecretary?: string;
   regional?: string;
+  selectedProducts: string[];
+  selectedContents: string[];
 }
