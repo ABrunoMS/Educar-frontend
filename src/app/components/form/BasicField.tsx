@@ -1,51 +1,46 @@
-import React from "react"
+import React from "react";
 import clsx from "clsx";
 import { FormikProps } from "formik";
 
 interface FieldProps {
   fieldName: string;
   label: string;
-  placeholder: string | null;
-  required: boolean;
+  placeholder?: string | null;
+  required?: boolean;
   formik: FormikProps<any>;
   type?: 'text' | 'number' | 'password';
-  rows?: number; // <--- Adicionado
+  rows?: number;
 }
 
 const BasicField: React.FC<FieldProps> = ({
   fieldName,
   label,
   placeholder,
-  required,
+  required = false,
   formik,
   type = 'text',
-  rows = 1, // <--- Adicionado com default 1
+  rows = 1,
 }) => {
+  const meta = formik.getFieldMeta(fieldName);
+  const showError = formik.submitCount > 0 && meta.error; // só após submit
   const isTextArea = rows > 1;
 
   return (
-    // Removi 'fv-row' para usar 'col-12' ou 'col-md-4' no LessonCreate,
-    // mas mantive a estrutura básica do label/input/erro.
-    <div className='fv-row mb-7'> 
-      <label
-        className={clsx(
-          'fw-bold fs-6 mb-2',
-          {'required': required}
-        )}
-      >{label}</label>
+    <div className='fv-row mb-7'>
+      <label className='fw-bold fs-6 mb-2'>
+        {label} {required && showError && <span className='text-danger'>*</span>}
+      </label>
 
       {isTextArea ? (
         <textarea
           placeholder={placeholder || undefined}
           {...formik.getFieldProps(fieldName)}
           name={fieldName}
-          rows={rows} // Renderiza o número de linhas
+          rows={rows}
           className={clsx(
             'form-control form-control-solid mb-3 mb-lg-0',
-            {'is-invalid': formik.getFieldMeta(fieldName).touched && formik.getFieldMeta(fieldName).error},
-            {
-              'is-valid': formik.getFieldMeta(fieldName).touched && !formik.getFieldMeta(fieldName).error,
-            }
+            { 'is-invalid': showError },
+            { 'is-valid': formik.submitCount > 0 && !meta.error }
           )}
           autoComplete='off'
           disabled={formik.isSubmitting}
@@ -58,25 +53,23 @@ const BasicField: React.FC<FieldProps> = ({
           name={fieldName}
           className={clsx(
             'form-control form-control-solid mb-3 mb-lg-0',
-            {'is-invalid': formik.getFieldMeta(fieldName).touched && formik.getFieldMeta(fieldName).error},
-            {
-              'is-valid': formik.getFieldMeta(fieldName).touched && !formik.getFieldMeta(fieldName).error,
-            }
+            { 'is-invalid': showError },
+            { 'is-valid': formik.submitCount > 0 && !meta.error }
           )}
           autoComplete='off'
           disabled={formik.isSubmitting}
         />
       )}
-      
-      {formik.getFieldMeta(fieldName).touched && formik.getFieldMeta(fieldName).error && (
+
+      {showError && (
         <div className='fv-plugins-message-container'>
           <div className='fv-help-block'>
-            <span role='alert'>{formik.getFieldMeta(fieldName).error}</span>
+            <span role='alert'>{meta.error}</span>
           </div>
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
 export default BasicField;

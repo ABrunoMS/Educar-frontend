@@ -1,17 +1,19 @@
 import React from "react"
 import clsx from "clsx";
 import { FormikProps } from "formik";
-import Select from "react-select"
-import { SelectOptions } from '@interfaces/Forms'
+import Select from "react-select";
+import { SelectOptions } from '@interfaces/Forms';
 
 interface FieldProps {
   fieldName: string;
   label: string;
-  placeholder: string | null;
-  required: boolean;
+  placeholder?: string;
+  required?: boolean;
+  loading?: boolean;
+  isDisabled?: boolean;
   disabled?: boolean;
-  multiselect: boolean;
-  onChange?: (value: string | string[]) => void; // Tipagem mais específica
+  multiselect?: boolean;
+  onChange?: (value: string | string[]) => void;
   options: SelectOptions[];
   formik: FormikProps<any>;
 }
@@ -20,71 +22,66 @@ const SelectField: React.FC<FieldProps> = ({
   fieldName,
   label,
   placeholder,
-  required,
+  required = false,
+  loading = false,
+  isDisabled = false,
   disabled,
   formik,
   options,
-  multiselect,
-  onChange // <-- Recebendo a prop
+  multiselect = false,
+  onChange
 }) => {
-  // Esta função agora será usada para a prop 'value'
+  const finalDisabledState = formik.isSubmitting || loading || isDisabled || disabled;
+  const formikValue = formik.values[fieldName];
+
   const getCurrentValues = (): SelectOptions | SelectOptions[] | null => {
-    const formikValue = formik.getFieldProps(fieldName).value;
     if (multiselect) {
-      // Para multiselect, formikValue é um array de strings (ex: ['id1', 'id2'])
-      return options.filter(option => formikValue.includes(option.value));
+      return options.filter(option => formikValue?.includes(option.value));
     }
-    // Para select único, formikValue é uma única string (ex: 'id1')
     return options.find(option => option.value === formikValue) || null;
   }
 
   const handleUpdate = (newValue: any) => {
     let finalValue: string | string[];
-
-    // Lógica para extrair o(s) valor(es) para o Formik
     if (multiselect) {
-      finalValue = newValue ? newValue.map((option: SelectOptions) => option.value) : [];
+      finalValue = newValue ? newValue.map((opt: SelectOptions) => opt.value) : [];
     } else {
       finalValue = newValue ? newValue.value : '';
     }
 
-    // 1. Atualiza o Formik
     formik.setFieldValue(fieldName, finalValue);
-    formik.setFieldTouched(fieldName, true); // Garante que o campo seja tocado para validação
+    formik.setFieldTouched(fieldName, true);
 
-    // 2. (CORREÇÃO DO BUG) Chama a função onChange customizada, se ela existir
-    if (onChange) {
-      onChange(finalValue);
-    }
+    if (onChange) onChange(finalValue);
   }
+
+  const meta = formik.getFieldMeta(fieldName);
+  const showError = formik.submitCount > 0 && meta.error; // só após submit
 
   return (
     <div className='mb-7'>
-      <label
-        className={clsx(
-          'fw-bold fs-6 mb-2',
-          {'required': required}
-        )}
-      >{label}</label>
-      <Select 
+      <label className='fw-bold fs-6 mb-2'>
+        {label} {required && showError && <span className='text-danger'>*</span>}
+      </label>
+      <Select
         className={clsx(
           'react-select-styled react-select-solid mb-3 mb-lg-0',
-          {'is-invalid': formik.getFieldMeta(fieldName).touched && formik.getFieldMeta(fieldName).error}
+          { 'is-invalid': showError }
         )}
-        classNamePrefix='react-select' 
+        classNamePrefix='react-select'
         options={options}
         placeholder={placeholder}
-        // MELHORIA: Usando 'value' para ser um componente controlado
         value={getCurrentValues()}
         name={fieldName}
-        onChange={handleUpdate} // Usando a nova função unificada
+        onChange={handleUpdate}
+        onBlur={() => formik.setFieldTouched(fieldName, true)}
         isMulti={multiselect}
-        isDisabled={formik.isSubmitting || disabled}
+        isDisabled={finalDisabledState}
       />
-      {formik.getFieldMeta(fieldName).touched && formik.getFieldMeta(fieldName).error && (
+      {showError && (
         <div className='fv-plugins-message-container'>
           <div className='fv-help-block'>
-            <span role='alert'>{formik.getFieldMeta(fieldName).error}</span>
+            <span role='alert'>{meta.error}</span>
           </div>
         </div>
       )}
