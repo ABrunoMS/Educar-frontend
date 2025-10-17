@@ -223,12 +223,11 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     const renderSubsecretariasRegionais = () => {
       return (
         <div className='mb-7'>
-          <div className='d-flex justify-content-between align-items-center mb-4'>
+          
+          <div className='d-flex align-items-center mb-4'>
             <label className='fw-bold fs-4 mb-0'>Subsecretarias</label>
-            <button type='button' className='btn btn-sm btn-primary' onClick={() => setShowSubsecretariaModal(true)}>
-              <i className='fas fa-plus me-1'></i> Nova subsecretaria
-            </button>
           </div>
+          
           <div className='row g-4'>
             {subsecretarias.map((sub: { value: string; label: string; regionais: { value: string; label: string }[] }) => (
               <div key={sub.value} className='col-12 col-md-6'>
@@ -269,52 +268,114 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     const renderContentFieldset = () => {
       return (
         <>
-        <div className='separator my-5'></div>
-      <div className='row'>
-        {/* Coluna de Produtos */}
-        <div className='col-md-6'>
-          <label className='form-label fw-bold required'>Produtos</label>
-          {products.map(product => (
-            <div className='form-check form-check-solid mb-3' key={product}>
-              <input
-                className='form-check-input'
-                type='checkbox'
-                name='selectedProducts'
-                value={product}
-                checked={formik.values.selectedProducts.includes(product)}
-                onChange={formik.handleChange}
-              />
-              <label className='form-check-label'>{product}</label>
+          <div className='separator my-5'></div>
+  <div className='px-2 py-3 rounded border'>
+            {/* Produtos minimalistas responsivos */}
+            <div className='mb-3'>
+              <label className='form-label fw-semibold required fs-6 text-gray-700 mb-2'>Produtos</label>
+              <div className='d-flex flex-row flex-wrap gap-1 overflow-auto pb-1'>
+                {products.map(product => (
+                  <label
+                    key={product}
+                    className={clsx(
+                      'chip-minimal px-3 py-1 rounded-pill cursor-pointer',
+                      formik.values.selectedProducts.includes(product)
+                        ? 'border border-gray-500 chip-selected'
+                        : 'border border-gray-300 text-gray-600'
+                    )}
+                    style={{ fontSize: '0.95rem', minWidth: '120px', userSelect: 'none', background: 'transparent', transition: 'all 0.2s' }}
+                    htmlFor={`product-${product}`}
+                  >
+                    <input
+                      className='d-none'
+                      type='checkbox'
+                      name='selectedProducts'
+                      value={product}
+                      checked={formik.values.selectedProducts.includes(product)}
+                      onChange={formik.handleChange}
+                      id={`product-${product}`}
+                    />
+                    {product}
+                  </label>
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
 
-        {/* Coluna de Conteúdos (renderização condicional) */}
-        <div className='col-md-6'>
-          <label className='form-label fw-bold required'>Conteúdos</label>
-          
-          {/* Mostra apenas os conteúdos compatíveis */}
-          {availableContents.map(content => (
-            <div className='form-check form-check-solid mb-3' key={content}>
-              <input
-                className='form-check-input'
-                type='checkbox'
-                name='selectedContents'
-                value={content}
-                checked={formik.values.selectedContents.includes(content)}
-                onChange={formik.handleChange}
-              />
-              <label className='form-check-label'>{content}</label>
+            {/* Conteúdos minimalistas responsivos */}
+            <div className='mb-1'>
+              <label className='form-label fw-semibold required fs-6 text-gray-700 mb-2'>Conteúdos</label>
+              <div className='d-flex flex-row flex-wrap gap-1'>
+                {availableContents.map(content => (
+                  <label
+                    key={content}
+                    className={clsx(
+                      'chip-minimal px-3 py-1 rounded-pill cursor-pointer',
+                      formik.values.selectedContents.includes(content)
+                        ? 'border border-gray-500 chip-selected'
+                        : 'border border-gray-300 text-gray-600'
+                    )}
+                    style={{ fontSize: '0.95rem', minWidth: '100px', userSelect: 'none', background: 'transparent', transition: 'all 0.2s' }}
+                    htmlFor={`content-${content}`}
+                  >
+                    <input
+                      className='d-none'
+                      type='checkbox'
+                      name='selectedContents'
+                      value={content}
+                      checked={formik.values.selectedContents.includes(content)}
+                      onChange={formik.handleChange}
+                      id={`content-${content}`}
+                    />
+                    {content}
+                  </label>
+                ))}
+              </div>
+              {formik.values.selectedProducts.length === 0 && (
+                <div className='text-muted fs-7 mt-2'>Selecione um produto para ver os conteúdos disponíveis.</div>
+              )}
             </div>
-          ))}
-
-          {/* Mensagem de ajuda se nenhum produto for selecionado */}
-          {formik.values.selectedProducts.length === 0 && (
-            <div className='text-muted fs-7'>Selecione um produto para ver os conteúdos disponíveis.</div>
-          )}
-        </div>
-      </div>
-      </>
+          </div>
+          {/* Botão de subsecretaria abaixo da section de conteúdo */}
+          <div className='d-flex justify-content-center mt-4 mb-2'>
+            <button type='button' className='btn btn-sm btn-primary' onClick={() => setShowSubsecretariaModal(true)}>
+              <i className='fas fa-plus me-1'></i> Nova subsecretaria
+            </button>
+          </div>
+          {/* Estilos responsivos para chips */}
+          <style>{`
+            .chip-minimal {
+              box-shadow: none !important;
+              font-size: 0.95rem;
+              font-weight: 400;
+              margin-bottom: 2px;
+              border-width: 1px;
+              background: transparent;
+              transition: all 0.2s;
+            }
+            .chip-selected {
+              border-width: 2px !important;
+              box-shadow: 0 2px 8px 0 rgba(0,0,0,0.04);
+              background: transparent !important;
+              color: inherit !important;
+            }
+            @media (max-width: 600px) {
+              .chip-minimal {
+                min-width: 90px !important;
+                font-size: 0.85rem !important;
+                padding: 0.5rem 0.7rem !important;
+              }
+            }
+            [data-bs-theme="dark"] .chip-minimal {
+              color: #b5b5c3;
+              border-color: #323248;
+            }
+            [data-bs-theme="dark"] .chip-selected {
+              border-color: #b5b5c3 !important;
+              box-shadow: 0 2px 8px 0 rgba(0,0,0,0.12);
+              color: #fff !important;
+            }
+          `}</style>
+        </>
       )
     }
 

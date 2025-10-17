@@ -9,7 +9,7 @@ const ClassPage = () => {
     <Routes>
       <Route element={<Outlet />}>
         <Route
-          path='class/{id}'
+          path='class/:id'
           element={
             <>
               <PageTitle>Editar Classe</PageTitle>
@@ -36,7 +36,7 @@ const ClassPage = () => {
           }
         />
       </Route>
-      <Route index element={<Navigate to='/apps/client-management/clients' />} />
+      <Route index element={<Navigate to='/apps/class-management/classes' />} />
     </Routes>
   )
 }
