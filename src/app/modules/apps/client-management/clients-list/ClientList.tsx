@@ -1,15 +1,18 @@
 import { ListView } from '@components/list-view/ListView'
 import { ClientType } from '@interfaces/Client'
-import { useQuery, UseQueryResult } from 'react-query'
+import { useQuery, UseQueryResult, useQueryClient } from 'react-query'
 import { Column } from 'react-table'
-import { getList } from './core/_requests'
+import { getList, deleteClient } from './core/_requests'
 import { usePagination } from '@contexts/PaginationContext'
 import { useState } from 'react'
 
 import ClientDetailsModal from '../../../../components/list-view/components/modals/ClientDetailsModal'
-
+import DeleteDialog from '@components/delete-dialog/DeleteDialog'
 
 import { Link } from 'react-router-dom'
+import { ActionsCell } from '@components/list-view/table/columns/ActionsCell'
+import { ID } from '@metronic/helpers'
+import { toast } from 'react-toastify'
 
 
 // Definimos uma interface para a resposta do Metronic
@@ -24,9 +27,19 @@ interface MetronicResponse<T> {
 
 const ClientListWrapper = () => {
   const {page, pageSize, sortBy, sortOrder, filter, search} = usePagination()
+  const [deleteId, setDeleteId] = useState<ID>();
+  const [showLoading, setShowLoading] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
   
+  
+
+  const deleteActionCallback = (id: ID) => {
+    setDeleteId(id);
+    setShowDeleteDialog(true);
+  };
   // A chamada useQuery agora espera o tipo MetronicResponse
-  const {data, isLoading}: UseQueryResult<MetronicResponse<ClientType>> = useQuery(
+  const {data, isLoading, refetch}: UseQueryResult<MetronicResponse<ClientType>> = useQuery(
     ['client-list', page, sortBy, sortOrder, filter, search],
     () => getList(page, pageSize, sortBy, sortOrder, filter, search),
     {
@@ -47,6 +60,20 @@ const ClientListWrapper = () => {
     setIsModalOpen(false)
   }
   
+  const deleteCallback = async () => {
+    setShowLoading(true);
+    try {
+      await deleteClient(deleteId as string); // Chame a função de deletar cliente
+      setShowLoading(false);
+      setShowDeleteDialog(false);
+      toast.success('Cliente excluído com sucesso');
+      refetch(); // Atualiza a lista
+    } catch (error) {
+      toast.error('Ocorreu um erro ao excluir o cliente');
+      setShowDeleteDialog(false);
+      setShowLoading(false);
+    }
+  };
   // As colunas usam camelCase, que é o formato dentro do array 'data'
   const columns: Column<ClientType>[] = [
   { 
@@ -70,6 +97,18 @@ const ClientListWrapper = () => {
     { Header: 'Total de contas', accessor: 'totalAccounts' },
     { Header: 'Contas restantes', accessor: 'remainingAccounts' },
     { Header: 'Parceiro', accessor: 'partner' },
+    {
+      Header: '',
+      id: 'actions',
+      Cell: ({ ...props }) => (
+        <ActionsCell
+          // Garanta que o 'editPath' está correto
+          editPath='/apps/client-management/client' // A Célula irá adicionar o /:id
+          id={props.data[props.row.index].id}
+          callbackFunction={deleteActionCallback}
+        />
+      ),
+    }
   ]
 
   return (
@@ -88,6 +127,12 @@ const ClientListWrapper = () => {
           onClose={handleCloseModal}
         />
       )}
+      <DeleteDialog
+        open={showDeleteDialog}
+        loading={showLoading}
+        closeCallback={() => setShowDeleteDialog(false)}
+        actionCallback={deleteCallback}
+      />
     </>
   )
 }

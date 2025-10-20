@@ -15,6 +15,7 @@ import { isNotEmpty } from '@metronic/helpers'
 type Props = {
   isUserLoading?: boolean
   client?: ClientType
+  onFormSubmit: () => void
 }
 
 export const initialClient: ClientType = {
