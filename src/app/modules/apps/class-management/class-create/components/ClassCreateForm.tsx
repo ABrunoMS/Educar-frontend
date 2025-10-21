@@ -60,6 +60,11 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
   const [teacherOptions, setTeacherOptions] = useState<SelectOptions[]>([]);
   const [studentOptions, setStudentOptions] = useState<SelectOptions[]>([]);
 
+  // Log para debug
+  useEffect(() => {
+    console.log('ClassCreateForm: classItem mudou:', classItem);
+  }, [classItem]);
+
   const editClassSchema = Yup.object().shape({
     name: Yup.string().required('O nome da turma é obrigatório'),
     isActive: Yup.boolean().required('O campo Ativo é obrigatório'),
@@ -73,14 +78,28 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
   });
 
   const formik = useFormik({
-    initialValues: classItem,
+    initialValues: {
+      ...initialClass,
+      ...classItem,
+      // Garante que os arrays existam
+      teacherIds: classItem?.teacherIds || [],
+      studentIds: classItem?.studentIds || [],
+      content: classItem?.content || []
+    },
     validationSchema: editClassSchema,
     enableReinitialize: true,
     onSubmit: async (values, { setSubmitting }) => {
+      console.log('Valores do formulário antes de enviar:', values);
       const finalValues = {
         ...values,
+        // Garante que o formato esteja correto para o backend
         accountIds: [...(values.teacherIds || []), ...(values.studentIds || [])],
+        teacherIds: values.teacherIds || [],
+        studentIds: values.studentIds || [],
+        content: values.content || [],
+        isActive: values.isActive ?? true
       };
+      console.log('Valores finais enviados para o backend:', finalValues);
       setSubmitting(true);
       try {
         if (isNotEmpty(finalValues.id)) {
@@ -92,7 +111,7 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
         }
         onFormSubmit();
       } catch (ex) {
-        console.error(ex);
+        console.error('Erro ao salvar turma:', ex);
         alert('Ocorreu um erro ao salvar a turma.');
       } finally {
         setSubmitting(false);
@@ -124,22 +143,13 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
     }
   }, [currentUser]);
 
-  // Carregar professores e alunos
+  // Carregar professores e alunos quando schoolId mudar
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || !formik.values.schoolId) return;
 
     const fetchUsers = async () => {
       try {
-        let id: string;
-        if (!currentUser.roles?.includes('Admin')) {
-          id = formik.values.schoolId || currentUser.client?.id || '';
-        } else {
-          id = formik.values.schoolId || '';
-        }
-
-        if (!id) return;
-
-        const res = await getAccountsBySchool(id, 1, 1000, '');
+        const res = await getAccountsBySchool(formik.values.schoolId, 1, 1000, '');
         const teachers = res.data
           .filter((acc: any) => acc.role === 'Teacher')
           .map((acc: any) => ({ value: acc.id, label: acc.name }));
@@ -149,10 +159,6 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
 
         setTeacherOptions(teachers);
         setStudentOptions(students);
-
-        // Pré-seleciona no modo edição
-        if (classItem.teacherIds?.length) formik.setFieldValue('teacherIds', classItem.teacherIds);
-        if (classItem.studentIds?.length) formik.setFieldValue('studentIds', classItem.studentIds);
       } catch (error) {
         console.error('Erro ao carregar usuários:', error);
       }
@@ -242,13 +248,14 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
             {/* Professores e Alunos */}
             <div className="row mb-7">
               <div className="col-md-6">
+                <label className="form-label">Professores</label>
                 <AsyncSelectField
-                  label="Professores"
+                  label=""
                   fieldName="teacherIds"
                   isMulti
                   placeholder="Selecione os professores..."
                   formik={formik}
-                  defaultOptions={teacherOptions} // mostra todos de início
+                  defaultOptions={teacherOptions}
                   loadOptions={(inputValue, callback) => {
                     const filtered = teacherOptions.filter((t) =>
                       t.label.toLowerCase().includes(inputValue.toLowerCase())
@@ -256,15 +263,45 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
                     callback(filtered);
                   }}
                 />
+                
+                {/* Lista de professores selecionados */}
+                {formik.values.teacherIds && formik.values.teacherIds.length > 0 && (
+                  <div className="mt-3">
+                    <small className="text-muted">Professores adicionados:</small>
+                    <div className="mt-2">
+                      {formik.values.teacherIds.map((teacherId) => {
+                        const teacher = teacherOptions.find(t => t.value === teacherId);
+                        return teacher ? (
+                          <div key={teacherId} className="d-flex align-items-center justify-content-between bg-light-primary p-2 rounded mb-2">
+                            <span className="fw-bold text-primary">{teacher.label}</span>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-icon btn-light-danger"
+                              onClick={() => {
+                                const currentTeachers = formik.values.teacherIds || [];
+                                const updatedTeachers = currentTeachers.filter(id => id !== teacherId);
+                                formik.setFieldValue('teacherIds', updatedTeachers);
+                              }}
+                            >
+                              <i className="bi bi-trash fs-6"></i>
+                            </button>
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
+              
               <div className="col-md-6">
+                <label className="form-label">Alunos</label>
                 <AsyncSelectField
-                  label="Alunos"
+                  label=""
                   fieldName="studentIds"
                   isMulti
                   placeholder="Selecione os alunos..."
                   formik={formik}
-                  defaultOptions={studentOptions} // mostra todos de início
+                  defaultOptions={studentOptions}
                   loadOptions={(inputValue, callback) => {
                     const filtered = studentOptions.filter((s) =>
                       s.label.toLowerCase().includes(inputValue.toLowerCase())
@@ -272,6 +309,34 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
                     callback(filtered);
                   }}
                 />
+                
+                {/* Lista de alunos selecionados */}
+                {formik.values.studentIds && formik.values.studentIds.length > 0 && (
+                  <div className="mt-3">
+                    <small className="text-muted">Alunos adicionados:</small>
+                    <div className="mt-2">
+                      {formik.values.studentIds.map((studentId) => {
+                        const student = studentOptions.find(s => s.value === studentId);
+                        return student ? (
+                          <div key={studentId} className="d-flex align-items-center justify-content-between bg-light-info p-2 rounded mb-2">
+                            <span className="fw-bold text-info">{student.label}</span>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-icon btn-light-danger"
+                              onClick={() => {
+                                const currentStudents = formik.values.studentIds || [];
+                                const updatedStudents = currentStudents.filter(id => id !== studentId);
+                                formik.setFieldValue('studentIds', updatedStudents);
+                              }}
+                            >
+                              <i className="bi bi-trash fs-6"></i>
+                            </button>
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -287,7 +352,7 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
                     type="checkbox"
                     name="content"
                     value={content}
-                    checked={formik.values.content.includes(content)}
+                      checked={Array.isArray(formik.values.content) && formik.values.content.includes(content)}
                     onChange={formik.handleChange}
                   />
                   <label className="form-check-label">{content}</label>

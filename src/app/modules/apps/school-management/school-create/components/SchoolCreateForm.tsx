@@ -10,13 +10,15 @@ import BasicField from '@components/form/BasicField'
 import SelectField from '@components/form/SelectField'
 import { getClients } from '@services/Clients'
 import { getAddresses } from '@services/Addresses'
-import { createSchool } from '@services/Schools'
+import { createSchool, updateSchool } from '@services/Schools'
 import { isNotEmpty } from '@metronic/helpers'
 import { AddressModal } from './AddressModal'
 
 type Props = {
   isUserLoading?: boolean
   school?: School
+  schoolItem?: SchoolType
+  onFormSubmit?: () => void
 }
 
 const initialSchool: School = {
@@ -27,16 +29,24 @@ const initialSchool: School = {
   client: ''
 }
 
-const SchoolCreateForm: FC<Props> = ({ school, isUserLoading }) => {
+const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onFormSubmit }) => {
   const [clientOptions, setClientOptions] = useState<SelectOptions[]>([]);
   const [addressOptions, setAddressOptions] = useState<SelectOptions[]>([]);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  
+  // Utiliza schoolItem se disponível (modo edição), senão usa school (modo criação)
+  const currentSchool = schoolItem || school;
+  
   const [dialogueForEdit] = useState<School>({
-    ...school,
-    name: school?.name || initialSchool.name,
-    description: school?.description || initialSchool.description,
-    address: school?.address || initialSchool.address,
-    client: school?.client || initialSchool.client
+    id: currentSchool?.id || '',
+    name: currentSchool?.name || '',
+    description: currentSchool?.description || '',
+    address: (currentSchool as SchoolType)?.addressId || 
+             (typeof currentSchool?.address === 'string' ? currentSchool.address : '') ||
+             '',
+    client: (currentSchool as SchoolType)?.clientId || 
+            (typeof currentSchool?.client === 'string' ? currentSchool.client : '') ||
+            ''
   })
 
   const intl = useIntl()
@@ -92,7 +102,9 @@ const SchoolCreateForm: FC<Props> = ({ school, isUserLoading }) => {
     initialValues: dialogueForEdit,
     validationSchema: editSchema,
     validateOnChange: true,
+    enableReinitialize: true,
     onSubmit: async (values, { setSubmitting }) => {
+      console.log('Valores do formulário antes de enviar:', values);
       setSubmitting(true);
       try {
         const schoolData: SchoolType = {
@@ -102,11 +114,24 @@ const SchoolCreateForm: FC<Props> = ({ school, isUserLoading }) => {
           clientId: values.client,
         };
         
-        await createSchool(schoolData);
-        alert('Escola criada com sucesso!');
-        formik.resetForm();
+        console.log('Dados da escola para enviar:', schoolData);
+        
+        if (isNotEmpty(values.id)) {
+          // Modo edição
+          await updateSchool(values.id!, schoolData);
+          alert('Escola atualizada com sucesso!');
+        } else {
+          // Modo criação
+          await createSchool(schoolData);
+          alert('Escola criada com sucesso!');
+          formik.resetForm();
+        }
+        
+        if (onFormSubmit) {
+          onFormSubmit();
+        }
       } catch (ex) {
-        console.error(ex);
+        console.error('Erro ao salvar escola:', ex);
         alert('Houve um erro ao salvar a escola. Por favor, tente novamente.');
       } finally {
         setSubmitting(false);
