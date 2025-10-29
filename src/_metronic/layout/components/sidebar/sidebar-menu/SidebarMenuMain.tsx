@@ -13,9 +13,9 @@ interface RoleBasedMenuItemProps {
 }
 
 const RoleBasedMenuItem: React.FC<RoleBasedMenuItemProps> = ({rolesAllowed, children}) => {
-  const { role } = useRole()
+  const { hasAnyRole } = useRole()
 
-  if (!rolesAllowed.includes(role)) {
+  if (!hasAnyRole(rolesAllowed)) {
     return null // Don't render if role is not allowed
   }
 

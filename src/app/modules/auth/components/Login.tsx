@@ -31,7 +31,7 @@ export function Login() {
 
   const [loading, setLoading] = useState(false)
   const {saveAuth, setCurrentUser} = useAuth()
-  const {setRole} = useRole()
+  const {setRoles} = useRole()
 
   const loginSchema = Yup.object().shape({
     email: Yup.string()
@@ -59,9 +59,14 @@ export function Login() {
         if (user) {
         setCurrentUser(user)
         // A lógica de Role agora funciona com o objeto 'user' real
-        const role = user.roles?.find(item => ['Admin', 'Teacher', 'Student'].includes(item))
-        if(role) setRole(role as 'Admin' | 'Teacher' | 'Student')
-        
+        const { mapRoleString } = await import('@contexts/roles.generated')
+        const mappedRoles = (user.roles || [])
+          .map((r: string) => mapRoleString(r))
+          .filter(Boolean) as any
+        if (mappedRoles.length) {
+          setRoles(mappedRoles)
+        }
+
         toast.success(`Bem vindo, ${user.name}`) // Use user.name que vem da API
       } else {
         throw new Error("Não foi possível obter os dados do usuário após o login.")

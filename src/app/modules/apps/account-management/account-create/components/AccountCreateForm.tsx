@@ -8,6 +8,10 @@ import BasicField from '@components/form/BasicField'
 import { SelectField } from '@components/form'
 import { SelectOptions } from '@interfaces/Forms'
 import { Account } from '@interfaces/Account'
+import { Role, ALL_ROLES } from '@contexts/roles.generated'
+
+// Roles allowed in the account creation form (limited subset)
+type AllowedRole = 'Admin' | 'Teacher' | 'Student'
 
 import { getClients } from '@services/Clients'
 import { getSchoolsByClient } from '@services/Schools'
@@ -204,29 +208,41 @@ const AccountCreateForm: FC<Props> = ({ account, isUserLoading, onFormSubmit }) 
         />
 
         <div className='mb-7'>
-          <label className='required fw-bold fs-6 mb-5'>Role</label>
-          {['Admin', 'Teacher', 'Student'].map((role, idx) => (
-            <div className='d-flex fv-row' key={idx}>
-              <div className='form-check form-check-custom form-check-solid'>
-                <input
-                  className='form-check-input me-3'
-                  {...formik.getFieldProps('role')}
-                  name='role'
-                  type='radio'
-                  value={role}
-                  id={`kt_modal_update_role_option_${idx}`}
-                  checked={formik.values.role === role}
-                  disabled={formik.isSubmitting || isUserLoading}
-                />
-                <label className='form-check-label' htmlFor={`kt_modal_update_role_option_${idx}`}>
-                  <div className='fw-bolder text-gray-800'>
-                    {role === 'Admin' ? 'Administrator' : role === 'Teacher' ? 'Professor' : 'Aluno'}
-                  </div>
-                </label>
-              </div>
-              {idx < 2 && <div className='separator separator-dashed my-5'></div>}
-            </div>
-          ))}
+          <label className='required fw-bold fs-6 mb-5'>Cargo</label>
+          <div className='d-flex flex-wrap gap-3'>
+            {ALL_ROLES.map((role, idx) => {
+              const label =
+                role === 'Admin' ? 'Administrador'
+                : role === 'Teacher' ? 'Professor'
+                : role === 'TeacherEducar' ? 'Professor Educar'
+                : role === 'Student' ? 'Aluno'
+                : role === 'AgenteComercial' ? 'Agente Comercial'
+                : role === 'Diretor' ? 'Diretor'
+                : role === 'Distribuidor' ? 'Distribuidor'
+                : role === 'Secretario' ? 'Secretário'
+                : role
+              return (
+                <div className='form-check form-check-custom form-check-solid p-0' key={idx} style={{minWidth: 140}}>
+                  <input
+                    className='form-check-input d-none'
+                    {...formik.getFieldProps('role')}
+                    name='role'
+                    type='radio'
+                    value={role}
+                    id={`kt_modal_update_role_option_${idx}`}
+                    checked={formik.values.role === role}
+                    disabled={formik.isSubmitting || isUserLoading}
+                  />
+                  <label
+                    className={`form-check-label w-100 px-4 py-3 rounded border text-center ${formik.values.role === role ? 'bg-primary text-white border-primary shadow-sm' : 'bg-light border-gray-300 text-gray-800'}`}
+                    htmlFor={`kt_modal_update_role_option_${idx}`}
+                    style={{cursor: 'pointer', display: 'block'}}>
+                    <span className='fw-bold fs-6'>{label}</span>
+                  </label>
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
 

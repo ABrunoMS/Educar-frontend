@@ -15,9 +15,9 @@ interface PrivateRouteProps {
 }
 
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, rolesAllowed }) => {
-  const { role } = useRole()
+  const { hasAnyRole } = useRole()
 
-  if (!rolesAllowed.includes(role)) {
+  if (!hasAnyRole(rolesAllowed)) {
     return <Navigate to="/dashboard" /> // Redirect if not authorized
   }
 
