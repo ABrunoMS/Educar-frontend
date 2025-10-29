@@ -4,7 +4,32 @@ import { ClientType } from '@interfaces/Client'
 import { PaginatedResponse } from "@contexts/PaginationContext";
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const CLIENTS_URL = `${API_URL}/api/Clients`; // URL correta para o endpoint de clientes
+const CLIENTS_URL = `${API_URL}/api/Clients`; // URL correta para o endpoint de 
+
+
+export interface ProductDto {
+  id: string 
+  name: string
+}
+
+export interface ContentDto {
+  id: string 
+  name: string
+}
+
+
+export const getAllProducts = (): Promise<PaginatedResponse<ProductDto>> => {
+  return axios
+    .get<PaginatedResponse<ProductDto>>(`${API_URL}/api/Products?pageNumber=1&pageSize=9999`)
+    .then((response: AxiosResponse<PaginatedResponse<ProductDto>>) => response.data);
+}
+
+export const getCompatibleContents = (productId: string): Promise<ContentDto[]> => {
+  return axios
+    .get<ContentDto[]>(`${API_URL}/api/Products/${productId}/contents`)
+    .then((response: AxiosResponse<ContentDto[]>) => response.data);
+}
+
 
 // Tipo de resposta para a lista de clientes
 export type ClientsQueryResponse = PaginatedResponse<ClientType>;

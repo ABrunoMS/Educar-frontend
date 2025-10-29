@@ -1,4 +1,5 @@
 export interface ContractBase {
+  id?: string;
   contractDurationInYears: number;
   contractSigningDate: Date | null;
   implementationDate: Date | null;

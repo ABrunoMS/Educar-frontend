@@ -1,4 +1,4 @@
-import React, { FC, useState} from 'react'
+import React, { FC, useState, useEffect } from 'react'
 import * as Yup from 'yup'
 import {useFormik} from 'formik'
 import Select from 'react-select'
@@ -9,10 +9,17 @@ import { ContractCreate } from '@interfaces/Contract'
 import BasicField from '@components/form/BasicField'
 import SelectField from '@components/form/SelectField'
 import { SelectOptions } from '@interfaces/Forms'
+import { isNotEmpty } from '@metronic/helpers'
+
+import { getClients } from '@services/Clients'
+import { getGames } from '@services/Games'
+import { createContract, updateContract } from '@services/Contracts'
+import { useNavigate } from 'react-router'
 
 type Props = {
   isUserLoading?: boolean
   contract?: ContractCreate
+  onFormSubmit: () => void
 }
 
 export const initialContract: ContractCreate = {
@@ -47,21 +54,27 @@ const statusOptions: SelectOptions[] = [
   { value: 'Canceled', label: 'Cancelado' }
 ]
 
-const ContractCreateForm: FC<Props> = ({contract, isUserLoading}) => {
-  const [userForEdit] = useState<ContractCreate>({
-    ...contract,
-    contractDurationInYears: contract?.contractDurationInYears || initialContract.contractDurationInYears,
-    contractSigningDate: contract?.contractSigningDate || initialContract.contractSigningDate,
-    implementationDate: contract?.implementationDate || initialContract.implementationDate,
-    totalAccounts: contract?.totalAccounts || initialContract.totalAccounts,
-    remainingAccounts: contract?.remainingAccounts || initialContract.remainingAccounts,
-    deliveryReport: contract?.deliveryReport || initialContract.deliveryReport,
-    status: contract?.status || initialContract.status,
-    clientId: contract?.clientId || initialContract.clientId,
-    gameId: contract?.gameId || initialContract.gameId,
-  })
+const ContractCreateForm: FC<Props> = ({ contract = initialContract, isUserLoading, onFormSubmit }) => {
+  const navigate = useNavigate();
 
-  const intl = useIntl()
+  // Estados para as opções dinâmicas
+  const [clientOptions, setClientOptions] = useState<SelectOptions[]>([]);
+  const [gameOptions, setGameOptions] = useState<SelectOptions[]>([]);
+
+  // Efeito para buscar os dados dos dropdowns na API
+  useEffect(() => {
+    // Buscar Clientes
+    getClients().then((res) => {
+      const options = res.data.data.map((c: any) => ({ value: c.id, label: c.name }));
+      setClientOptions(options);
+    });
+
+    // Buscar Games
+    getGames().then((res) => {
+      const options = res.data.map((g: any) => ({ value: g.id, label: g.name }));
+      setGameOptions(options);
+    });
+  }, []); // O array vazio [] garante que isso rode apenas uma vez
 
   const editUserSchema = Yup.object().shape({
     contractDurationInYears: Yup.number()
@@ -86,11 +99,31 @@ const ContractCreateForm: FC<Props> = ({contract, isUserLoading}) => {
   })
 
   const formik = useFormik({
-    initialValues: userForEdit,
+    initialValues: contract,
     validationSchema: editUserSchema,
-    validateOnChange: true,
-    onSubmit: async (values, {setSubmitting}) => {},
-  })
+    enableReinitialize: true, // Importante para o modo de edição
+    onSubmit: async (values, { setSubmitting, resetForm }) => {
+      setSubmitting(true);
+      try {
+        if (isNotEmpty(values.id)) {
+          // Lógica de Atualização (você precisará criar o updateContract)
+          await updateContract(values.id!, values as any);
+          alert('Contrato atualizado com sucesso!');
+        } else {
+          // Lógica de Criação
+          await createContract(values as any);
+          alert('Contrato criado com sucesso!');
+        }
+        resetForm();
+        onFormSubmit(); // Chama a função para fechar/redirecionar
+      } catch (ex) {
+        console.error(ex);
+        alert('Houve um erro ao salvar o contrato.');
+      } finally {
+        setSubmitting(false);
+      }
+    },
+  });
 
   const getDefaultSelectValue = (name: string): SelectOptions[] => {
     const initialValue = formik.getFieldProps(name).value; 
@@ -166,56 +199,28 @@ const ContractCreateForm: FC<Props> = ({contract, isUserLoading}) => {
   return (
     <>
       <form id='kt_modal_add_user_form' className='form' onSubmit={formik.handleSubmit} noValidate>
-        <div
-          className='d-flex flex-column me-n7 pe-7'
-        >
-          {/* Name */}
-          {renderBasicFieldset('contractDurationInYears', 'Total time', 'Total years...')}
+        <div className='d-flex flex-column me-n7 pe-7'>
+          {renderBasicFieldset('contractDurationInYears', 'Contract Duration (Years)', 'Enter duration in years')}
+          {renderCalendarField('contractSigningDate', 'Contract Signing Date', 'Select signing date')}
+          {renderCalendarField('implementationDate', 'Implementation Date', 'Select implementation date')}
+          {renderBasicFieldset('totalAccounts', 'Total Accounts', 'Enter total accounts')}
+          {renderBasicFieldset('remainingAccounts', 'Remaining Accounts', 'Enter remaining accounts')}
+          {renderBasicFieldset('deliveryReport', 'Delivery Report', 'Enter delivery report')}
+          {renderSelectFieldset('status', 'Status', 'Select status', statusOptions)}
+          {/* Client (Agora usa dados da API) */}
+          {renderSelectFieldset('clientId', 'Client', 'Select...', clientOptions)}
 
-          {/* Sign date */}
-          {renderCalendarField('contractSigningDate', 'Contract date', 'Date')}
-
-          {/* Sign date */}
-          {renderCalendarField('implementationDate', 'Implementation date', 'Date')}
-
-          {/* Total accounts */}
-          {renderBasicFieldset('totalAccounts', 'Total accounts', 'Number of accounts')}
-
-          {/* Remaining accounts */}
-          {renderBasicFieldset('remainingAccounts', 'Remaining accounts', 'Number of accounts')}
-
-          {/* Report */}
-          {renderBasicFieldset('deliveryReport', 'Report', 'Report')}
-
-          {/* Status */}
-          {renderBasicFieldset('status', 'Status', 'Status')}
-
-          {/* Client */}
-          {renderSelectFieldset('clientId', 'Client', 'Select...', options)}
-
-          {/* Game */}
+          {/* Game (Agora usa dados da API) */}
           {renderSelectFieldset('gameId', 'Game', 'Select...', gameOptions)}
         </div>
 
         <div className='text-center pt-15'>
-          <button
-            type='submit'
-            className='btn btn-primary'
-            data-kt-users-modal-action='submit'
-            // disabled={isUserLoading || formik.isSubmitting || !formik.isValid || !formik.touched}
-          >
+          <button type='submit' className='btn btn-primary' disabled={formik.isSubmitting || !formik.isValid}>
             <span className='indicator-label'>Submit</span>
-            {(formik.isSubmitting || isUserLoading) && (
-              <span className='indicator-progress'>
-                Please wait...{' '}
-                <span className='spinner-border spinner-border-sm align-middle ms-2'></span>
-              </span>
-            )}
+            {/* ... */}
           </button>
         </div>
-        {/* end::Actions */}
       </form>
-      {/* {(formik.isSubmitting || isUserLoading) && <UsersListLoading />} */}
     </>
   )
 }

@@ -83,11 +83,15 @@ const ClientDetailsModal: React.FC<Props> = ({ clientId, onClose }) => {
                 </div>
                 <div className="row mb-4">
                   <div className="col-md-4 fw-bold text-muted">Produto:</div>
-                  <div className="col-md-8">{client.selectedProducts && client.selectedProducts.length > 0 ? client.selectedProducts.join(', ') : 'N/A'}</div>
+                  <div className="col-md-8">{client.products && client.products.length > 0 
+                        ? client.products.map(p => p.name).join(', ')
+                        : 'N/A'}</div>
                 </div>
                  <div className="row mb-4">
                   <div className="col-md-4 fw-bold text-muted">Conteudo:</div>
-                  <div className="col-md-8">{client.selectedContents && client.selectedContents.length > 0 ? client.selectedContents.join(', ') : 'N/A'}</div>
+                  <div className="col-md-8">{client.contents && client.contents.length > 0
+                        ? client.contents.map(c => c.name).join(', ')
+                        : 'N/A'}</div>
                 </div>
               </div>
               </>

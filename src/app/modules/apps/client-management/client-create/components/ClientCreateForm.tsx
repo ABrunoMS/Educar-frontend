@@ -1,4 +1,4 @@
-import React, { FC, useState, useEffect, useMemo } from 'react'
+import React, { FC, useState, useEffect } from 'react'
 import * as Yup from 'yup'
 import { useFormik } from 'formik'
 import clsx from 'clsx'
@@ -8,15 +8,22 @@ import { ClientType } from '@interfaces/Client'
 import { SelectOptions } from '@interfaces/Forms'
 import BasicField from '@components/form/BasicField'
 import SelectField from '@components/form/SelectField'
-import { createClient, updateClient } from '../../clients-list/core/_requests'
+import { createClient, updateClient, getAllProducts, getCompatibleContents, ProductDto, ContentDto } from '../../clients-list/core/_requests'
 import { CreateOptionModal } from './CreateOptionModal'
 import { isNotEmpty } from '@metronic/helpers'
+import Flatpickr from 'react-flatpickr'
+import "flatpickr/dist/themes/material_green.css";
 
 type Props = {
   isUserLoading?: boolean
   client?: ClientType
   onFormSubmit: () => void
 }
+
+type ClientFormValues = Omit<ClientType, 'signatureDate' | 'implantationDate'> & {
+  signatureDate: Date | null | undefined;
+  implantationDate: Date | null | undefined;
+};
 
 export const initialClient: ClientType = {
   id: '',
@@ -26,8 +33,8 @@ export const initialClient: ClientType = {
   contacts: '',
   contract: '',
   validity: '',
-  signatureDate: '',
-  implantationDate: '',
+  signatureDate: undefined,
+  implantationDate: undefined,
   totalAccounts: 0,
   subSecretary: '',
   regional: '',
@@ -35,7 +42,7 @@ export const initialClient: ClientType = {
   selectedContents: [],
 }
 
-const products = [
+/*const products = [
   'Odisseia Educacional',
   'Odisseia Dungeons',
   'Jornada do Saber (ENEM)',
@@ -57,6 +64,7 @@ const contentCompatibility: { [key: string]: string[] } = {
 
 // Lista de todos os conteúdos possíveis
 const allContents = ['BNCC', 'SAEB', 'ENEM', 'Jornada do Trabalho', 'Educação Financeira', 'Empreendedorismo'];
+*/
 
 const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
   // Estrutura hierárquica dinâmica
@@ -72,6 +80,11 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
 
   const intl = useIntl()
 
+  const [allProducts, setAllProducts] = useState<ProductDto[]>([])
+  const [availableContents, setAvailableContents] = useState<ContentDto[]>([])
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false)
+  const [isLoadingContents, setIsLoadingContents] = useState(false)
+
   useEffect(() => {
     // Mock inicial de opções hierárquicas
     setSubsecretarias([
@@ -79,21 +92,65 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     ])
   }, [])
 
-  const dialogueForEdit: ClientType = {
+
+  // Preenche os estados de subsecretaria e regional ao editar
+  useEffect(() => {
+    // Verifica se estamos no modo de edição e se os dados do cliente já chegaram
+    if (client && client.subSecretary) {
+      setSubsecretarias([
+        {
+          value: client.subSecretary, 
+          label: client.subSecretary,
+          regionais: client.regional 
+            ? [{ value: client.regional, label: client.regional }] 
+            : []
+        }
+      ]);
+    }
+  }, [client]);
+
+
+  // --- EFEITO PARA BUSCAR PRODUTOS NA API (AO MONTAR) ---
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setIsLoadingProducts(true)
+      try {
+        const productData = await getAllProducts()
+        // A API retorna um PaginatedList, pegamos os 'items'
+        setAllProducts(productData.data || []) 
+      } catch (error) {
+        console.error('Falha ao buscar produtos:', error)
+        // Tratar erro (ex: toast)
+      } finally {
+        setIsLoadingProducts(false)
+      }
+    }
+    fetchProducts()
+  }, [])
+
+  const dialogueForEdit: ClientFormValues = {
     ...initialClient,
+    id: client?.id,
     name: client?.name || initialClient.name,
     description: client?.description || initialClient.description,
     partner: client?.partner || initialClient.partner,
     contacts: client?.contacts || initialClient.contacts,
     contract: client?.contract || initialClient.contract,
     validity: client?.validity || initialClient.validity,
-    signatureDate: client?.signatureDate || initialClient.signatureDate,
-    implantationDate: client?.implantationDate || initialClient.implantationDate,
+    signatureDate: client?.signatureDate ? new Date(client.signatureDate) : null,
+    implantationDate: client?.implantationDate ? new Date(client.implantationDate) : null,
     totalAccounts: client?.totalAccounts || initialClient.totalAccounts,
-    subSecretary: client?.id || initialClient.id,
+    subSecretary: client?.subSecretary || initialClient.subSecretary,
     regional: client?.regional || initialClient.regional,
-    selectedProducts: client?.selectedProducts || [],
-    selectedContents: client?.selectedContents || [],
+    products: client?.products || [], 
+    contents: client?.contents || [],
+    selectedProducts: client?.products 
+      ? client.products.map(p => p.id) 
+      : (client?.selectedProducts || []), // Fallback para a estrutura antiga
+      
+    selectedContents: client?.contents 
+      ? client.contents.map(c => c.id) 
+      : (client?.selectedContents || []), // Fallback
   }
 
   const editSchema = Yup.object().shape({
@@ -102,8 +159,8 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     contacts: Yup.string().required('Contatos são obrigatórios'),
     contract: Yup.string().required('Contrato é obrigatório'),
     validity: Yup.string().required('Validade é obrigatória'),
-    signatureDate: Yup.string().required('Data de assinatura é obrigatória'),
-    implantationDate: Yup.string().optional(),
+    signatureDate: Yup.date().nullable().required('Data de assinatura é obrigatória'),
+    implantationDate: Yup.date().nullable().optional(),
     totalAccounts: Yup.number().moreThan(0).required('Número de contas é obrigatório'),
     subSecretary: Yup.string().required('Subsecretaria é obrigatória'),
     regional: Yup.string().required('Regional é obrigatória'),
@@ -112,18 +169,41 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
 
   })
 
-  const formik = useFormik({
+  const formik = useFormik<ClientFormValues>({
     initialValues: dialogueForEdit,
     validationSchema: editSchema,
     validateOnChange: true,
+    enableReinitialize: true,
     onSubmit: async (values, { setSubmitting, resetForm }) => {
       console.log('SUBMIT DEBUG', { values, errors: formik.errors, touched: formik.touched });
       setSubmitting(true)
+
+      const { products, contents, ...formValues } = values;
+
+      const payload= {
+        ...formValues,
+        id: formValues.id || undefined, 
+        
+  
+        signatureDate: values.signatureDate 
+          ? (values.signatureDate as Date).toISOString() 
+          : undefined,
+        implantationDate: values.implantationDate 
+          ? (values.implantationDate as Date).toISOString() 
+          : undefined,
+
+        productIds: values.selectedProducts,
+        contentIds: values.selectedContents,
+
+        selectedProducts: undefined,
+        selectedContents: undefined
+      }
+
       try {
-        if (isNotEmpty(values.id)) {
-          await updateClient(values)
+        if (isNotEmpty(payload.id)) {
+          await updateClient(payload as any)
         } else {
-          await createClient(values)
+          await createClient(payload as any)
         }
         alert('Cliente salvo com sucesso!')
         resetForm()
@@ -136,7 +216,59 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     },
   })
 
-  const availableContents = useMemo(() => {
+useEffect(() => {
+    const fetchCompatibleContents = async () => {
+      const selectedProductIds = formik.values.selectedProducts
+      
+      if (selectedProductIds.length === 0) {
+        setAvailableContents([])
+        // Limpa também os conteúdos selecionados se nenhum produto está ativo
+        formik.setFieldValue('selectedContents', [])
+        return
+      }
+
+      setIsLoadingContents(true)
+      try {
+        // Cria um array de Promises, uma para cada produto selecionado
+        const fetchPromises = selectedProductIds.map(id => getCompatibleContents(id))
+        
+        // Espera todas as chamadas terminarem
+        const results = await Promise.all(fetchPromises) // results é ContentDto[][]
+
+        // Junta todos os arrays de conteúdos e remove duplicatas
+        const contentMap = new Map<string, ContentDto>()
+        results.forEach(contentList => {
+          contentList.forEach(content => {
+            if (!contentMap.has(content.id)) {
+              contentMap.set(content.id, content)
+            }
+          })
+        })
+
+        const newAvailableContents = Array.from(contentMap.values())
+        setAvailableContents(newAvailableContents)
+
+        // **Importante:** Limpa do formik os conteúdos que não são mais compatíveis
+        const availableContentIds = new Set(newAvailableContents.map(c => c.id))
+        const filteredSelectedContents = formik.values.selectedContents.filter(id =>
+          availableContentIds.has(id)
+        )
+        
+        formik.setFieldValue('selectedContents', filteredSelectedContents)
+
+      } catch (error) {
+        console.error('Falha ao buscar conteúdos compatíveis:', error)
+      } finally {
+        setIsLoadingContents(false)
+      }
+    }
+
+    fetchCompatibleContents()
+    // Dependência: o array de IDs de produtos selecionados.
+    // O Formik cria um novo array a cada mudança, disparando o efeito.
+  }, [formik.values.selectedProducts])
+
+/*const availableContents = useMemo(() => {
     const contents = new Set<string>();
     
     formik.values.selectedProducts.forEach(product => {
@@ -146,7 +278,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     
     return Array.from(contents);
   }, [formik.values.selectedProducts]);
-
+*/
   const handleCreateSubsecretaria = (subsecretariaValue: string, subsecretariaLabel: string) => {
     setSubsecretarias(prev => [
       ...prev,
@@ -220,15 +352,55 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     />
   )
 
+const updateCalendarValue = (newValue: Date | undefined, field: keyof ClientFormValues) => {
+    formik.setFieldValue(field, newValue)
+  }
+
+  // 3. NA VISÃO (RENDER): Formata a exibição para "d/m/Y"
+  const renderCalendarField = (fieldName: keyof ClientFormValues, label: string, placeholder: string | null, required: boolean = true) => (
+    <div className=' mb-7'>
+      <label
+        className={clsx(
+          'fw-bold fs-6 mb-2',
+          {'required': required}
+        )}
+      >{label}</label>
+      <Flatpickr
+        className='form-control form-control-solid'
+        placeholder={placeholder || ''}
+        // data-enable-time (REMOVIDO para salvar só a data)
+        value={formik.values[fieldName] as Date} 
+        onChange={(date: Date[]) => {
+          if(date[0] instanceof Date) return updateCalendarValue(date[0], fieldName)
+          return updateCalendarValue(undefined, fieldName) 
+        }}
+        // --- AQUI ESTÁ A MÁGICA ---
+        // 'options' controla apenas a exibição visual do Flatpickr
+        options={{
+          dateFormat: "d/m/Y", // Formato de exibição: DD/MM/YYYY
+        }}
+      />
+
+      {formik.getFieldMeta(fieldName).touched && formik.getFieldMeta(fieldName).error && (
+        <div className='fv-plugins-message-container'>
+          <div className='fv-help-block'>
+            <span role='alert'>{formik.getFieldMeta(fieldName).error as string}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+
   // Renderiza campos dinâmicos de subsecretarias e regionais
     const renderSubsecretariasRegionais = () => {
       return (
         <div className='mb-7'>
-          
-          <div className='d-flex align-items-center mb-4'>
+          <div className='d-flex justify-content-between align-items-center mb-4'>
             <label className='fw-bold fs-4 mb-0'>Subsecretarias</label>
+            <button type='button' className='btn btn-sm btn-primary' onClick={() => setShowSubsecretariaModal(true)}>
+              <i className='fas fa-plus me-1'></i> Nova subsecretaria
+            </button>
           </div>
-          
           <div className='row g-4'>
             {subsecretarias.map((sub: { value: string; label: string; regionais: { value: string; label: string }[] }) => (
               <div key={sub.value} className='col-12 col-md-6'>
@@ -269,116 +441,75 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     const renderContentFieldset = () => {
       return (
         <>
-          <div className='separator my-5'></div>
-  <div className='px-2 py-3 rounded border'>
-            {/* Produtos minimalistas responsivos */}
-            <div className='mb-3'>
-              <label className='form-label fw-semibold required fs-6 text-gray-700 mb-2'>Produtos</label>
-              <div className='d-flex flex-row flex-wrap gap-1 overflow-auto pb-1'>
-                {products.map(product => (
-                  <label
-                    key={product}
-                    className={clsx(
-                      'chip-minimal px-3 py-1 rounded-pill cursor-pointer',
-                      formik.values.selectedProducts.includes(product)
-                        ? 'border border-gray-500 chip-selected'
-                        : 'border border-gray-300 text-gray-600'
-                    )}
-                    style={{ fontSize: '0.95rem', minWidth: '120px', userSelect: 'none', background: 'transparent', transition: 'all 0.2s' }}
-                    htmlFor={`product-${product}`}
-                  >
-                    <input
-                      className='d-none'
-                      type='checkbox'
-                      name='selectedProducts'
-                      value={product}
-                      checked={formik.values.selectedProducts.includes(product)}
-                      onChange={formik.handleChange}
-                      id={`product-${product}`}
-                    />
-                    {product}
-                  </label>
-                ))}
+        <div className='separator my-5'></div>
+      <div className='row'>
+        {/* Coluna de Produtos */}
+        <div className='col-md-6'>
+          <label className='form-label fw-bold required'>Produtos</label>
+         {isLoadingProducts && (
+              <div className='d-flex align-items-center text-muted fs-7'>
+                <span className='spinner-border spinner-border-sm me-2'></span>
+                Carregando produtos...
               </div>
-            </div>
+            )}
 
-            {/* Conteúdos minimalistas responsivos */}
-            <div className='mb-1'>
-              <label className='form-label fw-semibold required fs-6 text-gray-700 mb-2'>Conteúdos</label>
-              <div className='d-flex flex-row flex-wrap gap-1'>
-                {availableContents.map(content => (
-                  <label
-                    key={content}
-                    className={clsx(
-                      'chip-minimal px-3 py-1 rounded-pill cursor-pointer',
-                      formik.values.selectedContents.includes(content)
-                        ? 'border border-gray-500 chip-selected'
-                        : 'border border-gray-300 text-gray-600'
-                    )}
-                    style={{ fontSize: '0.95rem', minWidth: '100px', userSelect: 'none', background: 'transparent', transition: 'all 0.2s' }}
-                    htmlFor={`content-${content}`}
-                  >
-                    <input
-                      className='d-none'
-                      type='checkbox'
-                      name='selectedContents'
-                      value={content}
-                      checked={formik.values.selectedContents.includes(content)}
-                      onChange={formik.handleChange}
-                      id={`content-${content}`}
-                    />
-                    {content}
-                  </label>
-                ))}
+            {/* Itera sobre os produtos da API */}
+            {!isLoadingProducts && allProducts.map(product => (
+              <div className='form-check form-check-solid mb-3' key={product.id}>
+                <input
+                  className='form-check-input'
+                  type='checkbox'
+                  name='selectedProducts'
+                  value={product.id} // <-- USA O ID
+                  checked={formik.values.selectedProducts.includes(product.id)} // <-- CHECA PELO ID
+                  onChange={formik.handleChange}
+                />
+                <label className='form-check-label'>{product.name}</label> {/* <-- MOSTRA O NOME */}
               </div>
-              {formik.values.selectedProducts.length === 0 && (
-                <div className='text-muted fs-7 mt-2'>Selecione um produto para ver os conteúdos disponíveis.</div>
-              )}
-            </div>
+            ))}
           </div>
-          {/* Botão de subsecretaria abaixo da section de conteúdo */}
-          <div className='d-flex justify-content-center mt-4 mb-2'>
-            <button type='button' className='btn btn-sm btn-primary' onClick={() => setShowSubsecretariaModal(true)}>
-              <i className='fas fa-plus me-1'></i> Nova subsecretaria
-            </button>
+
+        {/* Coluna de Conteúdos (renderização condicional) */}
+        <div className='col-md-6'>
+            <label className='form-label fw-bold required'>Conteúdos</label>
+
+            {/* Indicador de Loading para Conteúdos */}
+            {isLoadingContents && (
+              <div className='d-flex align-items-center text-muted fs-7'>
+                <span className='spinner-border spinner-border-sm me-2'></span>
+                Buscando conteúdos...
+              </div>
+            )}
+            
+            {/* Itera sobre os conteúdos disponíveis da API */}
+            {!isLoadingContents && availableContents.map(content => (
+              <div className='form-check form-check-solid mb-3' key={content.id}>
+                <input
+                  className='form-check-input'
+                  type='checkbox'
+                  name='selectedContents'
+                  value={content.id} // <-- USA O ID
+                  checked={formik.values.selectedContents.includes(content.id)} // <-- CHECA PELO ID
+                  onChange={formik.handleChange}
+                />
+                <label className='form-check-label'>{content.name}</label> {/* <-- MOSTRA O NOME */}
+              </div>
+            ))}
+
+            {/* Mensagem de ajuda se nenhum produto for selecionado */}
+            {!isLoadingContents && formik.values.selectedProducts.length === 0 && (
+              <div className='text-muted fs-7'>Selecione um produto para ver os conteúdos disponíveis.</div>
+            )}
+
+            {/* Mensagem se produtos estão selecionados mas não há conteúdos (ou ainda carregando) */}
+            {!isLoadingContents && availableContents.length === 0 && formik.values.selectedProducts.length > 0 && (
+                <div className='text-muted fs-7'>Nenhum conteúdo compatível encontrado.</div>
+            )}
           </div>
-          {/* Estilos responsivos para chips */}
-          <style>{`
-            .chip-minimal {
-              box-shadow: none !important;
-              font-size: 0.95rem;
-              font-weight: 400;
-              margin-bottom: 2px;
-              border-width: 1px;
-              background: transparent;
-              transition: all 0.2s;
-            }
-            .chip-selected {
-              border-width: 2px !important;
-              box-shadow: 0 2px 8px 0 rgba(0,0,0,0.04);
-              background: transparent !important;
-              color: inherit !important;
-            }
-            @media (max-width: 600px) {
-              .chip-minimal {
-                min-width: 90px !important;
-                font-size: 0.85rem !important;
-                padding: 0.5rem 0.7rem !important;
-              }
-            }
-            [data-bs-theme="dark"] .chip-minimal {
-              color: #b5b5c3;
-              border-color: #323248;
-            }
-            [data-bs-theme="dark"] .chip-selected {
-              border-color: #b5b5c3 !important;
-              box-shadow: 0 2px 8px 0 rgba(0,0,0,0.12);
-              color: #fff !important;
-            }
-          `}</style>
-        </>
-      )
-    }
+        </div>
+      </>
+    )
+  }
 
 
   return (
@@ -391,8 +522,8 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
           {renderSelectFieldset('contacts', 'Contacts', 'Select contacts...', [{ value: '1', label: 'Contato 1' }])}
           {renderSelectFieldset('contract', 'Contract', 'Select a contract...', [{ value: '1', label: 'Contrato 1' }])}
           {renderBasicFieldset('validity', 'Validity', 'Validity')}
-          {renderBasicFieldset('signatureDate', 'Signature date', 'Date')}
-          {renderBasicFieldset('implantationDate', 'Implantation date', 'Date')}
+          {renderCalendarField('signatureDate', 'Signature date', 'Select date', true)}
+          {renderCalendarField('implantationDate', 'Implantation date', 'Select date', false)}
           {renderBasicFieldset('totalAccounts', 'Number of accounts', 'Accounts...', false, 'number')}
           {renderContentFieldset()}
 

@@ -1,3 +1,5 @@
+import { ProductDto, ContentDto } from "src/app/modules/apps/client-management/clients-list/core/_requests";
+
 export interface ClientType {
   id?: string;
   name?: string;
@@ -13,6 +15,8 @@ export interface ClientType {
   secretaryId?: string;
   subSecretary?: string;
   regional?: string;
+  products?: ProductDto[];
+  contents?: ContentDto[];
   selectedProducts: string[];
   selectedContents: string[];
 }
