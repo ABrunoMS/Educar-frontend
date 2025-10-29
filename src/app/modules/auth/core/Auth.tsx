@@ -57,7 +57,7 @@ const AuthProvider: FC<WithChildren> = ({ children }) => {
 const AuthInit: FC<WithChildren> = ({ children }) => {
   const { auth, logout, setCurrentUser } = useAuth();
   const [showSplashScreen, setShowSplashScreen] = useState(true);
-  const { setRole } = useRole();
+  const { setRole, setRoles } = useRole();
 
   useEffect(() => {
     const initAuth = async () => {
@@ -69,17 +69,20 @@ const AuthInit: FC<WithChildren> = ({ children }) => {
           if (user?.roles) {
             setCurrentUser(user);
 
-            // 2. LÓGICA DE PERFIL ROBUSTA
-            const roles = user.roles.map(r => r.toLowerCase());
-            let userRole: 'Admin' | 'Teacher' | 'Student' = 'Student';
+            // Map roles array from backend/Keycloak into frontend roles
+            // Keep casing as in generated roles but accept any case from backend
+            // Use mapping helper to normalize role names coming from token/Keycloak
+            const { mapRoleString } = await import('@contexts/roles.generated')
+            const mappedRoles = user.roles
+              .map((r: string) => mapRoleString(r))
+              .filter(Boolean) as Array<'Admin' | 'AgenteComercial' | 'Diretor' | 'Distribuidor' | 'Secretario' | 'Teacher' | 'TeacherEducar' | 'Student'>
 
-            if (roles.includes('admin')) {
-              userRole = 'Admin';
-            } else if (roles.includes('teacher')) {
-              userRole = 'Teacher';
+            // if setRoles exists, set full array; otherwise fallback to setRole with first mapped value
+            if (setRoles) {
+              setRoles(mappedRoles.length ? mappedRoles : ['Student'])
+            } else if (setRole) {
+              setRole(mappedRoles.length ? mappedRoles[0] : 'Student')
             }
-            
-            setRole(userRole);
           } else {
             // Se getUserByToken não retornar um usuário, fazemos logout
             logout();
