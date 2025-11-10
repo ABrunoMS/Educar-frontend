@@ -46,9 +46,9 @@ const questionSchema = Yup.object().shape({
 
 const defaultInitialValues: Question = {
   id: Date.now(),
-  activityType: 'Pergunta',
+  activityType: 'Exercise',
   sequence: 1,
-  questionType: 'Escolha Única',
+  questionType: 'MultipleChoice',
   weight: 1,
   isActive: true,
   contentImage: '',
@@ -143,8 +143,8 @@ const LessonQuestionModal: FC<QuestionModalProps> = ({
             <div className='col-md-3 fv-row'>
               <label className='form-label required text-gray-700 dark:text-gray-300'>Atividade</label>
               <select className='form-select form-select-solid' {...formik.getFieldProps('activityType')}>
-                <option value='Pergunta'>Pergunta</option>
-                <option value='Conteúdo'>Conteúdo</option>
+                <option value='Exercise'>Exercise (Pergunta)</option>
+                <option value='Informative'>Informative (Conteúdo)</option>
               </select>
             </div>
             <div className='col-md-3 fv-row'>
@@ -157,8 +157,12 @@ const LessonQuestionModal: FC<QuestionModalProps> = ({
             <div className='col-md-3 fv-row'>
               <label className='form-label required text-gray-700 dark:text-gray-300'>Tipo de pergunta</label>
               <select className='form-select form-select-solid' {...formik.getFieldProps('questionType')}>
-                <option value='Escolha Única'>Escolha Única</option>
-                <option value='Múltipla Escolha'>Múltipla Escolha</option>
+                <option value='MultipleChoice'>Múltipla Escolha</option>
+                <option value='SingleChoice'>Escolha Única</option>
+                <option value='TrueOrFalse'>Verdadeiro ou Falso</option>
+                <option value='Dissertative'>Dissertativa</option>
+                <option value='ColumnFill'>Preencher Colunas</option>
+                <option value='AlwaysCorrect'>Sempre Correta</option>
               </select>
             </div>
             <div className='col-md-2 fv-row'>

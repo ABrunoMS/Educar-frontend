@@ -3,13 +3,14 @@ import * as Yup from 'yup';
 import { useFormik } from 'formik';
 import { Class } from '@interfaces/Class';
 import { SelectOptions } from '@interfaces/Forms';
-import SelectField from '@components/form/SelectField';
 import AsyncSelectField from '@components/form/AsyncSelectField';
 import { useAuth } from '../../../../auth';
-import { getSchools } from '@services/Schools';
+import { getSchools, getSchoolById } from '@services/Schools';
 import { getAccountsBySchool } from '@services/Accounts';
 import { createClass, updateClass } from '@services/Classes';
 import { isNotEmpty } from '@metronic/helpers';
+import { getClientById } from '@services/Clients';
+import { getAllProducts, getCompatibleContents } from '../../../client-management/clients-list/core/_requests';
 
 type Props = {
   isUserLoading?: boolean;
@@ -50,38 +51,44 @@ const schoolShiftOptions: SelectOptions[] = [
   { value: 'night', label: 'Noturno' },
 ];
 
-const contentOptions = [
-  'Odisséia', 'Educação financeira', 'Saeb', 'Empreendedorismo', 'Enem', 'Jornada do trabalho'
-];
+// Conteúdos dinâmicos conforme produtos do cliente
+type ContentOption = { value: string; label: string };
+
+// Função para filtrar e limitar opções
+const filterOptions = (options: SelectOptions[], inputValue: string) => {
+  return options
+    .filter((opt) =>
+      opt.label.toLowerCase().includes(inputValue.toLowerCase())
+    )
+    .slice(0, 10);
+};
+
+const editClassSchema = Yup.object().shape({
+  name: Yup.string().required('O nome da turma é obrigatório'),
+  isActive: Yup.boolean().required('O campo Ativo é obrigatório'),
+  schoolId: Yup.string().required('A escola é obrigatória'),
+  schoolYear: Yup.string().required('O ano escolar é obrigatório'),
+  schoolShift: Yup.string().required('O turno escolar é obrigatório'),
+  description: Yup.string().optional(),
+  content: Yup.array().of(Yup.string()).optional(),
+  teacherIds: Yup.array().of(Yup.string()).optional(),
+  studentIds: Yup.array().of(Yup.string()).optional(),
+});
+
 
 const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, onFormSubmit }) => {
   const { currentUser } = useAuth();
   const [schoolOptions, setSchoolOptions] = useState<SelectOptions[]>([]);
   const [teacherOptions, setTeacherOptions] = useState<SelectOptions[]>([]);
   const [studentOptions, setStudentOptions] = useState<SelectOptions[]>([]);
+  const [contentOptions, setContentOptions] = useState<ContentOption[]>([]);
 
-  // Log para debug
-  useEffect(() => {
-    console.log('ClassCreateForm: classItem mudou:', classItem);
-  }, [classItem]);
-
-  const editClassSchema = Yup.object().shape({
-    name: Yup.string().required('O nome da turma é obrigatório'),
-    isActive: Yup.boolean().required('O campo Ativo é obrigatório'),
-    schoolId: Yup.string().required('A escola é obrigatória'),
-    schoolYear: Yup.string().required('O ano escolar é obrigatório'),
-    schoolShift: Yup.string().required('O turno escolar é obrigatório'),
-    description: Yup.string().optional(),
-    content: Yup.array().of(Yup.string()).optional(),
-    teacherIds: Yup.array().of(Yup.string()).optional(),
-    studentIds: Yup.array().of(Yup.string()).optional(),
-  });
+  // useEffect movido para abaixo da declaração do formik
 
   const formik = useFormik({
     initialValues: {
       ...initialClass,
       ...classItem,
-      // Garante que os arrays existam
       teacherIds: classItem?.teacherIds || [],
       studentIds: classItem?.studentIds || [],
       content: classItem?.content || []
@@ -89,17 +96,14 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
     validationSchema: editClassSchema,
     enableReinitialize: true,
     onSubmit: async (values, { setSubmitting }) => {
-      console.log('Valores do formulário antes de enviar:', values);
       const finalValues = {
         ...values,
-        // Garante que o formato esteja correto para o backend
         accountIds: [...(values.teacherIds || []), ...(values.studentIds || [])],
         teacherIds: values.teacherIds || [],
         studentIds: values.studentIds || [],
         content: values.content || [],
         isActive: values.isActive ?? true
       };
-      console.log('Valores finais enviados para o backend:', finalValues);
       setSubmitting(true);
       try {
         if (isNotEmpty(finalValues.id)) {
@@ -111,13 +115,100 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
         }
         onFormSubmit();
       } catch (ex) {
-        console.error('Erro ao salvar turma:', ex);
         alert('Ocorreu um erro ao salvar a turma.');
       } finally {
         setSubmitting(false);
       }
     },
   });
+
+  // Buscar conteúdos baseados na escola selecionada (cliente da escola);
+  // Sem escola: fallback para Admin (todos) e não-admin (cliente do usuário)
+  useEffect(() => {
+    const fetchByClientId = async (clientId: string) => {
+      try {
+        const { data: client } = await getClientById(clientId);
+        let contents: any[] = [];
+        if (Array.isArray(client.products)) {
+          contents = client.products.flatMap((p: any) => Array.isArray(p.contents) ? p.contents : []);
+        }
+        if ((!contents || contents.length === 0) && Array.isArray(client.contents)) {
+          contents = client.contents;
+        }
+        const uniqueContents = Array.from(new Map(contents.map((c: any) => [c.id, c])).values());
+        const opts = uniqueContents.map((c: any) => ({ value: c.id, label: c.name }));
+        setContentOptions(opts);
+        // Sanitiza valores selecionados
+        const allowed = new Set(opts.map(o => o.value));
+        const selected = Array.isArray(formik.values.content) ? formik.values.content : [];
+        const filtered = selected.filter((id: string) => allowed.has(id));
+        if (filtered.length !== selected.length) {
+          formik.setFieldValue('content', filtered);
+        }
+      } catch (err) {
+        setContentOptions([]);
+        formik.setFieldValue('content', []);
+      }
+    };
+
+    const fetchAllContents = async () => {
+      try {
+        const productsResp = await getAllProducts();
+        const allProducts = productsResp.data || [];
+        const allContentsArr = await Promise.all(
+          allProducts.map((p: any) => getCompatibleContents(p.id))
+        );
+        const allContents = allContentsArr.flat();
+        const uniqueContents = Array.from(new Map(allContents.map((c: any) => [c.id, c])).values());
+        const opts = uniqueContents.map((c: any) => ({ value: c.id, label: c.name }));
+        setContentOptions(opts);
+        const allowed = new Set(opts.map(o => o.value));
+        const selected = Array.isArray(formik.values.content) ? formik.values.content : [];
+        const filtered = selected.filter((id: string) => allowed.has(id));
+        if (filtered.length !== selected.length) {
+          formik.setFieldValue('content', filtered);
+        }
+      } catch {
+        setContentOptions([]);
+        formik.setFieldValue('content', []);
+      }
+    };
+
+    const loadContents = async () => {
+      const schoolId = formik.values.schoolId;
+      if (schoolId) {
+        // Busca cliente a partir da escola selecionada
+        try {
+          const { data: school } = await getSchoolById(schoolId);
+          const clientId = school?.client?.id || school?.clientId;
+          if (clientId) {
+            await fetchByClientId(clientId);
+            return;
+          }
+          // Se escola não tiver cliente, limpa opções
+          setContentOptions([]);
+          formik.setFieldValue('content', []);
+          return;
+        } catch {
+          setContentOptions([]);
+          formik.setFieldValue('content', []);
+          return;
+        }
+      }
+
+      // Sem escola selecionada: fallback
+      if (currentUser?.client?.id) {
+        await fetchByClientId(currentUser.client.id);
+      } else if (currentUser?.roles?.includes('Admin')) {
+        await fetchAllContents();
+      } else {
+        setContentOptions([]);
+        formik.setFieldValue('content', []);
+      }
+    };
+
+    loadContents();
+  }, [formik.values.schoolId, currentUser?.client?.id, currentUser?.roles]);
 
   // Carregar escolas
   useEffect(() => {
@@ -141,6 +232,7 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
         formik.setFieldValue('schoolId', options[0].value);
       }
     }
+    // eslint-disable-next-line
   }, [currentUser]);
 
   // Carregar professores e alunos quando schoolId mudar
@@ -165,6 +257,7 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
     };
 
     fetchUsers();
+    // eslint-disable-next-line
   }, [currentUser, formik.values.schoolId]);
 
   return (
@@ -199,35 +292,39 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
             {/* Escola, Ano, Turno */}
             <div className="row mb-7">
               <div className="col-md-4">
-                <SelectField
+                <AsyncSelectField
                   label="Escola"
-                  required
                   placeholder="Selecione..."
-                  options={schoolOptions}
-                  formik={formik}
                   fieldName="schoolId"
+                  formik={formik}
+                  defaultOptions={schoolOptions}
+                  loadOptions={(inputValue, callback) => {
+                    callback(filterOptions(schoolOptions, inputValue));
+                  }}
                 />
               </div>
               <div className="col-md-4">
-                <SelectField
+                <AsyncSelectField
                   label="Ano escolar"
-                  required
                   placeholder="Selecione..."
-                  options={schoolYearOptions}
-                  formik={formik}
                   fieldName="schoolYear"
-                  multiselect={false}
+                  formik={formik}
+                  defaultOptions={schoolYearOptions}
+                  loadOptions={(inputValue, callback) => {
+                    callback(filterOptions(schoolYearOptions, inputValue));
+                  }}
                 />
               </div>
               <div className="col-md-4">
-                <SelectField
+                <AsyncSelectField
                   label="Turno escolar"
-                  required
                   placeholder="Selecione..."
-                  options={schoolShiftOptions}
-                  formik={formik}
                   fieldName="schoolShift"
-                  multiselect={false}
+                  formik={formik}
+                  defaultOptions={schoolShiftOptions}
+                  loadOptions={(inputValue, callback) => {
+                    callback(filterOptions(schoolShiftOptions, inputValue));
+                  }}
                 />
               </div>
             </div>
@@ -257,13 +354,14 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
                   formik={formik}
                   defaultOptions={teacherOptions}
                   loadOptions={(inputValue, callback) => {
-                    const filtered = teacherOptions.filter((t) =>
-                      t.label.toLowerCase().includes(inputValue.toLowerCase())
-                    );
+                    const filtered = teacherOptions
+                      .filter((t) =>
+                        t.label.toLowerCase().includes(inputValue.toLowerCase())
+                      )
+                      .slice(0, 10);
                     callback(filtered);
                   }}
                 />
-                
                 {/* Lista de professores selecionados */}
                 {formik.values.teacherIds && formik.values.teacherIds.length > 0 && (
                   <div className="mt-3">
@@ -292,7 +390,6 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
                   </div>
                 )}
               </div>
-              
               <div className="col-md-6">
                 <label className="form-label">Alunos</label>
                 <AsyncSelectField
@@ -303,13 +400,14 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
                   formik={formik}
                   defaultOptions={studentOptions}
                   loadOptions={(inputValue, callback) => {
-                    const filtered = studentOptions.filter((s) =>
-                      s.label.toLowerCase().includes(inputValue.toLowerCase())
-                    );
+                    const filtered = studentOptions
+                      .filter((s) =>
+                        s.label.toLowerCase().includes(inputValue.toLowerCase())
+                      )
+                      .slice(0, 10);
                     callback(filtered);
                   }}
                 />
-                
                 {/* Lista de alunos selecionados */}
                 {formik.values.studentIds && formik.values.studentIds.length > 0 && (
                   <div className="mt-3">
@@ -340,28 +438,29 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
               </div>
             </div>
           </div>
-
           {/* Conteúdo */}
           <div className="col-md-4">
             <div className="mb-7">
               <label className="form-label">Conteúdo</label>
+              {contentOptions.length === 0 && (
+                <div className="text-muted">Nenhum conteúdo disponível para o cliente.</div>
+              )}
               {contentOptions.map((content) => (
-                <div className="form-check mb-3" key={content}>
+                <div className="form-check mb-3" key={content.value}>
                   <input
                     className="form-check-input"
                     type="checkbox"
                     name="content"
-                    value={content}
-                      checked={Array.isArray(formik.values.content) && formik.values.content.includes(content)}
+                    value={content.value}
+                    checked={Array.isArray(formik.values.content) && formik.values.content.includes(content.value)}
                     onChange={formik.handleChange}
                   />
-                  <label className="form-check-label">{content}</label>
+                  <label className="form-check-label">{content.label}</label>
                 </div>
               ))}
             </div>
           </div>
         </div>
-
         {/* Botões */}
         <div className="card-footer d-flex justify-content-end py-6 px-9">
           <button type="button" className="btn btn-light me-2" onClick={onFormSubmit}>
