@@ -28,7 +28,7 @@ const ClientsPage = () => {
       </Route>
       <Route
         path='client/:id'
-        element={<ClientEdit />}
+        element={<ClientCreateWrapper />}
       />
       <Route index element={<Navigate to='/apps/client-management/clients' />} />
     </Routes>

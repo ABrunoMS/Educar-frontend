@@ -10,9 +10,7 @@ import { SelectOptions } from '@interfaces/Forms'
 import { Account } from '@interfaces/Account'
 import { Role, ALL_ROLES } from '@contexts/roles.generated'
 
-// Roles allowed in the account creation form (limited subset)
-type AllowedRole = 'Admin' | 'Teacher' | 'Student'
-
+// Importe as APIs que você já usa (caminhos baseados no seu arquivo)
 import { getClients } from '@services/Clients'
 import { getSchoolsByClient } from '@services/Schools'
 import { getClassesBySchools } from '@services/Classes'
@@ -22,8 +20,7 @@ import { isNotEmpty } from '@metronic/helpers'
 type Props = {
   isUserLoading?: boolean
   account?: Account
-  schoolOptions?: { value: string; label: string }[]
-  classOptions?: { value: string; label: string }[]
+  clientId?: string // <-- NOVO: Prop opcional para o ID do cliente
   onFormSubmit: () => void
 }
 
@@ -38,43 +35,67 @@ export const initialAccount: Account = {
   averageScore: 0,
   eventAverageScore: 0,
   stars: 0,
-  clientId: '',
+  clientId: '', // Será preenchido
   role: 'Student',
   schoolIds: [],
   classIds: []
 }
 
-const AccountCreateForm: FC<Props> = ({ account, isUserLoading, onFormSubmit }) => {
-  const [accountForEdit] = useState<Account>({ ...initialAccount, ...account })
-  const [selectedClientId, setSelectedClientId] = useState<string | undefined>(account?.clientId || undefined)
-  const [selectedSchoolIds, setSelectedSchoolIds] = useState<string[]>(account?.schoolIds || [])
+const AccountCreateForm: FC<Props> = ({
+  account,
+  isUserLoading,
+  clientId, // <-- Recebe a prop
+  onFormSubmit,
+}) => {
+  // MODIFICADO: Preenche o 'clientId' da prop se ele existir
+  const [accountForEdit] = useState<Account>({
+    ...initialAccount,
+    ...account,
+    clientId: account?.clientId || clientId || '', // <-- Preenche automaticamente
+  })
+
+  // MODIFICADO: Define o cliente selecionado baseado na prop ou na conta
+  const [selectedClientId, setSelectedClientId] = useState<string | undefined>(
+    account?.clientId || clientId || undefined
+  )
+  
+  const [selectedSchoolIds, setSelectedSchoolIds] = useState<string[]>(
+    account?.schoolIds || []
+  )
   const [clientOptions, setClientOptions] = useState<SelectOptions[]>([])
   const [schoolOptions, setSchoolOptions] = useState<SelectOptions[]>([])
   const [classOptions, setClassOptions] = useState<SelectOptions[]>([])
   const intl = useIntl()
 
+  // MODIFICADO: Schema de validação
   const editAccountSchema = Yup.object().shape({
     name: Yup.string().required('Field is required'),
     lastName: Yup.string().required('Field is required'),
     password: Yup.string()
       .min(8, 'A senha deve ter no mínimo 8 caracteres')
-      .required('A senha é obrigatória'),
+      .when('id', {
+        is: (id: string) => !isNotEmpty(id), // Obrigatório só na CRIAÇÃO
+        then: (schema) => schema.required('A senha é obrigatória'),
+        otherwise: (schema) => schema.optional(), // Opcional na EDIÇÃO
+      }),
     confirmPassword: Yup.string()
       .oneOf([Yup.ref('password')], 'As senhas devem ser iguais')
-      .required('A confirmação de senha é obrigatória'),
+      .when('password', { // Só exige confirmação se a senha foi digitada
+        is: (password: string) => isNotEmpty(password),
+        then: (schema) => schema.required('A confirmação de senha é obrigatória'),
+      }),
     email: Yup.string().email('Invalid email').required('Field is required'),
     registrationNumber: Yup.string().required('Field is required'),
-    averageScore: Yup.number().min(0, 'Must be 0 or higher').required('Field is required'),
-    eventAverageScore: Yup.number().min(0, 'Must be 0 or higher').required('Field is required'),
-    stars: Yup.number().min(0, 'Must be 0 or higher').required('Field is required'),
-    clientId: Yup.string().required('Field is required'),
+    
+    // Tornados opcionais
+    averageScore: Yup.number().min(0).optional(),
+    eventAverageScore: Yup.number().min(0).optional(),
+    stars: Yup.number().min(0).optional(),
+    
+    clientId: Yup.string().optional(), // <-- TORNADO OPCIONAL (vem da prop)
     role: Yup.string().required('Field is required'),
-    schoolIds: Yup.array().of(Yup.string()).when('role', {
-      is: (role: string) => role !== 'Admin',
-      then: (schema) => schema.min(1, 'Field is required'),
-      otherwise: (schema) => schema.optional()
-    }),
-    classIds: Yup.array().of(Yup.string()).optional()
+    schoolIds: Yup.array().of(Yup.string()).optional(), // <-- TORNADO OPCIONAL
+    classIds: Yup.array().of(Yup.string()).optional(),
   })
 
   const formik = useFormik({
@@ -83,23 +104,31 @@ const AccountCreateForm: FC<Props> = ({ account, isUserLoading, onFormSubmit }) 
     enableReinitialize: true,
     onSubmit: async (values, { setSubmitting, resetForm }) => {
       setSubmitting(true)
+      
+      const payload = { ...values }
+      // Não envia senha/confirmação se estiver editando e não foram alteradas
+      if (isNotEmpty(values.id) && !isNotEmpty(values.password)) {
+        delete (payload as Partial<Account>).password
+        delete (payload as Partial<Account>).confirmPassword
+      }
+      
       try {
-        if (isNotEmpty(values.id)) {
-          await updateAccount(values)
+        if (isNotEmpty(payload.id)) {
+          await updateAccount(payload)
           alert('Usuário atualizado com sucesso!')
         } else {
-          await createAccount(values)
+          await createAccount(payload)
           alert('Usuário criado com sucesso!')
         }
         resetForm()
-        onFormSubmit()
+        onFormSubmit() // <-- Chama o callback para fechar o modal
       } catch (ex) {
         console.error(ex)
         alert('Houve um erro ao salvar o usuário.')
       } finally {
         setSubmitting(false)
       }
-    }
+    },
   })
 
   const renderBasicFieldset = (
@@ -119,17 +148,29 @@ const AccountCreateForm: FC<Props> = ({ account, isUserLoading, onFormSubmit }) 
     />
   )
 
+  // MODIFICADO: Só busca clientes se 'clientId' NÃO foi passado via prop
   useEffect(() => {
-    getClients().then((res) => {
-      const options = res.data.data.map((c: any) => ({ value: c.id, label: c.name }))
-      setClientOptions(options)
-    })
-  }, [])
+    // Se estamos no contexto de um cliente (prop 'clientId' existe), não busca a lista
+    if (!clientId) {
+      getClients().then((res) => {
+        const options = res.data.data.map((c: any) => ({
+          value: c.id,
+          label: c.name,
+        }))
+        setClientOptions(options)
+      })
+    }
+  }, [clientId]) // Adiciona 'clientId' como dependência
 
+  // MODIFICADO: Este useEffect agora roda automaticamente se 'clientId' (via prop)
+  // for definido, disparando a busca por escolas.
   useEffect(() => {
     if (selectedClientId) {
       getSchoolsByClient(selectedClientId).then((res) => {
-        const options = res.data.data.map((s: any) => ({ value: s.id, label: s.name }))
+        const options = res.data.data.map((s: any) => ({
+          value: s.id,
+          label: s.name,
+        }))
         setSchoolOptions(options)
       })
     } else {
@@ -137,10 +178,14 @@ const AccountCreateForm: FC<Props> = ({ account, isUserLoading, onFormSubmit }) 
     }
   }, [selectedClientId])
 
+  // Este useEffect não muda
   useEffect(() => {
     if (selectedSchoolIds.length > 0) {
       getClassesBySchools(selectedSchoolIds).then((res) => {
-        const options = res.data.map((c: any) => ({ value: c.id, label: c.name }))
+        const options = res.data.map((c: any) => ({
+          value: c.id,
+          label: c.name,
+        }))
         setClassOptions(options)
       })
     } else {
@@ -149,44 +194,69 @@ const AccountCreateForm: FC<Props> = ({ account, isUserLoading, onFormSubmit }) 
   }, [selectedSchoolIds])
 
   return (
-    <form id='kt_modal_add_account_form' className='form' onSubmit={formik.handleSubmit} noValidate>
-      <div className='d-flex flex-column me-n7 pe-7'>
+    // ID do formulário alterado para ser mais genérico
+    <form id='kt_modal_add_account_form_in_client' className='form' onSubmit={formik.handleSubmit} noValidate>
+      {/* Adicionado scroll para o modal */}
+      <div 
+        className='d-flex flex-column me-n7 pe-7'
+        style={{ maxHeight: '65vh', overflowY: 'auto', overflowX: 'hidden'}}
+      >
         {renderBasicFieldset('name', 'Name', 'Enter account name')}
         {renderBasicFieldset('lastName', 'Sobrenome', 'Insira o sobrenome')}
         {renderBasicFieldset('email', 'Email', 'Enter email address')}
         {renderBasicFieldset('registrationNumber', 'Registration Number', 'Enter registration number')}
-        {renderBasicFieldset('averageScore', 'Average Score', 'Enter average score')}
-        {renderBasicFieldset('eventAverageScore', 'Event Average Score', 'Enter event average score')}
-        {renderBasicFieldset('stars', 'Stars', 'Enter stars')}
-        {renderBasicFieldset('password', 'Senha', 'Insira a senha', true, 'password')}
-        {renderBasicFieldset('confirmPassword', 'Confirmar Senha', 'Confirme a senha', true, 'password')}
+        
+        {/* Campos de pontuação opcionais */}
+        {renderBasicFieldset('averageScore', 'Average Score', '0', false, 'number')}
+        {renderBasicFieldset('eventAverageScore', 'Event Average Score', '0', false, 'number')}
+        {renderBasicFieldset('stars', 'Stars', '0', false, 'number')}
 
-        <SelectField
-          fieldName='clientId'
-          label='Cliente'
-          placeholder='Selecione uma Cliente'
-          options={clientOptions}
-          formik={formik}
-          multiselect={false}
-          required
-          onChange={(value) => {
-            if (typeof value === 'string') {
-              setSelectedClientId(value)
-              formik.setFieldValue('schoolIds', [])
-              formik.setFieldValue('classIds', [])
-              setSelectedSchoolIds([])
-            }
-          }}
-        />
+        {/* Campos de senha */}
+        {renderBasicFieldset(
+          'password',
+          'Senha',
+          account?.id ? 'Deixe em branco para não alterar' : 'Insira a senha',
+          !account?.id, // Obrigatório só na criação
+          'password'
+        )}
+        {renderBasicFieldset(
+          'confirmPassword',
+          'Confirmar Senha',
+          'Confirme a senha',
+          !account?.id, // Obrigatório só na criação
+          'password'
+        )}
 
+        {/* MODIFICADO: Oculta o campo 'Cliente' se 'clientId' foi passado via prop */}
+        {!clientId && (
+          <SelectField
+            fieldName='clientId'
+            label='Cliente'
+            placeholder='Selecione uma Cliente'
+            options={clientOptions}
+            formik={formik}
+            multiselect={false}
+            required
+            onChange={(value) => {
+              if (typeof value === 'string') {
+                setSelectedClientId(value)
+                formik.setFieldValue('schoolIds', [])
+                formik.setFieldValue('classIds', [])
+                setSelectedSchoolIds([])
+              }
+            }}
+          />
+        )}
+
+        {/* MODIFICADO: Campo de escolas agora é opcional */}
         <SelectField
           fieldName='schoolIds'
-          label='Escolas'
-          placeholder={selectedClientId ? 'Selecione uma ou mais escolas' : undefined}
+          label='Escolas (Opcional)'
+          placeholder={selectedClientId ? 'Selecione uma ou mais escolas' : 'Selecione um cliente primeiro'}
           options={schoolOptions}
           formik={formik}
           multiselect
-          required={false}
+          required={false} // <-- TORNADO OPCIONAL
           disabled={!selectedClientId}
           onChange={(value) => {
             if (Array.isArray(value)) {
@@ -199,7 +269,7 @@ const AccountCreateForm: FC<Props> = ({ account, isUserLoading, onFormSubmit }) 
         <SelectField
           fieldName='classIds'
           label='Turmas (Opcional)'
-          placeholder={selectedSchoolIds.length > 0 ? 'Selecione uma ou mais turmas' : undefined}
+          placeholder={selectedSchoolIds.length > 0 ? 'Selecione uma ou mais turmas' : 'Selecione uma escola primeiro'}
           options={classOptions}
           formik={formik}
           multiselect
@@ -207,6 +277,7 @@ const AccountCreateForm: FC<Props> = ({ account, isUserLoading, onFormSubmit }) 
           disabled={selectedSchoolIds.length === 0}
         />
 
+        {/* Campo de Cargo (Roles) */}
         <div className='mb-7'>
           <label className='required fw-bold fs-6 mb-5'>Cargo</label>
           <div className='d-flex flex-wrap gap-3'>
@@ -247,7 +318,7 @@ const AccountCreateForm: FC<Props> = ({ account, isUserLoading, onFormSubmit }) 
       </div>
 
       <div className='text-center pt-15'>
-        <button type='submit' className='btn btn-primary' data-kt-users-modal-action='submit'>
+        <button type='submit' className='btn btn-primary' data-kt-users-modal-action='submit' disabled={formik.isSubmitting || isUserLoading}>
           <span className='indicator-label'>Submit</span>
           {(formik.isSubmitting || isUserLoading) && (
             <span className='indicator-progress'>
