@@ -73,10 +73,10 @@ export const getList = async (
       },
     };
   } catch (error) {
-    console.warn('Erro ao buscar dados do backend, usando dados mockados:', error);
+    console.error('Erro ao buscar dados do backend:', error);
     
     // Dados mockados para teste
-    const mockQuests: Quest[] = [
+   /*const mockQuests: Quest[] = [
       {
         Id: 'aula-portugues-concordancia',
         Name: 'Aula de Português - Concordância',
@@ -107,13 +107,13 @@ export const getList = async (
         TotalQuestSteps: 5,
         CombatDifficulty: 'Fácil'
       }
-    ];
+    ];*/
     
     return {
-      data: mockQuests,
+      data: [],
       payload: {
         pagination: {
-          totalCount: mockQuests.length,
+          totalCount: 0,
         },
       },
     };

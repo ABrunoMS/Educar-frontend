@@ -12,9 +12,10 @@ import { SchoolType } from '@interfaces/School';
 import { PaginatedResponse } from '@contexts/PaginationContext';
 import { Quest, QuestStep } from '@interfaces/Lesson';
 
-import { getSchools } from '@services/Schools';
+import { getSchools, getSchoolsByClient } from '@services/Schools';
 import { getClassesBySchools } from '@services/Classes';
 import { createQuest, createQuestStep, updateQuest } from '@services/Lesson';
+import { useAuth } from '../../../../auth/core/Auth';
 
 type Props = {
   lesson?: Quest;
@@ -26,6 +27,7 @@ type OptionType = SelectOptions;
 
 const LessonCreateForm: React.FC<Props> = ({ lesson, isEditing = false, onFormSubmit }) => {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
 
   const [schoolOptions, setSchoolOptions] = useState<OptionType[]>([]);
   const [classOptions, setClassOptions] = useState<OptionType[]>([]);
@@ -109,7 +111,7 @@ const LessonCreateForm: React.FC<Props> = ({ lesson, isEditing = false, onFormSu
           const questId = questResponse.data.id;
 
           // 3. Criar uma etapa inicial apenas se for criação
-          const questStepData: QuestStep = {
+         /* const questStepData: QuestStep = {
             name: `Etapa 1 - ${values.Name}`,
             description: 'Etapa inicial da aula',
             order: 1,
@@ -140,7 +142,7 @@ const LessonCreateForm: React.FC<Props> = ({ lesson, isEditing = false, onFormSu
             ],
           };
 
-          await createQuestStep(questStepData);
+          await createQuestStep(questStepData);*/
 
           alert('Aula criada com sucesso!');
           if (onFormSubmit) {
@@ -159,22 +161,50 @@ const LessonCreateForm: React.FC<Props> = ({ lesson, isEditing = false, onFormSu
   });
 
   // Carregar escolas
-  useEffect(() => {
-    setIsLoadingSchools(true);
+ useEffect(() => {
+    
+  if (!currentUser) return; 
 
-    getSchools()
-      .then((res: { data: PaginatedResponse<SchoolType> }) => {
-        const options: OptionType[] = res.data.data
-          .filter((school): school is SchoolType & { id: string } => school.id !== undefined)
-          .map((school) => ({
+  setIsLoadingSchools(true);
+
+    
+  if (currentUser.roles?.includes('Admin')) {
+        
+     getSchools()
+            .then((res: { data: PaginatedResponse<SchoolType> }) => {
+          const options: OptionType[] = res.data.data
+                  .filter((school): school is SchoolType & { id: string } => school.id !== undefined)
+           .map((school) => ({
             value: school.id,
             label: school.name || '',
-          }));
-        setSchoolOptions(options);
-      })
-      .catch((error) => console.error('Erro ao carregar escolas:', error))
-      .finally(() => setIsLoadingSchools(false));
-  }, []);
+           }));
+          setSchoolOptions(options);
+         })
+            .catch((error) => console.error('Erro ao carregar escolas (Admin):', error))
+         .finally(() => setIsLoadingSchools(false));
+      } 
+    
+    else if (currentUser.schools?.length) { 
+     const options = currentUser.schools.map((school) => ({
+      value: school.id,
+      label: school.name,
+     }));
+     setSchoolOptions(options);
+
+        
+        if (options.length === 1 && !formik.values.school) {
+      formik.setFieldValue('school', options[0].value);
+     }
+        setIsLoadingSchools(false);
+  } 
+    else {
+        
+        console.warn("Usuário não é Admin e não tem escolas associadas no currentUser.");
+        setIsLoadingSchools(false);
+        setSchoolOptions([]); 
+    }
+  // eslint-disable-next-line
+ }, [currentUser]); 
 
   // Carregar turmas ao selecionar escola
   useEffect(() => {
