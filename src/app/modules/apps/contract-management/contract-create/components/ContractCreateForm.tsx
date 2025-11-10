@@ -204,7 +204,7 @@ const ContractCreateForm: FC<Props> = ({ contract = initialContract, isUserLoadi
           {renderCalendarField('contractSigningDate', 'Contract Signing Date', 'Select signing date')}
           {renderCalendarField('implementationDate', 'Implementation Date', 'Select implementation date')}
           {renderBasicFieldset('totalAccounts', 'Total Accounts', 'Enter total accounts')}
-          {renderBasicFieldset('remainingAccounts', 'Remaining Accounts', 'Enter remaining accounts')}
+          {/*{renderBasicFieldset('remainingAccounts', 'Remaining Accounts', 'Enter remaining accounts')}*/}
           {renderBasicFieldset('deliveryReport', 'Delivery Report', 'Enter delivery report')}
           {renderSelectFieldset('status', 'Status', 'Select status', statusOptions)}
           {/* Client (Agora usa dados da API) */}

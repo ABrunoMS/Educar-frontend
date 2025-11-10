@@ -20,9 +20,10 @@ type Props = {
   onFormSubmit: () => void
 }
 
-type ClientFormValues = Omit<ClientType, 'signatureDate' | 'implantationDate'> & {
+type ClientFormValues = Omit<ClientType, 'signatureDate' | 'implantationDate'| 'validity'> & {
   signatureDate: Date | null | undefined;
   implantationDate: Date | null | undefined;
+  validity: Date | null | undefined;
 };
 
 export const initialClient: ClientType = {
@@ -32,7 +33,7 @@ export const initialClient: ClientType = {
   partner: '',
   contacts: '',
   contract: '',
-  validity: '',
+  validity: undefined,
   signatureDate: undefined,
   implantationDate: undefined,
   totalAccounts: 0,
@@ -136,7 +137,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     partner: client?.partner || initialClient.partner,
     contacts: client?.contacts || initialClient.contacts,
     contract: client?.contract || initialClient.contract,
-    validity: client?.validity || initialClient.validity,
+    validity: client?.validity ? new Date(client.validity) : null,
     signatureDate: client?.signatureDate ? new Date(client.signatureDate) : null,
     implantationDate: client?.implantationDate ? new Date(client.implantationDate) : null,
     totalAccounts: client?.totalAccounts || initialClient.totalAccounts,
@@ -158,7 +159,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     partner: Yup.string().required('Parceiro é obrigatório'),
     contacts: Yup.string().required('Contatos são obrigatórios'),
     contract: Yup.string().required('Contrato é obrigatório'),
-    validity: Yup.string().required('Validade é obrigatória'),
+    validity: Yup.date().nullable().required('Validade é obrigatória'),
     signatureDate: Yup.date().nullable().required('Data de assinatura é obrigatória'),
     implantationDate: Yup.date().nullable().optional(),
     totalAccounts: Yup.number().moreThan(0).required('Número de contas é obrigatório'),
@@ -184,7 +185,10 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
         ...formValues,
         id: formValues.id || undefined, 
         
-  
+        validity: values.validity 
+          ? (values.validity as Date).toISOString() 
+          : undefined,
+
         signatureDate: values.signatureDate 
           ? (values.signatureDate as Date).toISOString() 
           : undefined,
@@ -521,7 +525,7 @@ const updateCalendarValue = (newValue: Date | undefined, field: keyof ClientForm
           {renderSelectFieldset('partner', 'Partner', 'Select a partner...', [{ value: '1', label: 'Option 1' }])}
           {renderSelectFieldset('contacts', 'Contacts', 'Select contacts...', [{ value: '1', label: 'Contato 1' }])}
           {renderSelectFieldset('contract', 'Contract', 'Select a contract...', [{ value: '1', label: 'Contrato 1' }])}
-          {renderBasicFieldset('validity', 'Validity', 'Validity')}
+          {renderCalendarField('validity', 'Validade', 'Selecione a data de validade', true)}
           {renderCalendarField('signatureDate', 'Signature date', 'Select date', true)}
           {renderCalendarField('implantationDate', 'Implantation date', 'Select date', false)}
           {renderBasicFieldset('totalAccounts', 'Number of accounts', 'Accounts...', false, 'number')}
