@@ -1,12 +1,9 @@
 import { Route, Routes, Outlet, Navigate } from 'react-router-dom'
-// CORREÇÃO: Usando o caminho de alias ou caminho relativo que o Metronic costuma usar, 
-// baseando-se na importação original que você forneceu: '@metronic/layout/core'
 import { PageTitle } from '@metronic/layout/core' 
 
-// Importe o novo LessonStepsWrapper do seu LessonCreate
 import { LessonCreateWrapper, LessonStepsWrapper } from './lesson-create/LessonCreate' 
-// CORREÇÃO: Usando o caminho que você sugeriu inicialmente (relativo ao LessonsPage.tsx)
 import { LessonListWrapper } from './lesson-list/LessonList' 
+import { LessonEdit } from './lesson-edit/LessonEdit' 
 
 const LessonsPage = () => {
   return (

@@ -86,12 +86,14 @@ const StepModal: FC<StepModalProps> = ({ show, handleClose, step, lessonSequence
             {/* Tipo */}
             <div className='col-md-6 fv-row mb-5'>
               <label className='form-label required text-gray-700 dark:text-gray-300'>Tipo da Etapa</label>
-              <input
-                type='text'
-                className='form-control form-control-solid'
-                placeholder='Ex: Atividade, Conteúdo, Quiz'
+              <select
+                className='form-select form-select-solid'
                 {...formik.getFieldProps('type')}
-              />
+              >
+                <option value=''>Selecione o Tipo</option>
+                <option value='Item'>Item</option>
+                <option value='Npc'>Npc</option>
+              </select>
               {formik.touched.type && formik.errors.type && (
                 <div className='fv-plugins-message-container'>
                   <div className='fv-help-block'>{formik.errors.type}</div>
@@ -116,15 +118,15 @@ const StepModal: FC<StepModalProps> = ({ show, handleClose, step, lessonSequence
 
             {/* Personagem */}
             <div className='col-md-4 fv-row mb-5'>
-              <label className='form-label required text-gray-700 dark:text-gray-300'>Personagem</label>
+              <label className='form-label required text-gray-700 dark:text-gray-300'>Tipo de NPC</label>
               <select
                 className='form-select form-select-solid'
                 {...formik.getFieldProps('character')}
               >
-                <option value=''>Selecione o Personagem</option>
-                <option value='Professor'>Professor</option>
-                <option value='Aluno-Guia'>Aluno-Guia</option>
-                <option value='Assistente'>Assistente</option>
+                <option value=''>Selecione o Tipo de NPC</option>
+                <option value='Passive'>Passive</option>
+                <option value='Enemy'>Enemy</option>
+                <option value='Friend'>Friend</option>
               </select>
               {formik.touched.character && formik.errors.character && (
                 <div className='fv-plugins-message-container'>

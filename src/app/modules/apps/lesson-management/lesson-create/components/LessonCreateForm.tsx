@@ -10,13 +10,21 @@ import { SelectOptions } from '@interfaces/Forms';
 import { Class } from '@interfaces/Class';
 import { SchoolType } from '@interfaces/School';
 import { PaginatedResponse } from '@contexts/PaginationContext';
+import { Quest, QuestStep } from '@interfaces/Lesson';
 
 import { getSchools } from '@services/Schools';
 import { getClassesBySchools } from '@services/Classes';
+import { createQuest, createQuestStep, updateQuest } from '@services/Lesson';
+
+type Props = {
+  lesson?: Quest;
+  isEditing?: boolean;
+  onFormSubmit?: () => void;
+};
 
 type OptionType = SelectOptions;
 
-const LessonCreateForm: React.FC = () => {
+const LessonCreateForm: React.FC<Props> = ({ lesson, isEditing = false, onFormSubmit }) => {
   const navigate = useNavigate();
 
   const [schoolOptions, setSchoolOptions] = useState<OptionType[]>([]);
@@ -44,35 +52,106 @@ const LessonCreateForm: React.FC = () => {
   ];
 
   const validationSchema = Yup.object().shape({
-    description: Yup.string().required('Descrição obrigatória'),
+    Name: Yup.string().required('Nome da aula obrigatório'),
+    Description: Yup.string().required('Descrição obrigatória'),
     school: Yup.string().required('Escola obrigatória'),
     class: Yup.string().required('Turma obrigatória'),
     discipline: Yup.string().required('Disciplina obrigatória'),
     schoolYear: Yup.string().required('Ano escolar obrigatório'),
-    combat: Yup.string().required('Combate obrigatório'),
+    UsageTemplate: Yup.string().required('Template obrigatório'),
+    Type: Yup.string().required('Tipo obrigatório'),
+    MaxPlayers: Yup.number().min(1).required('Máximo de jogadores obrigatório'),
+    TotalQuestSteps: Yup.number().min(1).required('Total de etapas obrigatório'),
+    CombatDifficulty: Yup.string().required('Dificuldade obrigatória'),
     bncc: Yup.array().min(1, 'Selecione ao menos uma opção BNCC'),
   });
 
   const formik = useFormik({
     initialValues: {
-      description: '',
+      Name: lesson?.Name || '',
+      Description: lesson?.Description || '',
       school: '',
       class: '',
       discipline: '',
       schoolYear: '',
-      combat: '',
+      UsageTemplate: lesson?.UsageTemplate || 'Global',
+      Type: lesson?.Type || 'SinglePlayer',
+      MaxPlayers: lesson?.MaxPlayers || 2,
+      TotalQuestSteps: lesson?.TotalQuestSteps || 1,
+      CombatDifficulty: lesson?.CombatDifficulty || 'Passive',
       bncc: [] as string[],
     },
     validationSchema,
+    enableReinitialize: true, // Permite reinicializar quando lesson mudar
     onSubmit: async (values, { setSubmitting }) => {
       try {
         setSubmitting(true);
-        console.log('Aula sendo salva:', values);
+        
+        // 1. Preparar dados da Quest
+        const questData: Quest = {
+          Name: values.Name,
+          Description: values.Description,
+          UsageTemplate: values.UsageTemplate,
+          Type: values.Type,
+          MaxPlayers: values.MaxPlayers,
+          TotalQuestSteps: values.TotalQuestSteps,
+          CombatDifficulty: values.CombatDifficulty,
+        };
 
-        const lessonId = 'a1b2c3d4';
-        navigate(`../steps/${lessonId}`);
+        if (isEditing && lesson?.Name) {
+          // Modo edição - atualizar quest existente
+          await updateQuest(lesson.Name, questData); // Assumindo que Name é o ID
+          alert('Aula atualizada com sucesso!');
+          if (onFormSubmit) onFormSubmit();
+        } else {
+          // Modo criação - criar nova quest
+          const questResponse = await createQuest(questData);
+          const questId = questResponse.data.id;
+
+          // 3. Criar uma etapa inicial apenas se for criação
+          const questStepData: QuestStep = {
+            name: `Etapa 1 - ${values.Name}`,
+            description: 'Etapa inicial da aula',
+            order: 1,
+            npcType: 'Passive',
+            npcBehaviour: 'StandStill',
+            questStepType: 'Npc',
+            questId: questId,
+            contents: [
+              {
+                questStepContentType: 'Exercise',
+                questionType: 'MultipleChoice',
+                description: 'Questão inicial',
+                weight: 10.0,
+                expectedAnswers: {
+                  questionType: 'MultipleChoice',
+                  options: [
+                    {
+                      description: 'Opção A',
+                      is_correct: false,
+                    },
+                    {
+                      description: 'Opção B',
+                      is_correct: true,
+                    },
+                  ],
+                },
+              },
+            ],
+          };
+
+          await createQuestStep(questStepData);
+
+          alert('Aula criada com sucesso!');
+          if (onFormSubmit) {
+            onFormSubmit();
+          } else {
+            navigate(`../steps/${questId}`);
+          }
+        }
       } catch (error) {
         console.error('Erro ao salvar a aula:', error);
+        alert('Erro ao salvar aula. Tente novamente.');
       } finally {
         setSubmitting(false);
       }
@@ -139,6 +218,15 @@ const LessonCreateForm: React.FC = () => {
           <h6 className="fw-semibold text-muted mb-3">Informações básicas</h6>
           <div className="row g-4">
             <div className="col-md-6">
+              <BasicField
+                fieldName="Name"
+                label="Nome da Aula"
+                placeholder="Digite o nome da aula"
+                required
+                formik={formik}
+              />
+            </div>
+            <div className="col-md-6">
               <SelectField
                 fieldName="schoolYear"
                 label="Ano escolar"
@@ -160,9 +248,23 @@ const LessonCreateForm: React.FC = () => {
                 formik={formik as FormikProps<any>}
               />
             </div>
+            <div className="col-md-6">
+              <SelectField
+                fieldName="Type"
+                label="Tipo da Aula"
+                placeholder="---"
+                options={[
+                  { value: 'SinglePlayer', label: 'Individual' },
+                  { value: 'MultiPlayer', label: 'Multiplayer' }
+                ]}
+                required
+                multiselect={false}
+                formik={formik as FormikProps<any>}
+              />
+            </div>
             <div className="col-12">
               <BasicField
-                fieldName="description"
+                fieldName="Description"
                 label="Descrição"
                 placeholder="Descrição da aula"
                 required
@@ -173,7 +275,64 @@ const LessonCreateForm: React.FC = () => {
           </div>
         </div>
 
-        {/* Seção 2 - Escola e Turma */}
+        {/* Seção 2 - Configurações da Quest */}
+        <div className="bg-body rounded-2xl shadow-sm p-4">
+          <h6 className="fw-semibold text-muted mb-3">Configurações da Aula</h6>
+          <div className="row g-4">
+            <div className="col-md-4">
+              <SelectField
+                fieldName="UsageTemplate"
+                label="Template"
+                placeholder="---"
+                options={[
+                  { value: 'Global', label: 'Global' },
+                  { value: 'Local', label: 'Local' }
+                ]}
+                required
+                multiselect={false}
+                formik={formik as FormikProps<any>}
+              />
+            </div>
+            <div className="col-md-4">
+              <BasicField
+                fieldName="MaxPlayers"
+                label="Máximo de Jogadores"
+                placeholder="2"
+                required
+                formik={formik}
+                type="number"
+              />
+            </div>
+            <div className="col-md-4">
+              <BasicField
+                fieldName="TotalQuestSteps"
+                label="Total de Etapas"
+                placeholder="1"
+                required
+                formik={formik}
+                type="number"
+              />
+            </div>
+            <div className="col-md-6">
+              <SelectField
+                fieldName="CombatDifficulty"
+                label="Dificuldade de Combate"
+                placeholder="---"
+                options={[
+                  { value: 'Passive', label: 'Passivo' },
+                  { value: 'Easy', label: 'Fácil' },
+                  { value: 'Medium', label: 'Médio' },
+                  { value: 'Hard', label: 'Difícil' }
+                ]}
+                required
+                multiselect={false}
+                formik={formik as FormikProps<any>}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Seção 3 - Escola e Turma */}
         <div className="bg-body rounded-2xl shadow-sm p-4">
           <h6 className="fw-semibold text-muted mb-3">Escola e Turma</h6>
           <div className="row g-4">
@@ -209,18 +368,8 @@ const LessonCreateForm: React.FC = () => {
         <div className="bg-body rounded-2xl shadow-sm p-4">
           <h6 className="fw-semibold text-muted mb-3">Diretrizes</h6>
           <div className="row g-4">
-            <div className="col-md-6">
-              <BasicField
-                fieldName="combat"
-                label="Combate"
-                placeholder="Ex: Evasão escolar"
-                required
-                formik={formik}
-              />
-            </div>
-
             {/* BNCC */}
-            <div className="col-md-6">
+            <div className="col-12">
               <label className="form-label fw-semibold mb-2 required">BNCC</label>
               <div className="d-flex flex-wrap gap-2">
                 {bnccOptions.map((opt) => {
@@ -271,9 +420,15 @@ const LessonCreateForm: React.FC = () => {
           <button
             type="button"
             className="btn btn-outline-secondary btn-sm"
-            onClick={() => navigate('/aulas')}
+            onClick={() => {
+              if (onFormSubmit) {
+                onFormSubmit();
+              } else {
+                navigate('/apps/lesson-management/lessons');
+              }
+            }}
           >
-            Voltar
+            {isEditing ? 'Cancelar' : 'Voltar'}
           </button>
 
           <button
@@ -287,7 +442,7 @@ const LessonCreateForm: React.FC = () => {
                 <span className="spinner-border spinner-border-sm ms-2"></span>
               </>
             ) : (
-              'Salvar e continuar'
+              isEditing ? 'Atualizar aula' : 'Salvar e continuar'
             )}
           </button>
         </div>

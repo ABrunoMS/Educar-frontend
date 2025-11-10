@@ -10,7 +10,50 @@ export interface LessonType {
   bncc?: string[]; 
   content?: string; 
 }
- export interface AnswerOption {
+
+// Interfaces para Quest (Aula) baseadas no modelo do backend
+export interface Quest {
+  Id?: string;
+  Name: string;
+  Description: string;
+  UsageTemplate: string;
+  Type: string;
+  MaxPlayers: number;
+  TotalQuestSteps: number;
+  CombatDifficulty: string;
+}
+
+// Interfaces para QuestStep (Etapa da Aula)
+export interface QuestStepContentOption {
+  description: string;
+  is_correct: boolean;
+}
+
+export interface QuestStepContentExpectedAnswers {
+  questionType: string;
+  options: QuestStepContentOption[];
+}
+
+export interface QuestStepContent {
+  questStepContentType: string;
+  questionType: string;
+  description: string;
+  weight: number;
+  expectedAnswers: QuestStepContentExpectedAnswers;
+}
+
+export interface QuestStep {
+  name: string;
+  description: string;
+  order: number;
+  npcType: string;
+  npcBehaviour: string;
+  questStepType: string;
+  questId: string;
+  contents: QuestStepContent[];
+}
+
+export interface AnswerOption {
   id: number;
   image: string;
   text: string;

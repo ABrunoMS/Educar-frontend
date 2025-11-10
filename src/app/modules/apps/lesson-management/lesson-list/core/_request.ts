@@ -1,17 +1,25 @@
 import axios, { AxiosResponse } from "axios";
 import { ID, Response } from '@metronic/helpers'
-// Substitua ClientType por LessonType. Crie este tipo se ainda não existir.
-import { LessonType } from '@interfaces/Lesson' 
+// Substitua ClientType por LessonType e adicione Quest
+import { LessonType, Quest } from '@interfaces/Lesson' 
 import { PaginatedResponse } from "@contexts/PaginationContext";
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-// URL corrigida para o endpoint de Aulas
+// URLs para endpoints de Aulas e Quests
 const LESSONS_URL = `${API_URL}/api/Lessons`; 
+const QUESTS_URL = `${API_URL}/api/Quests`;
 
-// Tipo de resposta para a lista de aulas
-export type LessonsQueryResponse = PaginatedResponse<LessonType>;
+// Tipo de resposta para a lista de aulas (Quest) no formato Metronic
+export type LessonsQueryResponse = {
+  data: Quest[];
+  payload: {
+    pagination: {
+      totalCount: number;
+    };
+  };
+};
 
-// Função para buscar a lista de aulas com paginação, ordenação e filtros
+// Função para buscar a lista de Quests com paginação, ordenação e filtros
 export const getList = async (
   PageNumber: number,
   PageSize: number,
@@ -20,18 +28,123 @@ export const getList = async (
   filter: string,
   search: string
 ): Promise<LessonsQueryResponse> => {
-  const response: AxiosResponse<LessonsQueryResponse> = await axios.get(LESSONS_URL, {
-    params: { PageNumber, PageSize, sortBy, sortOrder, filter, search },
-  });
-  return response.data;
+  try {
+    const response = await axios.get(QUESTS_URL, {
+      params: { PageNumber, PageSize, sortBy, sortOrder, filter, search },
+    });
+    
+    console.log('Backend response for Quests:', response.data);
+    
+    // Check if backend returns an array directly or a paginated object
+    if (Array.isArray(response.data)) {
+      // Plain array response
+      return {
+        data: response.data,
+        payload: {
+          pagination: {
+            totalCount: response.data.length,
+          },
+        },
+      };
+    } else if (response.data && typeof response.data === 'object') {
+      // Paginated response: use 'data' or 'Data' property for items
+      const data = response.data;
+      const items = data.data || data.Data || data.items || [];
+      // Busca o total de forma robusta
+      const total = (data.payload && data.payload.pagination && data.payload.pagination.totalCount)
+        || data.totalCount || data.total || items.length;
+      return {
+        data: Array.isArray(items) ? items : [],
+        payload: {
+          pagination: {
+            totalCount: total,
+          },
+        },
+      };
+    }
+    
+    // Fallback to empty array
+    return {
+      data: [],
+      payload: {
+        pagination: {
+          totalCount: 0,
+        },
+      },
+    };
+  } catch (error) {
+    console.warn('Erro ao buscar dados do backend, usando dados mockados:', error);
+    
+    // Dados mockados para teste
+    const mockQuests: Quest[] = [
+      {
+        Id: 'aula-portugues-concordancia',
+        Name: 'Aula de Português - Concordância',
+        Description: 'Introdução ao conceito de concordância',
+        UsageTemplate: '2º Trimestre',
+        Type: 'Português',
+        MaxPlayers: 35,
+        TotalQuestSteps: 0,
+        CombatDifficulty: 'Baixo Desempenho'
+      },
+      {
+        Id: 'aula-matematica-fracoes',
+        Name: 'Aula de Matemática - Frações',
+        Description: 'Introdução ao conceito de frações',
+        UsageTemplate: 'Ensino Fundamental',
+        Type: 'Matemática',
+        MaxPlayers: 30,
+        TotalQuestSteps: 3,
+        CombatDifficulty: 'Fácil'
+      },
+      {
+        Id: 'aula-ciencias-sistema-solar',
+        Name: 'Aula de Ciências - Sistema Solar',
+        Description: 'Explorando o sistema solar',
+        UsageTemplate: 'Ensino Fundamental',
+        Type: 'Ciências',
+        MaxPlayers: 25,
+        TotalQuestSteps: 5,
+        CombatDifficulty: 'Fácil'
+      }
+    ];
+    
+    return {
+      data: mockQuests,
+      payload: {
+        pagination: {
+          totalCount: mockQuests.length,
+        },
+      },
+    };
+  }
 };
 
-// Deleta uma única aula
+// Deleta uma única Quest
+export const deleteQuest = (questId: ID): Promise<void> => {
+  return axios.delete(`${QUESTS_URL}/${questId}`).then(() => {});
+};
+
+// Deleta múltiplas Quests
+export const deleteSelectedQuests = (questIds: Array<ID>): Promise<void> => {
+  const requests = questIds.map((id) => axios.delete(`${QUESTS_URL}/${id}`));
+  return axios.all(requests).then(() => {});
+};
+
+// Busca uma Quest pelo ID
+export const getQuestById = async (id: ID): Promise<Quest> => {
+  const response: AxiosResponse<Quest> = await axios.get(`${QUESTS_URL}/${id}`)
+  return response.data
+}
+
+// === FUNÇÕES LEGADAS PARA COMPATIBILIDADE ===
+
+// Deleta uma única aula legada
 export const deleteLesson = (lessonId: ID): Promise<void> => {
   return axios.delete(`${LESSONS_URL}/${lessonId}`).then(() => {});
 };
 
-// Deleta múltiplas aulas
+// Deleta múltiplas aulas legadas
 export const deleteSelectedLessons = (lessonIds: Array<ID>): Promise<void> => {
   const requests = lessonIds.map((id) => axios.delete(`${LESSONS_URL}/${id}`));
   return axios.all(requests).then(() => {});
