@@ -54,34 +54,34 @@ const LessonCreateForm: React.FC<Props> = ({ lesson, isEditing = false, onFormSu
   ];
 
   const validationSchema = Yup.object().shape({
-    Name: Yup.string().required('Nome da aula obrigatório'),
-    Description: Yup.string().required('Descrição obrigatória'),
+    name: Yup.string().required('Nome da aula obrigatório'),
+    description: Yup.string().required('Descrição obrigatória'),
     school: Yup.string().required('Escola obrigatória'),
     class: Yup.string().required('Turma obrigatória'),
     discipline: Yup.string().required('Disciplina obrigatória'),
     schoolYear: Yup.string().required('Ano escolar obrigatório'),
-    UsageTemplate: Yup.string().required('Template obrigatório'),
-    Type: Yup.string().required('Tipo obrigatório'),
-    MaxPlayers: Yup.number().min(1).required('Máximo de jogadores obrigatório'),
-    TotalQuestSteps: Yup.number().min(1).required('Total de etapas obrigatório'),
-    CombatDifficulty: Yup.string().required('Dificuldade obrigatória'),
+    usageTemplate: Yup.boolean().required('Template obrigatório'),
+    type: Yup.string().required('Tipo obrigatório'),
+    maxPlayers: Yup.number().min(1).required('Máximo de jogadores obrigatório'),
+    totalQuestSteps: Yup.number().min(1).required('Total de etapas obrigatório'),
+    combatDifficulty: Yup.string().required('Dificuldade obrigatória'),
     bncc: Yup.array().min(1, 'Selecione ao menos uma opção BNCC'),
   });
 
   const formik = useFormik({
     initialValues: {
-      Name: lesson?.Name || '',
-      Description: lesson?.Description || '',
+      name: lesson?.name || '',
+      description: lesson?.description || '',
       school: '',
       class: '',
-      discipline: '',
-      schoolYear: '',
-      UsageTemplate: lesson?.UsageTemplate || 'Global',
-      Type: lesson?.Type || 'SinglePlayer',
-      MaxPlayers: lesson?.MaxPlayers || 2,
-      TotalQuestSteps: lesson?.TotalQuestSteps || 1,
-      CombatDifficulty: lesson?.CombatDifficulty || 'Passive',
-      bncc: [] as string[],
+      discipline: lesson?.subject || '',
+      schoolYear: lesson?.grade || '',
+      usageTemplate: lesson?.usageTemplate ?? true,
+      type: lesson?.type || 'SinglePlayer',
+      maxPlayers: lesson?.maxPlayers || 2,
+      totalQuestSteps: lesson?.totalQuestSteps || 1,
+      combatDifficulty: lesson?.combatDifficulty || 'Passive',
+      bncc: lesson?.proficiencies || [],
     },
     validationSchema,
     enableReinitialize: true, // Permite reinicializar quando lesson mudar
@@ -91,22 +91,28 @@ const LessonCreateForm: React.FC<Props> = ({ lesson, isEditing = false, onFormSu
         
         // 1. Preparar dados da Quest
         const questData: Quest = {
-          Name: values.Name,
-          Description: values.Description,
-          UsageTemplate: values.UsageTemplate,
-          Type: values.Type,
-          MaxPlayers: values.MaxPlayers,
-          TotalQuestSteps: values.TotalQuestSteps,
-          CombatDifficulty: values.CombatDifficulty,
+          id: lesson?.id,
+          name: values.name,
+          description: values.description,
+          usageTemplate: values.usageTemplate,
+          type: values.type,
+          maxPlayers: values.maxPlayers,
+          totalQuestSteps: values.totalQuestSteps,
+          combatDifficulty: values.combatDifficulty,
+          questSteps: lesson?.questSteps || [],
+          subject: values.discipline,
+          grade: values.schoolYear,
+          proficiencies: values.bncc,
         };
 
-        if (isEditing && lesson?.Name) {
+        if (isEditing && lesson?.id) {
           // Modo edição - atualizar quest existente
-          await updateQuest(lesson.Name, questData); // Assumindo que Name é o ID
+          await updateQuest(lesson.id, questData); 
           alert('Aula atualizada com sucesso!');
           if (onFormSubmit) onFormSubmit();
         } else {
           // Modo criação - criar nova quest
+          delete (questData as Partial<Quest>).id;
           const questResponse = await createQuest(questData);
           const questId = questResponse.data.id;
 
@@ -249,7 +255,7 @@ const LessonCreateForm: React.FC<Props> = ({ lesson, isEditing = false, onFormSu
           <div className="row g-4">
             <div className="col-md-6">
               <BasicField
-                fieldName="Name"
+                fieldName="name"
                 label="Nome da Aula"
                 placeholder="Digite o nome da aula"
                 required
@@ -280,7 +286,7 @@ const LessonCreateForm: React.FC<Props> = ({ lesson, isEditing = false, onFormSu
             </div>
             <div className="col-md-6">
               <SelectField
-                fieldName="Type"
+                fieldName="type"
                 label="Tipo da Aula"
                 placeholder="---"
                 options={[
@@ -294,7 +300,7 @@ const LessonCreateForm: React.FC<Props> = ({ lesson, isEditing = false, onFormSu
             </div>
             <div className="col-12">
               <BasicField
-                fieldName="Description"
+                fieldName="description"
                 label="Descrição"
                 placeholder="Descrição da aula"
                 required
@@ -309,23 +315,31 @@ const LessonCreateForm: React.FC<Props> = ({ lesson, isEditing = false, onFormSu
         <div className="bg-body rounded-2xl shadow-sm p-4">
           <h6 className="fw-semibold text-muted mb-3">Configurações da Aula</h6>
           <div className="row g-4">
-            <div className="col-md-4">
-              <SelectField
-                fieldName="UsageTemplate"
-                label="Template"
-                placeholder="---"
-                options={[
-                  { value: 'Global', label: 'Global' },
-                  { value: 'Local', label: 'Local' }
-                ]}
-                required
-                multiselect={false}
-                formik={formik as FormikProps<any>}
-              />
+           <div className="col-md-4 d-flex align-items-center pt-5">
+              <div className="form-check form-switch form-check-custom form-check-solid">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="usageTemplateToggle"
+                  name="usageTemplate"
+                  checked={formik.values.usageTemplate}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                />
+                <label className="form-check-label ms-3 text-gray-700" htmlFor="usageTemplateToggle">
+                  Template 
+                </label>
+              </div>
+              {/* Feedback de erro para o switch */}
+              {formik.touched.usageTemplate && formik.errors.usageTemplate && (
+                <div className="fv-plugins-message-container invalid-feedback d-block">
+                  {formik.errors.usageTemplate}
+                </div>
+              )}
             </div>
             <div className="col-md-4">
               <BasicField
-                fieldName="MaxPlayers"
+                fieldName="maxPlayers"
                 label="Máximo de Jogadores"
                 placeholder="2"
                 required
@@ -335,7 +349,7 @@ const LessonCreateForm: React.FC<Props> = ({ lesson, isEditing = false, onFormSu
             </div>
             <div className="col-md-4">
               <BasicField
-                fieldName="TotalQuestSteps"
+                fieldName="totalQuestSteps"
                 label="Total de Etapas"
                 placeholder="1"
                 required
@@ -345,7 +359,7 @@ const LessonCreateForm: React.FC<Props> = ({ lesson, isEditing = false, onFormSu
             </div>
             <div className="col-md-6">
               <SelectField
-                fieldName="CombatDifficulty"
+                fieldName="combatDifficulty"
                 label="Dificuldade de Combate"
                 placeholder="---"
                 options={[

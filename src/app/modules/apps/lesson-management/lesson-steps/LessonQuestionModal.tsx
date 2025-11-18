@@ -2,17 +2,18 @@ import React, { FC, useState, useEffect } from 'react'
 import { Modal } from 'react-bootstrap'
 import { useFormik } from 'formik'
 import * as Yup from 'yup'
+import { Question, AnswerOption } from '@interfaces/Lesson'
 
 // Tipagem simplificada para a Opção de Resposta
-interface AnswerOption {
+/*interface AnswerOption {
   id: number
   image: string
   text: string
   isCorrect: boolean
-}
+}*/
 
 // Tipagem da Questão (Atividade)
-interface Question {
+/*interface Question {
   id: number
   activityType: string
   sequence: number
@@ -26,7 +27,7 @@ interface Question {
   shuffleAnswers: boolean
   alwaysCorrect: boolean
 }
-
+*/
 interface QuestionModalProps {
   show: boolean
   handleClose: () => void
@@ -55,6 +56,7 @@ const defaultInitialValues: Question = {
   title: '',
   comments: '',
   options: [],
+  description: '',
   shuffleAnswers: false,
   alwaysCorrect: false,
 }
@@ -102,13 +104,13 @@ const LessonQuestionModal: FC<QuestionModalProps> = ({
     setAnswerOptions([...answerOptions, { id: Date.now(), image: '', text: '', isCorrect: false }])
   }
 
-  const handleRemoveOption = (id: number) => {
+  const handleRemoveOption = (id: string | number) => {
     if (answerOptions.length > 1) {
       setAnswerOptions(answerOptions.filter(opt => opt.id !== id))
     }
   }
 
-  const handleUpdateOption = (id: number, key: keyof AnswerOption, value: any) => {
+  const handleUpdateOption = (id: string | number, key: keyof AnswerOption, value: any) => {
     setAnswerOptions(prev =>
       prev.map(opt => {
         if (opt.id === id) {

@@ -5,7 +5,7 @@ import * as Yup from 'yup'
 
 // Tipagem para a Etapa
 interface Step {
-  id: number
+  id: string | null
   type: string
   title: string
   active: boolean

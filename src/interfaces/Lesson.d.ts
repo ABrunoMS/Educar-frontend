@@ -13,14 +13,18 @@ export interface LessonType {
 
 // Interfaces para Quest (Aula) baseadas no modelo do backend
 export interface Quest {
-  Id?: string;
-  Name: string;
-  Description: string;
-  UsageTemplate: string;
-  Type: string;
-  MaxPlayers: number;
-  TotalQuestSteps: number;
-  CombatDifficulty: string;
+  id?: string;             
+  name: string;            
+  description: string;     
+  usageTemplate: boolean;   
+  type: string;            
+  maxPlayers: number;     
+  totalQuestSteps: number; 
+  combatDifficulty: string; 
+  questSteps: QuestStep[];
+  subject: string | null;  
+  grade: string | null;     
+  proficiencies: string[];
 }
 
 // Interfaces para QuestStep (Etapa da Aula)
@@ -35,6 +39,7 @@ export interface QuestStepContentExpectedAnswers {
 }
 
 export interface QuestStepContent {
+  id?: string;
   questStepContentType: string;
   questionType: string;
   description: string;
@@ -43,6 +48,7 @@ export interface QuestStepContent {
 }
 
 export interface QuestStep {
+  id?: string;
   name: string;
   description: string;
   order: number;
@@ -54,14 +60,14 @@ export interface QuestStep {
 }
 
 export interface AnswerOption {
-  id: number;
+  id: string | number;
   image: string;
   text: string;
   isCorrect: boolean;
 }
 
 export interface Question {
-  id: number;
+  id: string | number;
   title: string;  
   activityType: string;
   sequence: number;

@@ -3,28 +3,46 @@ import { useParams, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import StepModal from './LessonStepModal';
 import QuestionModal from './LessonQuestionModal';
-import { LessonType, Step, Question, AnswerOption, Quest } from '@interfaces/Lesson';
-import { createQuestStep, getQuestById } from '@services/Lesson';  // Importa as funções para salvar e buscar aula
+import { LessonType, Step, Question, AnswerOption, Quest, QuestStep } from '@interfaces/Lesson';
+import { createQuestStep, getQuestById, updateQuestStep, deleteQuestStep } from '@services/Lesson';  // Importa as funções para salvar e buscar aula
+
+
+interface PageStep {
+ id: string | null; // <-- string (para IDs do backend) ou null (para novas)
+ title: string;
+ type: string;
+ active: boolean;
+ sequence: number;
+ character: string;
+ suggestion: string;
+ questions: Question[];
+}
 
 // Tipagem para os dados da Aula baseada na interface Quest
 interface LessonData {
-  Name: string;
-  Description: string;
-  UsageTemplate: string;
-  Type: string;
-  MaxPlayers: number;
-  TotalQuestSteps: number;
-  CombatDifficulty: string;
+  name: string;
+  description: string;
+  usageTemplate: boolean;
+  type: string;
+  maxPlayers: number;
+  totalQuestSteps: number;
+  combatDifficulty: string;
+  discipline: string;  
+  schoolYear: string;  
+  bncc: string[];
 }
 
 const initialLessonData: LessonData = {
-  Name: '',
-  Description: '',
-  UsageTemplate: '',
-  Type: '',
-  MaxPlayers: 0,
-  TotalQuestSteps: 0,
-  CombatDifficulty: '',
+  name: '',
+  description: '',
+  usageTemplate: true,
+  type: '',
+  maxPlayers: 0,
+  totalQuestSteps: 0,
+  combatDifficulty: '',
+  discipline: '',
+  schoolYear: '',
+  bncc: [],
 };
 
 const LessonStepPage: FC = () => {
@@ -32,7 +50,8 @@ const LessonStepPage: FC = () => {
   const navigate = useNavigate();
 
   const [lessonData, setLessonData] = useState<LessonData>(initialLessonData);
-  const [steps, setSteps] = useState<Step[]>([]); // Começa sem nenhuma etapa
+  const [steps, setSteps] = useState<PageStep[]>([]); // Começa sem nenhuma 
+  const [stepsToDelete, setStepsToDelete] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false); // Estado para controlar o salvamento
   const [isLoading, setIsLoading] = useState(true); // Estado para controlar carregamento dos dados
 
@@ -50,7 +69,7 @@ const LessonStepPage: FC = () => {
       setIsLoading(true);
       
       // Primeiro, definir dados específicos baseados no ID da aula
-      let mockData: LessonData;
+/*let mockData: LessonData;
       
       if (lessonId === 'aula-portugues-concordancia') {
         mockData = {
@@ -93,7 +112,7 @@ const LessonStepPage: FC = () => {
           TotalQuestSteps: 0,
           CombatDifficulty: 'Médio',
         };
-      }
+      }*/
 
       try {
         console.log('Tentando buscar aula no backend...');
@@ -101,37 +120,58 @@ const LessonStepPage: FC = () => {
         console.log('Dados da aula carregados do backend:', response.data);
         
         // Usar dados do backend se disponível
-        if (response.data && Object.keys(response.data).length > 0) {
+        if (response.data && response.data.id) {
           console.log('Usando dados do backend:', response.data);
           // Mapear campos do backend para o formato esperado pelo frontend
-          const backend = response.data as any;
+          const backend = response.data as Quest;
           setLessonData({
-            Name: backend['name'] || backend['Name'] || '',
-            Description: backend['description'] || backend['Description'] || '',
-            UsageTemplate: backend['usageTemplate'] || backend['UsageTemplate'] || '',
-            Type: backend['type'] || backend['Type'] || '',
-            MaxPlayers: backend['maxPlayers'] || backend['MaxPlayers'] || 0,
-            TotalQuestSteps: backend['totalQuestSteps'] || backend['TotalQuestSteps'] || 0,
-            CombatDifficulty: backend['combatDifficulty'] || backend['CombatDifficulty'] || '',
-          });
+               name: backend.name || '',
+               description: backend.description || '',
+               usageTemplate: backend.usageTemplate || true,
+               type: backend.type || '',
+               maxPlayers: backend.maxPlayers || 0,
+               totalQuestSteps: backend.totalQuestSteps || 0,
+               combatDifficulty: backend.combatDifficulty || '',
+               discipline: backend.subject || 'Não definida',
+               schoolYear: backend.grade || 'Não definido',
+               bncc: backend.proficiencies || [],
+               });
           
           // Carregar as etapas se existirem
-          const questSteps = backend['questSteps'] || backend['QuestSteps'] || [];
+          const questSteps = backend.questSteps || [];
           console.log('QuestSteps do backend:', questSteps);
           
           if (Array.isArray(questSteps) && questSteps.length > 0) {
-            const mappedSteps: Step[] = questSteps.map((questStep: any, index: number) => ({
-              id: questStep.id || Date.now() + index,
-              title: questStep.name || questStep.Name || '',
-              type: questStep.questStepType || questStep.QuestStepType || questStep.type || questStep.Type || 'Npc',
+            const mappedSteps: PageStep[] = questSteps.map((questStep: QuestStep, index: number) => ({
+              id: questStep.id || null,
+              title: questStep.name || '',
+              type: questStep.questStepType || 'Npc',
               active: true,
-              sequence: questStep.order || questStep.Order || index + 1,
-              character: questStep.npcType || questStep.NpcType || 'Passive',
-              suggestion: questStep.description || questStep.Description || '',
-              questions: [] // Por enquanto vazio
-            }));
-            console.log('Etapas mapeadas:', mappedSteps);
-            setSteps(mappedSteps);
+              sequence: index + 1,
+              character: questStep.npcType || 'Passive',
+              suggestion: questStep.description || '',
+              questions: (questStep.contents || []).map((content, qIndex) => ({ // Mapeia questões
+                id: content.id || Date.now() + qIndex,
+                activityType: content.questStepContentType || 'Exercise',
+                sequence: qIndex + 1,
+                questionType: content.questionType || 'MultipleChoice',
+                weight: content.weight || 1,
+                isActive: true,
+                contentImage: '', // TODO: Mapear se existir
+                description: content.description || 'Descrição da questão',
+                title: content.description || 'Questão',
+                comments: '', // TODO: Mapear se existir
+                options: (content.expectedAnswers?.options || []).map((opt, oIndex) => ({
+                  id: Date.now() + oIndex, // TODO: Usar ID real da opção
+                  image: '',
+                  text: opt.description,
+                  isCorrect: opt.is_correct
+                })),
+                shuffleAnswers: false,
+                alwaysCorrect: false,
+              }))
+          }));
+          setSteps(mappedSteps);
           } else {
             // Aula criada pela primeira vez: garantir que steps fique vazio
             setSteps([]);
@@ -139,12 +179,12 @@ const LessonStepPage: FC = () => {
           }
         } else {
           console.log('Backend retornou dados vazios, usando fallback');
-          setLessonData(mockData);
+        
         }
       } catch (error) {
-        console.error('Erro ao carregar dados da aula, usando fallback:', error);
-        console.log('Usando dados de fallback para aula:', lessonId, mockData);
-        setLessonData(mockData);
+        console.error('Erro ao carregar dados da aula', error);
+        
+        
       } finally {
         console.log('Finalizando carregamento, setIsLoading(false)');
         setIsLoading(false);
@@ -158,14 +198,14 @@ const LessonStepPage: FC = () => {
   useEffect(() => {
     console.log('=== DEBUG lessonData ===');
     console.log('lessonData completo:', lessonData);
-    console.log('Nome:', lessonData?.Name);
-    console.log('Nome typeof:', typeof lessonData?.Name);
-    console.log('Nome length:', lessonData?.Name?.length);
+    console.log('Nome:', lessonData?.name);
+    console.log('Nome typeof:', typeof lessonData?.name);
+    console.log('Nome length:', lessonData?.name?.length);
     console.log('isLoading:', isLoading);
-    console.log('Descrição:', lessonData?.Description);
-    console.log('Template:', lessonData?.UsageTemplate);
-    console.log('Tipo:', lessonData?.Type);
-    console.log('Combate:', lessonData?.CombatDifficulty);
+    console.log('Descrição:', lessonData?.description);
+    console.log('Template:', lessonData?.usageTemplate);
+    console.log('Tipo:', lessonData?.type);
+    console.log('Combate:', lessonData?.combatDifficulty);
     console.log('=== FIM DEBUG ===');
   }, [lessonData, isLoading]);
 
@@ -180,19 +220,19 @@ const LessonStepPage: FC = () => {
 
   // States StepModal
   const [isStepModalOpen, setIsStepModalOpen] = useState(false);
-  const [editingStep, setEditingStep] = useState<Step | null>(null);
+  const [editingStep, setEditingStep] = useState<PageStep | null>(null);
 
   // States QuestionModal
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
-  const [currentStepId, setCurrentStepId] = useState<number | null>(null);
+ 
 
   const nextSequence = useMemo(() => {
     return steps.length > 0 ? Math.max(...steps.map(s => s.sequence)) + 1 : 1;
   }, [steps]);
 
   // --- Handlers Step ---
-  const handleOpenStepModal = (step: Step | null = null) => {
+  const handleOpenStepModal = (step: PageStep | null = null) => {
     setEditingStep(step);
     setIsStepModalOpen(true);
   };
@@ -202,34 +242,77 @@ const LessonStepPage: FC = () => {
     setEditingStep(null);
   };
 
-  const handleSaveStep = (newStepData: Omit<Step, 'id' | 'questions'>) => {
-    if (editingStep) {
-      setSteps(
-        steps.map(s =>
-          s.id === editingStep.id
-            ? { ...newStepData, id: editingStep.id, questions: editingStep.questions } as Step
-            : s
-        )
-      );
-    } else {
-      const newStep: Step = { ...newStepData, id: Date.now(), questions: [] };
-      setSteps([...steps, newStep].sort((a, b) => a.sequence - b.sequence));
+  const handleSaveStep = async (stepData: Omit<Step, 'id' | 'questions'>) => {
+    if (!lessonId) return;
+    
+    setIsSaving(true);
+    const stepPayload = {
+        name: stepData.title,
+        description: stepData.suggestion || stepData.title,
+        order: stepData.sequence,
+        npcType: stepData.character || 'Passive',
+        npcBehaviour: 'StandStill', // Valor padrão
+        type: stepData.type || 'Npc',
+        questId: lessonId,
+        contents: [] // Salva a etapa primeiro, depois as questões
+    };
+
+    try {
+        if (editingStep && editingStep.id) {
+            // --- MODO DE ATUALIZAÇÃO ---
+            await updateQuestStep(editingStep.id, stepPayload); // Usa updateQuestStep
+            setSteps(steps.map(s =>
+                s.id === editingStep.id
+                ? { ...s, ...stepData } // Atualiza o estado local
+                : s
+            ));
+        } else {
+            // --- MODO DE CRIAÇÃO ---
+            const response = await createQuestStep(stepPayload); // Usa createQuestStep
+            const newStep: PageStep = { 
+              ...stepData, 
+              id: response.data.id, // <-- Usa o ID real retornado pela API
+              questions: [] 
+            };
+            setSteps([...steps, newStep].sort((a, b) => a.sequence - b.sequence));
+        }
+        handleCloseStepModal();
+    } catch (error) {
+        console.error("Erro ao salvar etapa:", error);
+        alert("Erro ao salvar etapa.");
+    } finally {
+        setIsSaving(false);
     }
-    handleCloseStepModal();
   };
 
-  const handleRemoveStep = (stepId: number) => {
-    if (window.confirm('Tem certeza que deseja remover esta etapa?')) {
-      setSteps(steps.filter(s => s.id !== stepId));
+  const handleRemoveStep = async (stepId: string | null) => {
+    if (!stepId) { // Se for uma etapa nova (id=null) que ainda não foi salva
+      setSteps(steps.filter(s => s.id !== null));
+      return;
     }
-  };
+    
+    if (window.confirm('Tem certeza que deseja remover esta etapa?')) {
+          try {
+            await deleteQuestStep(stepId); // <-- 1. Chama a API de deleção
+            setSteps(steps.filter(s => s.id !== stepId)); // <-- 2. Atualiza o estado local
+          } catch (error) {
+            console.error("Erro ao deletar etapa:", error);
+            alert("Erro ao deletar etapa.");
+          }
+    }
+    };
 
   // --- Handlers Questão ---
-  const handleOpenQuestionModal = (stepId: number, question: Question | null = null) => {
-    setCurrentStepId(stepId);
-    setEditingQuestion(question);
-    setIsQuestionModalOpen(true);
-  };
+  const [currentStepId, setCurrentStepId] = useState<string | null>(null);
+  const handleOpenQuestionModal = (stepId: string | null, question: Question | null = null) => {
+    if (!stepId) {
+      alert("Salve a etapa primeiro antes de adicionar questões.");
+      return;
+    }
+     setCurrentStepId(stepId);
+     setEditingQuestion(question);
+     setIsQuestionModalOpen(true);
+   };
 
   const handleCloseQuestionModal = () => {
     setIsQuestionModalOpen(false);
@@ -293,54 +376,61 @@ const LessonStepPage: FC = () => {
     try {
       console.log('Iniciando salvamento das etapas...', { lessonId, steps });
       
-      // Para cada etapa, transformar em QuestStep e salvar
-      for (const [index, step] of steps.entries()) {
-        console.log(`Salvando etapa ${index + 1}:`, step);
-        // Payload matches backend's camelCase JSON serialization
-        const questStepData = {
-          name: step.title,
-          description: step.suggestion || step.title || 'Descrição da etapa',
-          order: step.sequence,
-          npcType: step.character || 'Passive',
-          npcBehaviour: 'StandStill',
-          type: step.type || 'Npc',
-          questId: lessonId,
-          contents: step.questions?.map((question) => ({
-            questStepContentType: question.activityType || 'Exercise',
-            questionType: question.questionType || 'MultipleChoice',
-            description: question.description || question.title || 'Pergunta sem descrição',
-            weight: question.weight || 1,
-            expectedAnswers: {
-              questionType: question.questionType || 'MultipleChoice',
-              options: question.options?.map(opt => ({
-                description: opt.text || '',
-                is_correct: opt.isCorrect || false
-              })) || []
-            }
-          })) || []
-        };
+        // Usamos Promise.all para rodar as atualizações em paralelo
+        await Promise.all(steps.map((step, index) => {
+          console.log(`Processando etapa ${index + 1}:`, step);
 
-        console.log('Dados enviados para o backend:', questStepData);
+          // Monta o payload (dados) da etapa
+          const questStepData = {
+             name: step.title,
+             description: step.suggestion || step.title || 'Descrição da etapa',
+             order: step.sequence,
+             npcType: step.character || 'Passive',
+             npcBehaviour: 'StandStill',
+             type: step.type || 'Npc',
+             questId: lessonId,
+             contents: step.questions?.map((question) => ({
+               questStepContentType: question.activityType || 'Exercise',
+               questionType: question.questionType || 'MultipleChoice',
+               description: question.description || question.title || 'Pergunta sem descrição',
+               weight: question.weight || 1,
+               expectedAnswers: {
+                  questionType: question.questionType || 'MultipleChoice',
+                  options: question.options?.map(opt => ({
+                    description: opt.text || '',
+                    is_correct: opt.isCorrect || false
+                  })) || []
+               }
+             })) || []
+          };
 
-        const result = await createQuestStep(questStepData);
-        console.log(`Etapa ${index + 1} salva com sucesso:`, result);
-      }
+          // --- LÓGICA DA CORREÇÃO ---
+          // Se a etapa tem um ID, ela já existe no backend -> ATUALIZAR
+          if (step.id) {
+             console.log(`Atualizando etapa ID: ${step.id}`);
+             return updateQuestStep(step.id, questStepData);
+          } else {
+             // Se a etapa não tem ID, ela é nova -> CRIAR
+             // (Nota: A sua lógica atual de salvar modal já deve dar um ID)
+             console.log(`Criando nova etapa: ${step.title}`);
+             return createQuestStep(questStepData);
+          }
+          // --- FIM DA CORREÇÃO ---
+        }));
 
-      alert('Aula salva com sucesso!');
-      navigate('/apps/lesson-management/lessons');
-    } catch (error: any) {
-      console.error('Erro detalhado ao salvar aula:', error);
-      console.error('Response data:', error.response?.data);
-      console.error('Response status:', error.response?.status);
-      alert(`Erro ao salvar aula: ${error.response?.data?.message || error.message}`);
-    } finally {
-      setIsSaving(false);
-    }
-  };
+        alert('Aula salva com sucesso!');
+        navigate('/apps/lesson-management/lessons');
+     } catch (error: any) {
+        console.error('Erro detalhado ao salvar aula:', error);
+        alert(`Erro ao salvar aula: ${error.response?.data?.message || error.message}`);
+     } finally {
+        setIsSaving(false);
+     }
+   };
 
   // --- Render Step Cards ---
-  const renderStepCard = (step: Step) => (
-    <div key={step.id} className='col-xl-6 mb-7'>
+  const renderStepCard = (step: PageStep, index: number) => (
+    <div key={step.id || `step-${index}`} className='col-xl-6 mb-7'>
       <div className='card h-100 bg-body'>
         <div className='card-body d-flex flex-column'>
           {/* Cabeçalho */}
@@ -395,7 +485,7 @@ const LessonStepPage: FC = () => {
                       <tr key={q.id} className='fw-semibold fs-7 text-gray-900 dark:text-white'>
                         <td>{q.sequence}</td>
                         <td>{q.questionType}</td>
-                        <td>{q.description.length > 30 ? q.description.substring(0, 30) + '...' : q.description}</td>
+                        <td>{q.title.length > 30 ? q.title.substring(0, 30) + '...' : q.title}</td>
                         <td className='text-center'>
                           <i
                             className={clsx('ki-duotone fs-4', {
@@ -473,18 +563,18 @@ const LessonStepPage: FC = () => {
                   <div className='d-flex flex-column'>
                     <div className='d-flex align-items-center mb-2'>
                       <h1 className='fs-2 fw-bold text-gray-900 dark:text-white me-1'>
-                        Aula: {getDisplayValue(lessonData.Name, lessonId || 'Não identificada')}
+                        Aula: {getDisplayValue(lessonData.name, lessonId || 'Não identificada')}
                       </h1>
                     </div>
                   </div>
-                  {!isLoading && lessonData.Name ? (
+                  {!isLoading && lessonData.name ? (
                     <div className='row border border-gray-300 rounded p-5 mt-5 g-5'>
                       <div className='col-md-6 col-lg-3 d-flex flex-column'>
                         <span className='text-gray-600 fs-7 fw-semibold'>Nome da Aula</span>
                         <input
                           type='text'
                           className='form-control form-control-sm form-control-solid'
-                          value={lessonData.Name}
+                          value={lessonData.name}
                           readOnly
                         />
                       </div>
@@ -493,7 +583,7 @@ const LessonStepPage: FC = () => {
                         <input
                           type='text'
                           className='form-control form-control-sm form-control-solid'
-                          value={lessonData.UsageTemplate}
+                          value={lessonData.schoolYear}
                           readOnly
                         />
                       </div>
@@ -502,7 +592,7 @@ const LessonStepPage: FC = () => {
                         <input
                           type='text'
                           className='form-control form-control-sm form-control-solid'
-                          value={lessonData.Type}
+                          value={lessonData.discipline}
                           readOnly
                         />
                       </div>
@@ -511,7 +601,7 @@ const LessonStepPage: FC = () => {
                         <input
                           type='text'
                           className='form-control form-control-sm form-control-solid'
-                          value={lessonData.CombatDifficulty}
+                          value={lessonData.combatDifficulty}
                           readOnly
                         />
                       </div>
@@ -520,7 +610,16 @@ const LessonStepPage: FC = () => {
                         <input
                           type='text'
                           className='form-control form-control-sm form-control-solid'
-                          value={lessonData.Description}
+                          value={lessonData.bncc.join(', ')}
+                          readOnly
+                        />
+                      </div>
+                      <div className='col-md-6 col-lg-3 d-flex flex-column'>
+                        <span className='text-gray-600 fs-7 fw-semibold'>Total de Etapas</span>
+                        <input
+                          type='text'
+                          className='form-control form-control-sm form-control-solid'
+                          value={lessonData.totalQuestSteps}
                           readOnly
                         />
                       </div>
@@ -589,7 +688,7 @@ const LessonStepPage: FC = () => {
           handleClose={handleCloseStepModal}
           step={editingStep}
           lessonSequence={nextSequence}
-          onSave={handleSaveStep}
+          onSave={handleSaveStep as (step: Omit<any, 'id'>) => void}
         />
 
         {/* Modal Questão */}

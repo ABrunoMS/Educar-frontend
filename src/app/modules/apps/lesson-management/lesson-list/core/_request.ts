@@ -134,7 +134,7 @@ export const deleteSelectedQuests = (questIds: Array<ID>): Promise<void> => {
 // Busca uma Quest pelo ID
 export const getQuestById = async (id: ID): Promise<Quest> => {
   const response: AxiosResponse<Quest> = await axios.get(`${QUESTS_URL}/${id}`)
-  return response.data
+  return response.data;
 }
 
 // === FUNÇÕES LEGADAS PARA COMPATIBILIDADE ===
