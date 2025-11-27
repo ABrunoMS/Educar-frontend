@@ -6,45 +6,57 @@ import { LessonListWrapper } from './lesson-list/LessonList'
 import { LessonEdit } from './lesson-edit/LessonEdit' 
 
 const LessonsPage = () => {
-  return (
-    <Routes>
-      <Route element={<Outlet />}>
-        {/* Rota para a Listagem de Aulas */}
-        <Route
-          path='lessons' 
-          element={
-            <>
-              <PageTitle>Listagem de Aulas</PageTitle>
-              <LessonListWrapper />
-            </>
-          }
-        />
-        {/* Rota para a Criação de Aula */}
-        <Route
-          path='create'
-          element={
-            <>
-              <PageTitle>Criar Aula</PageTitle>
-              <LessonCreateWrapper />
-            </>
-          }
-        />
+ return (
+  <Routes>
+   <Route element={<Outlet />}>
+    {/* Rota para a Listagem de Aulas */}
+    <Route
+     path='lessons' 
+     element={
+      <>
+       <PageTitle>Listagem de Aulas</PageTitle>
+       <LessonListWrapper isTemplateView={false}/>
+      </>
+     }
+    />
+
+    <Route
+          path='templates' 
+          element={
+            <>
+              <PageTitle>Modelos de Aula</PageTitle>
+              <LessonListWrapper isTemplateView={true} />
+            </>
+          }
+     />
+
+
+    {/* Rota para a Criação de Aula */}
+    <Route
+     path='create'
+     element={
+      <>
+       <PageTitle>Criar Aula</PageTitle>
+       <LessonCreateWrapper />
+      </>
+     }
+    />
         {/* NOVA ROTA DINÂMICA PARA GERENCIAMENTO DE ETAPAS */}
-        <Route
-          path='steps/:lessonId' 
-          element={
-            <>
-              <PageTitle>Gerenciamento de Etapas</PageTitle>
-              <LessonStepsWrapper />
-            </>
-          }
-        />
-      </Route>
-      
-      {/* Rota de índice para redirecionar para a lista de aulas */}
-      <Route index element={<Navigate to='/apps/lesson-management/lessons' />} />
-    </Routes>
-  )
+    <Route
+     path='steps/:lessonId' 
+     element={
+      <>
+       <PageTitle>Gerenciamento de Etapas</PageTitle>
+       <LessonStepsWrapper />
+      </>
+     }
+    />
+   </Route>
+   
+   {/* Rota de índice para redirecionar para a lista de aulas */}
+   <Route index element={<Navigate to='/apps/lesson-management/lessons' />} />
+  </Routes>
+ )
 }
 
 export default LessonsPage

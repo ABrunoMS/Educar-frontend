@@ -5,7 +5,7 @@ import { Column } from 'react-table'
 import { getList, deleteQuest, deleteSelectedQuests } from './core/_request' // Importe as funções de Quest
 import { usePagination } from '@contexts/PaginationContext'
 import { useState } from 'react'
-import { Link } from 'react-router-dom' 
+import { Link, useNavigate } from 'react-router-dom' 
 import { ActionsCell } from '@components/list-view/table/columns/ActionsCell'
 
 // Definimos a interface de resposta Metronic (usando Quest ao invés de LessonType)
@@ -18,9 +18,14 @@ interface MetronicResponse<T> {
   };
 }
 
-const LessonListWrapper = () => {
+type Props = {
+  isTemplateView: boolean;
+}
+
+const LessonListWrapper: React.FC<Props> = ({ isTemplateView }) => {
   // 1. Hook de paginação para obter o estado atual
   const {page, pageSize, sortBy, sortOrder, filter, search} = usePagination()
+  const navigate = useNavigate()
   
   // Mocks de estado da Modal de Detalhes (se você for usar)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -37,14 +42,10 @@ const LessonListWrapper = () => {
   }
   
   // 2. Chamada useQuery para buscar os dados das Quests (aulas)
-  const {data, isLoading}: UseQueryResult<MetronicResponse<Quest>> = useQuery(
-    // A key deve ser única para lista de quests
-    ['quest-list', page, pageSize, sortBy, sortOrder, filter, search], 
-    // getList() busca as Quests do backend
-    () => getList(page, pageSize, sortBy, sortOrder, filter, search),
-    {
-      keepPreviousData: true,
-    }
+  const {data, isLoading}: UseQueryResult<any> = useQuery(
+    ['quest-list', page, pageSize, sortBy, sortOrder, filter, search, isTemplateView], 
+    () => getList(page, pageSize, sortBy, sortOrder, filter, search, isTemplateView),
+    { keepPreviousData: true }
   )
   
   // 3. Definição das colunas para Quest
@@ -57,6 +58,7 @@ const LessonListWrapper = () => {
       Cell: ({ row }: any) => {
         const id = row.original.Id || row.original.id || row.original.Name || row.original.name;
         const name = row.original.Name || row.original.name || 'Sem nome';
+        if(isTemplateView) return <span className='text-gray-800 fw-bold'>{name}</span>;
         return (
           <Link
             to={`/apps/lesson-management/steps/${id}`}
@@ -103,6 +105,17 @@ const LessonListWrapper = () => {
       Cell: ({ ...props }: any) => {
         const item = props.data[props.row.index];
         const id = item.Id || item.id || item.Name || item.name;
+        if (isTemplateView) {
+             return (
+                 <button 
+                    className='btn btn-sm btn-light-primary'
+                    // Redireciona para 'create' com o ID do template na URL
+                    onClick={() => navigate(`/apps/lesson-management/create?sourceTemplateId=${item.id}`)}
+                 >
+                    <i className="ki-duotone ki-copy fs-5 me-1"></i> Importar Modelo
+                 </button>
+             )
+         }
         return (
           <ActionsCell
             editPath='/apps/lesson-management/lesson'

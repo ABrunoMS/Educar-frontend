@@ -26,11 +26,12 @@ export const getList = async (
   sortBy: string,
   sortOrder: 'asc' | 'desc',
   filter: string,
-  search: string
+  search: string,
+  isTemplate: boolean = false
 ): Promise<LessonsQueryResponse> => {
   try {
     const response = await axios.get(QUESTS_URL, {
-      params: { PageNumber, PageSize, sortBy, sortOrder, filter, search },
+      params: { PageNumber, PageSize, sortBy, sortOrder, filter, search, UsageTemplate: isTemplate },
     });
     
     console.log('Backend response for Quests:', response.data);

@@ -55,7 +55,7 @@ export interface QuestStep {
   npcType: string;
   npcBehaviour: string;
   questStepType: string;
-  questId: string;
+  questId?: string;
   contents: QuestStepContent[];
 }
 
