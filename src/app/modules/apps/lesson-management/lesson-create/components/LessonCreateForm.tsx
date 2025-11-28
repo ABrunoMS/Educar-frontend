@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useFormik, FormikProps } from 'formik';
 import * as Yup from 'yup';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import clsx from 'clsx';
 
 import BasicField from '@components/form/BasicField';
@@ -12,9 +12,9 @@ import { SchoolType } from '@interfaces/School';
 import { PaginatedResponse } from '@contexts/PaginationContext';
 import { Quest, QuestStep } from '@interfaces/Lesson';
 
-import { getSchools, getSchoolsByClient } from '@services/Schools';
+import { getSchools } from '@services/Schools'; // Se tiver getSchoolsByClient, importe também
 import { getClassesBySchools } from '@services/Classes';
-import { createQuest, createQuestStep, updateQuest } from '@services/Lesson';
+import { createQuest, updateQuest, getQuestById } from '@services/Lesson';
 import { useAuth } from '../../../../auth/core/Auth';
 
 type Props = {
@@ -25,15 +25,24 @@ type Props = {
 
 type OptionType = SelectOptions;
 
-const LessonCreateForm: React.FC<Props> = ({ lesson, isEditing = false, onFormSubmit }) => {
+const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = false, onFormSubmit }) => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  
+  // Hooks de URL e Estado
+  const [searchParams] = useSearchParams();
+  const sourceTemplateId = searchParams.get('sourceTemplateId');
+  
+  const [clonedData, setClonedData] = useState<Quest | null>(null);
+  const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
 
+  // Estados para Selects
   const [schoolOptions, setSchoolOptions] = useState<OptionType[]>([]);
   const [classOptions, setClassOptions] = useState<OptionType[]>([]);
   const [isLoadingSchools, setIsLoadingSchools] = useState(false);
   const [isLoadingClasses, setIsLoadingClasses] = useState(false);
 
+  // Dados estáticos
   const [disciplines] = useState<OptionType[]>([
     { value: '1', label: 'Matemática' },
     { value: '2', label: 'Português' },
@@ -53,6 +62,32 @@ const LessonCreateForm: React.FC<Props> = ({ lesson, isEditing = false, onFormSu
     'Jornada do trabalho',
   ];
 
+  // --- EFEITO: Carregar Template (se houver sourceTemplateId) ---
+  useEffect(() => {
+    if (sourceTemplateId) {
+      setIsLoadingTemplate(true);
+      getQuestById(sourceTemplateId)
+        .then((response) => {
+          setClonedData(response.data as Quest);
+        })
+        .catch(err => {
+            console.error("Erro ao carregar template", err);
+            alert("Erro ao carregar o modelo.");
+        })
+        .finally(() => setIsLoadingTemplate(false));
+    }
+  }, [sourceTemplateId]);
+
+  // --- LÓGICA DE DADOS ATIVOS ---
+  // Determina qual conjunto de dados usar para preencher o formulário
+  const activeData = isEditing ? initialLesson : (clonedData || undefined);
+
+  // Encontrar IDs baseados nos Labels (para Disciplina e Ano Escolar)
+  // Se activeData.subject for "Matemática", achamos o ID "1"
+  const initialDisciplineId = disciplines.find(d => d.label === activeData?.subject)?.value || '';
+  const initialSchoolYearId = schoolYears.find(s => s.label === activeData?.grade)?.value || '';
+
+  // --- SCHEMA DE VALIDAÇÃO ---
   const validationSchema = Yup.object().shape({
     name: Yup.string().required('Nome da aula obrigatório'),
     description: Yup.string().required('Descrição obrigatória'),
@@ -68,30 +103,41 @@ const LessonCreateForm: React.FC<Props> = ({ lesson, isEditing = false, onFormSu
     bncc: Yup.array().min(1, 'Selecione ao menos uma opção BNCC'),
   });
 
+  // --- FORMIK ---
   const formik = useFormik({
     initialValues: {
-      name: lesson?.name || '',
-      description: lesson?.description || '',
-      school: '',
-      class: '',
-      discipline: lesson?.subject || '',
-      schoolYear: lesson?.grade || '',
-      usageTemplate: lesson?.usageTemplate ?? true,
-      type: lesson?.type || 'SinglePlayer',
-      maxPlayers: lesson?.maxPlayers || 2,
-      totalQuestSteps: lesson?.totalQuestSteps || 1,
-      combatDifficulty: lesson?.combatDifficulty || 'Passive',
-      bncc: lesson?.proficiencies || [],
+      // Se for template clonado, adiciona "(Cópia)" no nome
+      name: activeData?.name ? (sourceTemplateId ? `${activeData.name} (Cópia)` : activeData.name) : '',
+      description: activeData?.description || '',
+      school: '', // O usuário deve selecionar a escola novamente (pois é uma nova aula dele)
+      class: '',  // O usuário deve selecionar a turma novamente
+      discipline: initialDisciplineId, 
+      schoolYear: initialSchoolYearId,
+      
+      // Se for clonagem, o padrão é NÃO ser template (false). Se for edição, mantém.
+      usageTemplate: sourceTemplateId ? false : (activeData?.usageTemplate ?? true),
+      
+      type: activeData?.type || 'SinglePlayer',
+      maxPlayers: activeData?.maxPlayers || 2,
+      totalQuestSteps: activeData?.totalQuestSteps || 1,
+      combatDifficulty: activeData?.combatDifficulty || 'Passive',
+      bncc: activeData?.proficiencies || [],
     },
     validationSchema,
-    enableReinitialize: true, // Permite reinicializar quando lesson mudar
+    enableReinitialize: true, // Permite atualizar o form quando o template carregar
+    
     onSubmit: async (values, { setSubmitting }) => {
       try {
         setSubmitting(true);
+
+        // Converter IDs de volta para Labels para enviar ao backend
+        const disciplineLabel = disciplines.find(d => d.value === values.discipline)?.label || '';
+        const schoolYearLabel = schoolYears.find(s => s.value === values.schoolYear)?.label || '';
         
-        // 1. Preparar dados da Quest
+        // Preparar dados da Quest
         const questData: Quest = {
-          id: lesson?.id,
+          // Se for edição, usa o ID original. Se for novo/clone, undefined.
+          id: isEditing ? initialLesson?.id : undefined,
           name: values.name,
           description: values.description,
           usageTemplate: values.usageTemplate,
@@ -99,63 +145,47 @@ const LessonCreateForm: React.FC<Props> = ({ lesson, isEditing = false, onFormSu
           maxPlayers: values.maxPlayers,
           totalQuestSteps: values.totalQuestSteps,
           combatDifficulty: values.combatDifficulty,
-          questSteps: lesson?.questSteps || [],
-          subject: values.discipline,
-          grade: values.schoolYear,
+          
+          // Se tiver steps do activeData (template/edição), usamos eles.
+          // Mas a limpeza de IDs será feita abaixo se for criação.
+          questSteps: activeData?.questSteps || [],
+          
+          subject: disciplineLabel,
+          grade: schoolYearLabel,
           proficiencies: values.bncc,
         };
 
-        if (isEditing && lesson?.id) {
-          // Modo edição - atualizar quest existente
-          await updateQuest(lesson.id, questData); 
+        if (isEditing && initialLesson?.id) {
+          // --- MODO EDIÇÃO ---
+          await updateQuest(initialLesson.id, questData); 
           alert('Aula atualizada com sucesso!');
           if (onFormSubmit) onFormSubmit();
         } else {
-          // Modo criação - criar nova quest
+          // --- MODO CRIAÇÃO / CLONAGEM ---
+          
+          // Remove explicitamente o ID da Quest para criar uma nova
           delete (questData as Partial<Quest>).id;
-          const questResponse = await createQuest(questData);
-          const questId = questResponse.data.id;
+          
+          // Se tiver steps (vindo do template), precisamos limpar os IDs
+          // para que o backend crie novos steps em vez de tentar atualizar os antigos
+          if (questData.questSteps && questData.questSteps.length > 0) {
+              questData.questSteps = questData.questSteps.map(step => ({
+                  ...step,
+                  id: undefined, // Limpa ID da etapa
+                  questId: undefined, // Limpa vínculo com a quest antiga
+                  contents: step.contents.map(content => ({
+                      ...content,
+                      id: undefined // Limpa ID do conteúdo
+                  }))
+              }));
+          }
 
-          // 3. Criar uma etapa inicial apenas se for criação
-         /* const questStepData: QuestStep = {
-            name: `Etapa 1 - ${values.Name}`,
-            description: 'Etapa inicial da aula',
-            order: 1,
-            npcType: 'Passive',
-            npcBehaviour: 'StandStill',
-            questStepType: 'Npc',
-            questId: questId,
-            contents: [
-              {
-                questStepContentType: 'Exercise',
-                questionType: 'MultipleChoice',
-                description: 'Questão inicial',
-                weight: 10.0,
-                expectedAnswers: {
-                  questionType: 'MultipleChoice',
-                  options: [
-                    {
-                      description: 'Opção A',
-                      is_correct: false,
-                    },
-                    {
-                      description: 'Opção B',
-                      is_correct: true,
-                    },
-                  ],
-                },
-              },
-            ],
-          };
-
-          await createQuestStep(questStepData);*/
+          const response = await createQuest(questData);
+          const newId = response.data.id;
 
           alert('Aula criada com sucesso!');
-          if (onFormSubmit) {
-            onFormSubmit();
-          } else {
-            navigate(`../steps/${questId}`);
-          }
+          // Redireciona para a tela de etapas da NOVA aula criada
+          navigate(`../steps/${newId}`);
         }
       } catch (error) {
         console.error('Erro ao salvar a aula:', error);
@@ -166,51 +196,46 @@ const LessonCreateForm: React.FC<Props> = ({ lesson, isEditing = false, onFormSu
     },
   });
 
+  // --- EFEITOS DE CARREGAMENTO (Escolas/Turmas) ---
+
   // Carregar escolas
- useEffect(() => {
-    
-  if (!currentUser) return; 
+  useEffect(() => {
+    if (!currentUser) return; 
+    setIsLoadingSchools(true);
 
-  setIsLoadingSchools(true);
-
-    
-  if (currentUser.roles?.includes('Admin')) {
-        
-     getSchools()
-            .then((res: { data: PaginatedResponse<SchoolType> }) => {
-          const options: OptionType[] = res.data.data
+    if (currentUser.roles?.includes('Admin')) {
+        getSchools()
+           .then((res: { data: PaginatedResponse<SchoolType> }) => {
+              const options: OptionType[] = res.data.data
                   .filter((school): school is SchoolType & { id: string } => school.id !== undefined)
-           .map((school) => ({
-            value: school.id,
-            label: school.name || '',
-           }));
-          setSchoolOptions(options);
-         })
-            .catch((error) => console.error('Erro ao carregar escolas (Admin):', error))
-         .finally(() => setIsLoadingSchools(false));
-      } 
-    
+                  .map((school) => ({
+                    value: school.id,
+                    label: school.name || '',
+                  }));
+              setSchoolOptions(options);
+           })
+           .catch((error) => console.error('Erro ao carregar escolas (Admin):', error))
+           .finally(() => setIsLoadingSchools(false));
+    } 
     else if (currentUser.schools?.length) { 
-     const options = currentUser.schools.map((school) => ({
-      value: school.id,
-      label: school.name,
-     }));
-     setSchoolOptions(options);
+        const options = currentUser.schools.map((school) => ({
+            value: school.id,
+            label: school.name,
+        }));
+        setSchoolOptions(options);
 
-        
         if (options.length === 1 && !formik.values.school) {
-      formik.setFieldValue('school', options[0].value);
-     }
+             formik.setFieldValue('school', options[0].value);
+        }
         setIsLoadingSchools(false);
-  } 
+    } 
     else {
-        
         console.warn("Usuário não é Admin e não tem escolas associadas no currentUser.");
         setIsLoadingSchools(false);
         setSchoolOptions([]); 
     }
-  // eslint-disable-next-line
- }, [currentUser]); 
+    // eslint-disable-next-line
+  }, [currentUser]); 
 
   // Carregar turmas ao selecionar escola
   useEffect(() => {
@@ -241,6 +266,10 @@ const LessonCreateForm: React.FC<Props> = ({ lesson, isEditing = false, onFormSu
       })
       .finally(() => setIsLoadingClasses(false));
   }, [formik.values.school]);
+
+  if (isLoadingTemplate) {
+      return <div className="text-center p-10"><h3>Carregando modelo de aula...</h3></div>;
+  }
 
   return (
     <div className="w-100">
@@ -315,7 +344,7 @@ const LessonCreateForm: React.FC<Props> = ({ lesson, isEditing = false, onFormSu
         <div className="bg-body rounded-2xl shadow-sm p-4">
           <h6 className="fw-semibold text-muted mb-3">Configurações da Aula</h6>
           <div className="row g-4">
-           <div className="col-md-4 d-flex align-items-center pt-5">
+            <div className="col-md-4 d-flex align-items-center pt-5">
               <div className="form-check form-switch form-check-custom form-check-solid">
                 <input
                   className="form-check-input"
@@ -327,10 +356,9 @@ const LessonCreateForm: React.FC<Props> = ({ lesson, isEditing = false, onFormSu
                   onBlur={formik.handleBlur}
                 />
                 <label className="form-check-label ms-3 text-gray-700" htmlFor="usageTemplateToggle">
-                  Template 
+                  Template
                 </label>
               </div>
-              {/* Feedback de erro para o switch */}
               {formik.touched.usageTemplate && formik.errors.usageTemplate && (
                 <div className="fv-plugins-message-container invalid-feedback d-block">
                   {formik.errors.usageTemplate}
@@ -442,7 +470,6 @@ const LessonCreateForm: React.FC<Props> = ({ lesson, isEditing = false, onFormSu
                 })}
               </div>
 
-              {/* Mensagem de erro padronizada */}
               <div className="mt-2" style={{ minHeight: '18px' }}>
                 {(formik.touched.bncc || formik.submitCount > 0) &&
                   formik.errors.bncc && (

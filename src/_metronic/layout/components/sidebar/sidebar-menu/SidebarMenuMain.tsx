@@ -95,6 +95,12 @@ const SidebarMenuMain = () => {
             title='Nova Aula'
             hasBullet
           />
+          <SidebarMenuItem
+            to='/apps/lesson-management/templates'
+            icon='abstract-28' // ícone de "layers" ou "templates"
+            title='Aulas Template'
+            hasBullet
+         />
         </SidebarMenuItemWithSub>
         
       </RoleBasedMenuItem>
@@ -249,6 +255,12 @@ const SidebarMenuMain = () => {
             title='Nova Aula'
             hasBullet
           />
+          <SidebarMenuItem
+            to='/apps/lesson-management/templates'
+            icon='abstract-28' // ícone de "layers" ou "templates"
+            title='Aulas Template'
+            hasBullet
+         />
         </SidebarMenuItemWithSub>
 
         <SidebarMenuItemWithSub
