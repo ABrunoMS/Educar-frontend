@@ -31,14 +31,14 @@ export const initialAccount: Account = {
   email: '',
   password: '',
   confirmPassword: '',
-  registrationNumber: '',
-  averageScore: 0,
-  eventAverageScore: 0,
-  stars: 0,
   clientId: '', // Será preenchido
   role: 'Student',
   schoolIds: [],
-  classIds: []
+  classIds: [],
+  registrationNumber: undefined,
+  averageScore: undefined,
+  eventAverageScore: undefined,
+  stars: undefined
 }
 
 const AccountCreateForm: FC<Props> = ({
@@ -85,13 +85,6 @@ const AccountCreateForm: FC<Props> = ({
         then: (schema) => schema.required('A confirmação de senha é obrigatória'),
       }),
     email: Yup.string().email('Invalid email').required('Field is required'),
-    registrationNumber: Yup.string().required('Field is required'),
-    
-    // Tornados opcionais
-    averageScore: Yup.number().min(0).optional(),
-    eventAverageScore: Yup.number().min(0).optional(),
-    stars: Yup.number().min(0).optional(),
-    
     clientId: Yup.string().optional(), // <-- TORNADO OPCIONAL (vem da prop)
     role: Yup.string().required('Field is required'),
     schoolIds: Yup.array().of(Yup.string()).optional(), // <-- TORNADO OPCIONAL
@@ -204,12 +197,6 @@ const AccountCreateForm: FC<Props> = ({
         {renderBasicFieldset('name', 'Name', 'Enter account name')}
         {renderBasicFieldset('lastName', 'Sobrenome', 'Insira o sobrenome')}
         {renderBasicFieldset('email', 'Email', 'Enter email address')}
-        {renderBasicFieldset('registrationNumber', 'Registration Number', 'Enter registration number')}
-        
-        {/* Campos de pontuação opcionais */}
-        {renderBasicFieldset('averageScore', 'Average Score', '0', false, 'number')}
-        {renderBasicFieldset('eventAverageScore', 'Event Average Score', '0', false, 'number')}
-        {renderBasicFieldset('stars', 'Stars', '0', false, 'number')}
 
         {/* Campos de senha */}
         {renderBasicFieldset(

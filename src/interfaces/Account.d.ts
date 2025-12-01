@@ -4,10 +4,10 @@ export interface Account {
   name: string;
   lastName: string;
   email: string;
-  registrationNumber: string;
-  averageScore: 0;
-  eventAverageScore: 0;
-  stars: 0;
+  registrationNumber?: string;
+  averageScore?: number;
+  eventAverageScore?: number;
+  stars?: number;
   clientId: string;
   role: 'Admin' | 'Teacher' | 'Student';
   schoolIds: string[];
