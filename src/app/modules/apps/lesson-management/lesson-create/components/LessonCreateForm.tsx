@@ -14,7 +14,7 @@ import { Quest, QuestStep } from '@interfaces/Lesson';
 
 import { getSchools } from '@services/Schools'; // Se tiver getSchoolsByClient, importe também
 import { getClassesBySchools } from '@services/Classes';
-import { createQuest, updateQuest, getQuestById } from '@services/Lesson';
+import { createQuest, updateQuest, getQuestById, getBnccContents } from '@services/Lesson';
 import { useAuth } from '../../../../auth/core/Auth';
 
 type Props = {
@@ -39,8 +39,10 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
   // Estados para Selects
   const [schoolOptions, setSchoolOptions] = useState<OptionType[]>([]);
   const [classOptions, setClassOptions] = useState<OptionType[]>([]);
+  const [bnccOptions, setBnccOptions] = useState<OptionType[]>([]);
   const [isLoadingSchools, setIsLoadingSchools] = useState(false);
   const [isLoadingClasses, setIsLoadingClasses] = useState(false);
+  const [isLoadingBncc, setIsLoadingBncc] = useState(false);
 
   // Dados estáticos
   const [disciplines] = useState<OptionType[]>([
@@ -52,15 +54,6 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
     { value: '6', label: '6º Ano' },
     { value: '7', label: '7º Ano' },
   ]);
-
-  const bnccOptions = [
-    'BNCC',
-    'Saeb',
-    'Enem',
-    'Educação financeira',
-    'Empreendedorismo',
-    'Jornada do trabalho',
-  ];
 
   // --- EFEITO: Carregar Template (se houver sourceTemplateId) ---
   useEffect(() => {
@@ -267,6 +260,19 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
       .finally(() => setIsLoadingClasses(false));
   }, [formik.values.school]);
 
+  // Carregar BNCC via API
+  useEffect(() => {
+    setIsLoadingBncc(true);
+    getBnccContents()
+      .then((res: { data: any[] }) => {
+        // Mapeia corretamente os campos do backend
+        const options = res.data.map((item) => ({ value: item.id ?? item.Id, label: item.description ?? item.Description }));
+        setBnccOptions(options);
+      })
+      .catch(() => setBnccOptions([]))
+      .finally(() => setIsLoadingBncc(false));
+  }, []);
+
   if (isLoadingTemplate) {
       return <div className="text-center p-10"><h3>Carregando modelo de aula...</h3></div>;
   }
@@ -405,36 +411,38 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
         </div>
 
         {/* Seção 3 - Escola e Turma */}
-        <div className="bg-body rounded-2xl shadow-sm p-4">
-          <h6 className="fw-semibold text-muted mb-3">Escola e Turma</h6>
-          <div className="row g-4">
-            <div className="col-md-6">
-              <SelectField
-                fieldName="school"
-                label="Escola"
-                placeholder="---"
-                options={schoolOptions}
-                required
-                multiselect={false}
-                formik={formik as FormikProps<any>}
-                loading={isLoadingSchools}
-              />
-            </div>
-            <div className="col-md-6">
-              <SelectField
-                fieldName="class"
-                label="Turma"
-                placeholder={formik.values.school ? '---' : 'Selecione uma escola primeiro'}
-                options={classOptions}
-                required
-                multiselect={false}
-                formik={formik as FormikProps<any>}
-                loading={isLoadingClasses}
-                isDisabled={!formik.values.school || isLoadingClasses}
-              />
+        {!formik.values.usageTemplate && (
+          <div className="bg-body rounded-2xl shadow-sm p-4">
+            <h6 className="fw-semibold text-muted mb-3">Escola e Turma</h6>
+            <div className="row g-4">
+              <div className="col-md-6">
+                <SelectField
+                  fieldName="school"
+                  label="Escola"
+                  placeholder="---"
+                  options={schoolOptions}
+                  required
+                  multiselect={false}
+                  formik={formik as FormikProps<any>}
+                  loading={isLoadingSchools}
+                />
+              </div>
+              <div className="col-md-6">
+                <SelectField
+                  fieldName="class"
+                  label="Turma"
+                  placeholder={formik.values.school ? '---' : 'Selecione uma escola primeiro'}
+                  options={classOptions}
+                  required
+                  multiselect={false}
+                  formik={formik as FormikProps<any>}
+                  loading={isLoadingClasses}
+                  isDisabled={!formik.values.school || isLoadingClasses}
+                />
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Seção 3 - Diretrizes */}
         <div className="bg-body rounded-2xl shadow-sm p-4">
@@ -442,40 +450,16 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
           <div className="row g-4">
             {/* BNCC */}
             <div className="col-12">
-              <label className="form-label fw-semibold mb-2 required">BNCC</label>
-              <div className="d-flex flex-wrap gap-2">
-                {bnccOptions.map((opt) => {
-                  const checked = formik.values.bncc.includes(opt);
-                  return (
-                    <button
-                      key={opt}
-                      type="button"
-                      className={clsx(
-                        'btn btn-sm rounded-pill',
-                        checked
-                          ? 'btn-primary'
-                          : 'btn-outline-secondary text-muted'
-                      )}
-                      onClick={() => {
-                        const newValues = checked
-                          ? formik.values.bncc.filter((v) => v !== opt)
-                          : [...formik.values.bncc, opt];
-                        formik.setFieldValue('bncc', newValues);
-                        formik.setFieldTouched('bncc', true);
-                      }}
-                    >
-                      {opt}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="mt-2" style={{ minHeight: '18px' }}>
-                {(formik.touched.bncc || formik.submitCount > 0) &&
-                  formik.errors.bncc && (
-                    <div className="text-danger small">{formik.errors.bncc as string}</div>
-                  )}
-              </div>
+              <SelectField
+                fieldName="bncc"
+                label="BNCC"
+                placeholder="Selecione conteúdos BNCC"
+                options={bnccOptions}
+                required
+                multiselect
+                formik={formik as FormikProps<any>}
+                loading={isLoadingBncc}
+              />
             </div>
           </div>
         </div>

@@ -112,3 +112,11 @@ export const deleteQuest = (id: string): Promise<any> => {
 export const deleteQuestStep = (id: string): Promise<any> => {
   return axios.delete(`${API_URL}/api/QuestSteps/${id}`);
 };
+
+/**
+ * Busca conteúdos BNCC para uso em Selects.
+ * @returns Promessa com a lista de conteúdos BNCC.
+ */
+export const getBnccContents = (): Promise<{ data: any[] }> => {
+  return axios.get(`${API_URL}/api/Bncc`);
+};
