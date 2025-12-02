@@ -22,6 +22,8 @@ export interface Quest {
   totalQuestSteps: number; 
   combatDifficulty: string; 
   questSteps: QuestStep[];
+  subjectId: string | null;
+  gradeId: string | null;
   subject: string | null;  
   grade: string | null;     
   proficiencies: string[];
