@@ -52,6 +52,16 @@ const LessonsPage = () => {
      }
     />
    </Route>
+    {/* Rota para Edição de Aula */}
+    <Route
+      path='lessonEdit/:id'
+      element={
+        <>
+          <PageTitle>Editar Aula</PageTitle>
+          <LessonEdit />
+        </>
+      }
+    />
    
    {/* Rota de índice para redirecionar para a lista de aulas */}
    <Route index element={<Navigate to='/apps/lesson-management/lessons' />} />

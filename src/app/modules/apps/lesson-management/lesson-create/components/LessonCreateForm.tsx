@@ -3,6 +3,7 @@ import { useFormik, FormikProps } from 'formik';
 import * as Yup from 'yup';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import clsx from 'clsx';
+import axios from 'axios'; 
 
 import BasicField from '@components/form/BasicField';
 import SelectField from '@components/form/SelectField';
@@ -11,12 +12,16 @@ import { SelectOptions } from '@interfaces/Forms';
 import { Class } from '@interfaces/Class';
 import { SchoolType } from '@interfaces/School';
 import { PaginatedResponse } from '@contexts/PaginationContext';
-import { Quest, QuestStep } from '@interfaces/Lesson';
+import { Quest } from '@interfaces/Lesson';
 
-import { getSchools } from '@services/Schools'; // Se tiver getSchoolsByClient, importe também
+// Serviços
+import { getSchools } from '@services/Schools';
 import { getClassesBySchools } from '@services/Classes';
 import { createQuest, updateQuest, getQuestById, getBnccContents } from '@services/Lesson';
+import { getSubjects } from '@services/Subjects'; 
 import { useAuth } from '../../../../auth/core/Auth';
+
+const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 type Props = {
   lesson?: Quest;
@@ -30,7 +35,6 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   
-  // Hooks de URL e Estado
   const [searchParams] = useSearchParams();
   const sourceTemplateId = searchParams.get('sourceTemplateId');
   
@@ -41,96 +45,128 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
   const [schoolOptions, setSchoolOptions] = useState<OptionType[]>([]);
   const [classOptions, setClassOptions] = useState<OptionType[]>([]);
   const [bnccOptions, setBnccOptions] = useState<OptionType[]>([]);
+  const [disciplines, setDisciplines] = useState<OptionType[]>([]);
+  const [schoolYears, setSchoolYears] = useState<OptionType[]>([]);
+
+  // Loadings
   const [isLoadingSchools, setIsLoadingSchools] = useState(false);
   const [isLoadingClasses, setIsLoadingClasses] = useState(false);
   const [isLoadingBncc, setIsLoadingBncc] = useState(false);
+  const [isLoadingDisciplines, setIsLoadingDisciplines] = useState(false);
+  const [isLoadingSchoolYears, setIsLoadingSchoolYears] = useState(false);
 
-  // Dados estáticos
-  const [disciplines] = useState<OptionType[]>([
-    { value: '1', label: 'Matemática' },
-    { value: '2', label: 'Português' },
-  ]);
+  // 1. CARREGAR DADOS REAIS (Matérias e Anos)
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoadingDisciplines(true);
+      setIsLoadingSchoolYears(true);
+      try {
+        // Matérias
+        const subjectsResponse = await getSubjects();
+        const subjectsList = subjectsResponse.data.data || subjectsResponse.data || [];
+        setDisciplines(Array.isArray(subjectsList) ? subjectsList.map((s: any) => ({ value: s.id, label: s.name })) : []);
 
-  const [schoolYears] = useState<OptionType[]>([
-    { value: '6', label: '6º Ano' },
-    { value: '7', label: '7º Ano' },
-  ]);
+        // Anos
+        const gradesResponse = await axios.get(`${API_URL}/api/Grades`, { params: { PageNumber: 1, PageSize: 999 }});
+        const gradesList = gradesResponse.data.data || gradesResponse.data || [];
+        setSchoolYears(Array.isArray(gradesList) ? gradesList.map((g: any) => ({ value: g.id, label: g.name })) : []);
 
-  // --- EFEITO: Carregar Template (se houver sourceTemplateId) ---
+      } catch (error) {
+        console.error("Erro ao carregar opções:", error);
+      } finally {
+        setIsLoadingDisciplines(false);
+        setIsLoadingSchoolYears(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // 2. CARREGAR TEMPLATE
   useEffect(() => {
     if (sourceTemplateId) {
       setIsLoadingTemplate(true);
       getQuestById(sourceTemplateId)
-        .then((response) => {
-          setClonedData(response.data as Quest);
-        })
+        .then((response) => setClonedData(response.data as Quest))
         .catch(err => {
-            console.error("Erro ao carregar template", err);
-            alert("Erro ao carregar o modelo.");
+            console.error("Erro template", err);
+            alert("Erro ao carregar modelo.");
         })
         .finally(() => setIsLoadingTemplate(false));
     }
   }, [sourceTemplateId]);
 
-  // --- LÓGICA DE DADOS ATIVOS ---
-  // Determina qual conjunto de dados usar para preencher o formulário
+  // 3. DADOS ATIVOS
   const activeData = isEditing ? initialLesson : (clonedData || undefined);
 
-  // Encontrar IDs baseados nos Labels (para Disciplina e Ano Escolar)
-  // Se activeData.subject for "Matemática", achamos o ID "1"
-  const initialDisciplineId = disciplines.find(d => d.label === activeData?.subject)?.value || '';
-  const initialSchoolYearId = schoolYears.find(s => s.label === activeData?.grade)?.value || '';
+  // -------------------------------------------------------------------------
+  // LÓGICA DE INICIALIZAÇÃO ROBUSTA
+  // -------------------------------------------------------------------------
+  
+  // Função auxiliar para pegar ID de campo que pode ser string, objeto ou nulo
+  const getIdFromField = (field: any): string => {
+    if (!field) return '';
+    if (typeof field === 'string') return field; // Já é o ID
+    if (typeof field === 'object' && field.id) return field.id; // É objeto {id: "...", name: "..."}
+    return '';
+  };
 
-  // --- SCHEMA DE VALIDAÇÃO ---
+  // Tenta pegar o ID direto (subjectId) ou de dentro do objeto (subject.id)
+  const initialDisciplineId = activeData?.subjectId 
+      || getIdFromField(activeData?.subject)
+      // Fallback: Tenta achar pelo nome na lista carregada
+      || disciplines.find(d => d.label === (activeData?.subject as any))?.value 
+      || '';
+      
+  const initialSchoolYearId = activeData?.gradeId 
+      || getIdFromField(activeData?.grade)
+      || schoolYears.find(s => s.label === (activeData?.grade as any))?.value 
+      || '';
+
+  const initialBnccIds = activeData?.proficiencies 
+      ? activeData.proficiencies.map((p: any) => p.id || p.Id) 
+      : [];
+  // -------------------------------------------------------------------------
+
   const validationSchema = Yup.object().shape({
-    name: Yup.string().required('Nome da aula obrigatório'),
+    name: Yup.string().required('Nome obrigatório'),
     description: Yup.string().required('Descrição obrigatória'),
-    school: Yup.string().required('Escola obrigatória'),
-    class: Yup.string().required('Turma obrigatória'),
+    // School e Class não são obrigatórios se for template, ou se for edição (pois o back não retorna)
+    // Ajuste conforme sua regra de negócio. Aqui deixei flexível.
+    school: Yup.string(), 
+    class: Yup.string(),
     discipline: Yup.string().required('Disciplina obrigatória'),
     schoolYear: Yup.string().required('Ano escolar obrigatório'),
     usageTemplate: Yup.boolean().required('Template obrigatório'),
     type: Yup.string().required('Tipo obrigatório'),
-    maxPlayers: Yup.number().min(1).required('Máximo de jogadores obrigatório'),
+    maxPlayers: Yup.number().min(1).required('Máximo obrigatório'),
     totalQuestSteps: Yup.number().min(1).required('Total de etapas obrigatório'),
     combatDifficulty: Yup.string().required('Dificuldade obrigatória'),
     bncc: Yup.array().min(1, 'Selecione ao menos uma opção BNCC'),
   });
 
-  // --- FORMIK ---
   const formik = useFormik({
     initialValues: {
-      // Se for template clonado, adiciona "(Cópia)" no nome
       name: activeData?.name ? (sourceTemplateId ? `${activeData.name} (Cópia)` : activeData.name) : '',
       description: activeData?.description || '',
-      school: '', // O usuário deve selecionar a escola novamente (pois é uma nova aula dele)
-      class: '',  // O usuário deve selecionar a turma novamente
+      school: '', // Fica vazio na edição pois o Backend não retorna SchoolId
+      class: '',  // Fica vazio na edição pois o Backend não retorna ClassId
       discipline: initialDisciplineId, 
       schoolYear: initialSchoolYearId,
-      
-      // Se for clonagem, o padrão é NÃO ser template (false). Se for edição, mantém.
       usageTemplate: sourceTemplateId ? false : (activeData?.usageTemplate ?? true),
-      
       type: activeData?.type || 'SinglePlayer',
       maxPlayers: activeData?.maxPlayers || 2,
       totalQuestSteps: activeData?.totalQuestSteps || 1,
       combatDifficulty: activeData?.combatDifficulty || 'Passive',
-      bncc: activeData?.proficiencies || [],
+      bncc: initialBnccIds, 
     },
     validationSchema,
-    enableReinitialize: true, // Permite atualizar o form quando o template carregar
+    enableReinitialize: true, // Essencial para carregar os dados após o fetch
     
     onSubmit: async (values, { setSubmitting }) => {
       try {
         setSubmitting(true);
-
-        // Converter IDs de volta para Labels para enviar ao backend
-        const disciplineLabel = disciplines.find(d => d.value === values.discipline)?.label || '';
-        const schoolYearLabel = schoolYears.find(s => s.value === values.schoolYear)?.label || '';
         
-        // Preparar dados da Quest
-        const questData: Quest = {
-          // Se for edição, usa o ID original. Se for novo/clone, undefined.
+        const questData: any = {
           id: isEditing ? initialLesson?.id : undefined,
           name: values.name,
           description: values.description,
@@ -140,59 +176,52 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
           totalQuestSteps: values.totalQuestSteps,
           combatDifficulty: values.combatDifficulty,
           
-          // Se tiver steps do activeData (template/edição), usamos eles.
-          // Mas a limpeza de IDs será feita abaixo se for criação.
-          questSteps: activeData?.questSteps || [],
+          // Envia os IDs diretos
+          subjectId: values.discipline, 
+          gradeId: values.schoolYear,
+          bnccIds: values.bncc, // CORRIGIDO PARA 'bnccIds' conforme o backend Command
+
+          // Mantém retrocompatibilidade se necessário
+          proficiencies: values.bncc, 
           
-          subject: disciplineLabel,
-          grade: schoolYearLabel,
-          proficiencies: values.bncc,
+          questSteps: activeData?.questSteps || [],
         };
 
         if (isEditing && initialLesson?.id) {
-          // --- MODO EDIÇÃO ---
           await updateQuest(initialLesson.id, questData); 
           alert('Aula atualizada com sucesso!');
           if (onFormSubmit) onFormSubmit();
         } else {
-          // --- MODO CRIAÇÃO / CLONAGEM ---
+          delete questData.id;
           
-          // Remove explicitamente o ID da Quest para criar uma nova
-          delete (questData as Partial<Quest>).id;
-          
-          // Se tiver steps (vindo do template), precisamos limpar os IDs
-          // para que o backend crie novos steps em vez de tentar atualizar os antigos
           if (questData.questSteps && questData.questSteps.length > 0) {
-              questData.questSteps = questData.questSteps.map(step => ({
+              questData.questSteps = questData.questSteps.map((step: any) => ({
                   ...step,
-                  id: undefined, // Limpa ID da etapa
-                  questId: undefined, // Limpa vínculo com a quest antiga
-                  contents: step.contents.map(content => ({
+                  id: undefined, 
+                  questId: undefined, 
+                  contents: step.contents.map((content: any) => ({
                       ...content,
-                      id: undefined // Limpa ID do conteúdo
+                      id: undefined
                   }))
               }));
           }
 
           const response = await createQuest(questData);
-          const newId = response.data.id;
+          const newId = response.data.id; 
 
           alert('Aula criada com sucesso!');
-          // Redireciona para a tela de etapas da NOVA aula criada
           navigate(`../steps/${newId}`);
         }
       } catch (error) {
-        console.error('Erro ao salvar a aula:', error);
-        alert('Erro ao salvar aula. Tente novamente.');
+        console.error('Erro ao salvar:', error);
+        alert('Erro ao salvar aula. Verifique os dados.');
       } finally {
         setSubmitting(false);
       }
     },
   });
 
-  // --- EFEITOS DE CARREGAMENTO (Escolas/Turmas) ---
-
-  // Carregar escolas
+  // --- ESCOLAS / TURMAS ---
   useEffect(() => {
     if (!currentUser) return; 
     setIsLoadingSchools(true);
@@ -202,72 +231,58 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
            .then((res: { data: PaginatedResponse<SchoolType> }) => {
               const options: OptionType[] = res.data.data
                   .filter((school): school is SchoolType & { id: string } => school.id !== undefined)
-                  .map((school) => ({
-                    value: school.id,
-                    label: school.name || '',
-                  }));
+                  .map((school) => ({ value: school.id, label: school.name || '' }));
               setSchoolOptions(options);
            })
-           .catch((error) => console.error('Erro ao carregar escolas (Admin):', error))
+           .catch((error) => console.error('Erro escolas:', error))
            .finally(() => setIsLoadingSchools(false));
     } 
     else if (currentUser.schools?.length) { 
-        const options = currentUser.schools.map((school) => ({
-            value: school.id,
-            label: school.name,
-        }));
+        const options = currentUser.schools.map((school) => ({ value: school.id, label: school.name }));
         setSchoolOptions(options);
-
         if (options.length === 1 && !formik.values.school) {
              formik.setFieldValue('school', options[0].value);
         }
         setIsLoadingSchools(false);
     } 
     else {
-        console.warn("Usuário não é Admin e não tem escolas associadas no currentUser.");
         setIsLoadingSchools(false);
         setSchoolOptions([]); 
     }
     // eslint-disable-next-line
   }, [currentUser]); 
 
-  // Carregar turmas ao selecionar escola
   useEffect(() => {
     const selectedSchoolId = formik.values.school;
-
     if (!selectedSchoolId) {
       setClassOptions([]);
       return;
     }
-
     setIsLoadingClasses(true);
     getClassesBySchools([selectedSchoolId])
       .then((res: { data: Class[] }) => {
-        const options: OptionType[] = res.data.map((classItem: Class) => ({
-          value: classItem.id,
-          label: classItem.name,
-        }));
-
+        const options: OptionType[] = res.data.map((classItem: Class) => ({ value: classItem.id, label: classItem.name }));
         setClassOptions(options);
-
         if (!options.some((opt) => opt.value === formik.values.class)) {
           formik.setFieldValue('class', '');
         }
       })
       .catch((error) => {
-        console.error('Erro ao carregar turmas:', error);
+        console.error('Erro turmas:', error);
         setClassOptions([]);
       })
       .finally(() => setIsLoadingClasses(false));
   }, [formik.values.school]);
 
-  // Carregar BNCC via API
+  // --- BNCC LOAD ---
   useEffect(() => {
     setIsLoadingBncc(true);
     getBnccContents()
       .then((res: { data: any[] }) => {
-        // Mapeia corretamente os campos do backend
-        const options = res.data.map((item) => ({ value: item.id ?? item.Id, label: item.description ?? item.Description }));
+        const options = res.data.map((item) => ({ 
+            value: item.id || item.Id, 
+            label: item.description || item.Description || item.code 
+        }));
         setBnccOptions(options);
       })
       .catch(() => setBnccOptions([]))
@@ -280,176 +295,69 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
 
   return (
     <div className="w-100">
-      <form
-        onSubmit={formik.handleSubmit}
-        className="form pb-8 d-flex flex-column gap-4"
-        noValidate
-      >
-        {/* Seção 1 - Informações básicas */}
+      <form onSubmit={formik.handleSubmit} className="form pb-8 d-flex flex-column gap-4" noValidate>
+        
+        {/* Campos Básicos */}
         <div className="bg-body rounded-2xl shadow-sm p-4">
           <h6 className="fw-semibold text-muted mb-3">Informações básicas</h6>
           <div className="row g-4">
             <div className="col-md-6">
-              <BasicField
-                fieldName="name"
-                label="Nome da Aula"
-                placeholder="Digite o nome da aula"
-                required
-                formik={formik}
-              />
+              <BasicField fieldName="name" label="Nome da Aula" placeholder="Digite o nome da aula" required formik={formik} />
             </div>
             <div className="col-md-6">
-              <SelectField
-                fieldName="schoolYear"
-                label="Ano escolar"
-                placeholder="---"
-                options={schoolYears}
-                required
-                multiselect={false}
-                formik={formik as FormikProps<any>}
-              />
+              <SelectField fieldName="schoolYear" label="Ano escolar" placeholder={isLoadingSchoolYears ? "Carregando..." : "Selecione..."} options={schoolYears} required multiselect={false} formik={formik as FormikProps<any>} loading={isLoadingSchoolYears} />
             </div>
             <div className="col-md-6">
-              <SelectField
-                fieldName="discipline"
-                label="Disciplina"
-                placeholder="---"
-                options={disciplines}
-                required
-                multiselect={false}
-                formik={formik as FormikProps<any>}
-              />
+              <SelectField fieldName="discipline" label="Disciplina" placeholder={isLoadingDisciplines ? "Carregando..." : "Selecione..."} options={disciplines} required multiselect={false} formik={formik as FormikProps<any>} loading={isLoadingDisciplines} />
             </div>
-            <div className="col-md-6">
-              <SelectField
-                fieldName="type"
-                label="Tipo da Aula"
-                placeholder="---"
-                options={[
-                  { value: 'SinglePlayer', label: 'Individual' },
-                  { value: 'MultiPlayer', label: 'Multiplayer' }
-                ]}
-                required
-                multiselect={false}
-                formik={formik as FormikProps<any>}
-              />
-            </div>
+           {/* <div className="col-md-6">
+              <SelectField fieldName="type" label="Tipo da Aula" placeholder="---" options={[{ value: 'SinglePlayer', label: 'Individual' }, { value: 'MultiPlayer', label: 'Multiplayer' }]} required multiselect={false} formik={formik as FormikProps<any>} />
+            </div>*/}
             <div className="col-12">
-              <BasicField
-                fieldName="description"
-                label="Descrição"
-                placeholder="Descrição da aula"
-                required
-                formik={formik}
-                rows={2}
-              />
+              <BasicField fieldName="description" label="Descrição" placeholder="Descrição da aula" required formik={formik} rows={2} />
             </div>
           </div>
         </div>
 
-        {/* Seção 2 - Configurações da Quest */}
+        {/* Configurações */}
         <div className="bg-body rounded-2xl shadow-sm p-4">
           <h6 className="fw-semibold text-muted mb-3">Configurações da Aula</h6>
           <div className="row g-4">
             <div className="col-md-4 d-flex align-items-center pt-5">
               <div className="form-check form-switch form-check-custom form-check-solid">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id="usageTemplateToggle"
-                  name="usageTemplate"
-                  checked={formik.values.usageTemplate}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                />
-                <label className="form-check-label ms-3 text-gray-700" htmlFor="usageTemplateToggle">
-                  Template
-                </label>
+                <input className="form-check-input" type="checkbox" id="usageTemplateToggle" name="usageTemplate" checked={formik.values.usageTemplate} onChange={formik.handleChange} onBlur={formik.handleBlur} />
+                <label className="form-check-label ms-3 text-gray-700" htmlFor="usageTemplateToggle">Template Global</label>
               </div>
-              {formik.touched.usageTemplate && formik.errors.usageTemplate && (
-                <div className="fv-plugins-message-container invalid-feedback d-block">
-                  {formik.errors.usageTemplate}
-                </div>
-              )}
             </div>
+            {/*<div className="col-md-4">
+              <BasicField fieldName="maxPlayers" label="Máximo de Jogadores" placeholder="2" required formik={formik} type="number" />
+            </div>*/}
             <div className="col-md-4">
-              <BasicField
-                fieldName="maxPlayers"
-                label="Máximo de Jogadores"
-                placeholder="2"
-                required
-                formik={formik}
-                type="number"
-              />
+              <BasicField fieldName="totalQuestSteps" label="Total de Etapas" placeholder="1" required formik={formik} type="number" />
             </div>
-            <div className="col-md-4">
-              <BasicField
-                fieldName="totalQuestSteps"
-                label="Total de Etapas"
-                placeholder="1"
-                required
-                formik={formik}
-                type="number"
-              />
-            </div>
-            <div className="col-md-6">
-              <SelectField
-                fieldName="combatDifficulty"
-                label="Dificuldade de Combate"
-                placeholder="---"
-                options={[
-                  { value: 'Passive', label: 'Passivo' },
-                  { value: 'Easy', label: 'Fácil' },
-                  { value: 'Medium', label: 'Médio' },
-                  { value: 'Hard', label: 'Difícil' }
-                ]}
-                required
-                multiselect={false}
-                formik={formik as FormikProps<any>}
-              />
-            </div>
+            {/*<div className="col-md-6">
+              <SelectField fieldName="combatDifficulty" label="Dificuldade de Combate" placeholder="---" options={[{ value: 'Passive', label: 'Passivo' }, { value: 'Easy', label: 'Fácil' }, { value: 'Medium', label: 'Médio' }, { value: 'Hard', label: 'Difícil' }]} required multiselect={false} formik={formik as FormikProps<any>} />
+            </div>*/}
           </div>
         </div>
 
-        {/* Seção 3 - Escola e Turma */}
-        {!formik.values.usageTemplate && (
-          <div className="bg-body rounded-2xl shadow-sm p-4">
+        {/* Escola e Turma (Opcionais na Edição/Template) */}
+       {/* <div className="bg-body rounded-2xl shadow-sm p-4">
             <h6 className="fw-semibold text-muted mb-3">Escola e Turma</h6>
             <div className="row g-4">
               <div className="col-md-6">
-                <SelectField
-                  fieldName="school"
-                  label="Escola"
-                  placeholder="---"
-                  options={schoolOptions}
-                  required
-                  multiselect={false}
-                  formik={formik as FormikProps<any>}
-                  loading={isLoadingSchools}
-                />
+                <SelectField fieldName="school" label="Escola" placeholder="---" options={schoolOptions} required={false} multiselect={false} formik={formik as FormikProps<any>} loading={isLoadingSchools} />
               </div>
               <div className="col-md-6">
-                <SelectField
-                  fieldName="class"
-                  label="Turma"
-                  placeholder={formik.values.school ? '---' : 'Selecione uma escola primeiro'}
-                  options={classOptions}
-                  required
-                  multiselect={false}
-                  formik={formik as FormikProps<any>}
-                  loading={isLoadingClasses}
-                  isDisabled={!formik.values.school || isLoadingClasses}
-                />
+                <SelectField fieldName="class" label="Turma" placeholder={formik.values.school ? '---' : 'Selecione uma escola primeiro'} options={classOptions} required={false} multiselect={false} formik={formik as FormikProps<any>} loading={isLoadingClasses} isDisabled={!formik.values.school || isLoadingClasses} />
               </div>
             </div>
-          </div>
-        )}
+        </div>*/}
 
-        {/* Seção 3 - Diretrizes */}
+        {/* BNCC */}
         <div className="bg-body rounded-2xl shadow-sm p-4">
           <h6 className="fw-semibold text-muted mb-3">Diretrizes</h6>
           <div className="row g-4">
-            {/* BNCC */}
             <div className="col-12">
               {/* Renderiza tags BNCC fora do campo de input */}
               {formik.values.bncc && formik.values.bncc.length > 0 && (
@@ -494,41 +402,12 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
           </div>
         </div>
 
-        {/* Alerta */}
-        <div className="alert alert-info py-2 px-3 d-flex align-items-center gap-2">
-          <i className="bi bi-info-circle fs-5"></i>
-          <span>Salve a aula antes de vincular etapas e alunos.</span>
-        </div>
-
-        {/* Botões */}
         <div className="d-flex justify-content-end gap-3 mt-3">
-          <button
-            type="button"
-            className="btn btn-outline-secondary btn-sm"
-            onClick={() => {
-              if (onFormSubmit) {
-                onFormSubmit();
-              } else {
-                navigate('/apps/lesson-management/lessons');
-              }
-            }}
-          >
+          <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => { if (onFormSubmit) onFormSubmit(); else navigate('/apps/lesson-management/lessons'); }}>
             {isEditing ? 'Cancelar' : 'Voltar'}
           </button>
-
-          <button
-            type="submit"
-            className="btn btn-primary px-5 fw-bold"
-            disabled={formik.isSubmitting || isLoadingSchools || isLoadingClasses}
-          >
-            {formik.isSubmitting ? (
-              <>
-                <span>Aguarde...</span>
-                <span className="spinner-border spinner-border-sm ms-2"></span>
-              </>
-            ) : (
-              isEditing ? 'Atualizar aula' : 'Salvar e continuar'
-            )}
+          <button type="submit" className="btn btn-primary px-5 fw-bold" disabled={formik.isSubmitting || isLoadingSchools || isLoadingClasses}>
+            {formik.isSubmitting ? (<><span>Aguarde...</span><span className="spinner-border spinner-border-sm ms-2"></span></>) : (isEditing ? 'Atualizar aula' : 'Salvar e continuar')}
           </button>
         </div>
       </form>
