@@ -132,10 +132,12 @@ const LessonStepPage: FC = () => {
                maxPlayers: backend.maxPlayers || 0,
                totalQuestSteps: backend.totalQuestSteps || 0,
                combatDifficulty: backend.combatDifficulty || '',
-               discipline: backend.subject || 'Não definida',
-               schoolYear: backend.grade || 'Não definido',
-               bncc: backend.proficiencies || [],
-               });
+               discipline: (backend.subject as any)?.name || 'Não definida',
+               schoolYear: (backend.grade as any)?.name || 'Não definida',
+               bncc: backend.proficiencies 
+                  ? backend.proficiencies.map((p: any) => p.description || p.name || p.code) 
+                  : [],
+       });
           
           // Carregar as etapas se existirem
           const questSteps = backend.questSteps || [];

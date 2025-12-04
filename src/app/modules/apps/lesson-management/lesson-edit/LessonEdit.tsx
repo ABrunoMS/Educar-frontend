@@ -8,7 +8,7 @@ import { KTCard } from '../../../../../_metronic/helpers';
 const LessonEdit = () => {
   const { id } = useParams(); // Pega o ID da URL
   const navigate = useNavigate();
-
+  console.log('1. ID da URL:', id);
   // Função para voltar para a lista
   const handleFormSubmit = () => {
     navigate('/apps/lesson-management/lessons');
@@ -46,7 +46,7 @@ const LessonEdit = () => {
       </div>
     );
   }
-
+console.log('Dados brutos da API na edição:', lessonData);
   return (
     <KTCard>
       <div className="card-header border-0 pt-6">
