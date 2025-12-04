@@ -1,8 +1,9 @@
-import React from "react"
+import React from "react";
 import clsx from "clsx";
 import { FormikProps } from "formik";
 import Select from "react-select";
-import { SelectOptions } from '@interfaces/Forms';
+import { SelectOptions } from "@interfaces/Forms";
+import { components } from "react-select";
 
 interface FieldProps {
   fieldName: string;
@@ -17,6 +18,23 @@ interface FieldProps {
   options: SelectOptions[];
   formik: FormikProps<any>;
 }
+
+const CustomMultiValue = (props: any) => (
+  <components.MultiValue {...props}>
+    <span className="badge bg-primary text-white px-2 py-1 me-1 mb-1 rounded-pill d-flex align-items-center">
+      {props.data.label}
+      <span
+        style={{ cursor: "pointer", marginLeft: 6 }}
+        onClick={(e) => {
+          e.stopPropagation();
+          props.removeProps.onClick();
+        }}
+      >
+        &times;
+      </span>
+    </span>
+  </components.MultiValue>
+);
 
 const SelectField: React.FC<FieldProps> = ({
   fieldName,
@@ -34,29 +52,30 @@ const SelectField: React.FC<FieldProps> = ({
   const finalDisabledState = formik.isSubmitting || loading || isDisabled || disabled;
   const formikValue = formik.values[fieldName];
 
-  const getCurrentValues = (): SelectOptions | SelectOptions[] | null => {
-    if (multiselect) {
-      return options.filter(option => formikValue?.includes(option.value));
-    }
-    return options.find(option => option.value === formikValue) || null;
-  }
+  // Monta o valor para o Select
+  const selectValue = multiselect
+    ? (formikValue || []).map((val: string) => {
+        const option = options.find((o) => o.value === val);
+        return option || { value: val, label: val };
+      })
+    : formikValue
+    ? options.find((o) => o.value === formikValue) || { value: formikValue, label: formikValue }
+    : null;
 
-  const handleUpdate = (newValue: any) => {
+  const handleUpdate = (selected: any) => {
     let finalValue: string | string[];
     if (multiselect) {
-      finalValue = newValue ? newValue.map((opt: SelectOptions) => opt.value) : [];
+      finalValue = selected ? selected.map((opt: SelectOptions) => opt.value) : [];
     } else {
-      finalValue = newValue ? newValue.value : '';
+      finalValue = selected ? selected.value : '';
     }
-
     formik.setFieldValue(fieldName, finalValue);
     formik.setFieldTouched(fieldName, true);
-
     if (onChange) onChange(finalValue);
-  }
+  };
 
   const meta = formik.getFieldMeta(fieldName);
-  const showError = formik.submitCount > 0 && meta.error; // só após submit
+  const showError = formik.submitCount > 0 && meta.error;
 
   return (
     <div className='mb-7'>
@@ -71,7 +90,7 @@ const SelectField: React.FC<FieldProps> = ({
         classNamePrefix='react-select'
         options={options}
         placeholder={placeholder}
-        value={getCurrentValues()}
+        value={selectValue}
         name={fieldName}
         onChange={handleUpdate}
         onBlur={() => formik.setFieldTouched(fieldName, true)}
@@ -86,7 +105,7 @@ const SelectField: React.FC<FieldProps> = ({
         </div>
       )}
     </div>
-  )
+  );
 }
 
 export default SelectField;

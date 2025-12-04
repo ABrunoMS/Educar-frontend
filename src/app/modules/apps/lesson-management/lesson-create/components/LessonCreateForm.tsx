@@ -6,6 +6,7 @@ import clsx from 'clsx';
 
 import BasicField from '@components/form/BasicField';
 import SelectField from '@components/form/SelectField';
+import AsyncSelectField from '@components/form/AsyncSelectField';
 import { SelectOptions } from '@interfaces/Forms';
 import { Class } from '@interfaces/Class';
 import { SchoolType } from '@interfaces/School';
@@ -450,15 +451,44 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
           <div className="row g-4">
             {/* BNCC */}
             <div className="col-12">
-              <SelectField
+              {/* Renderiza tags BNCC fora do campo de input */}
+              {formik.values.bncc && formik.values.bncc.length > 0 && (
+                <div className="d-flex flex-wrap mb-2 gap-2">
+                  {formik.values.bncc.map((bnccId: string) => {
+                    const bncc = bnccOptions.find(opt => opt.value === bnccId);
+                    return bncc ? (
+                      <span key={bnccId} className="d-flex align-items-center px-3 py-1 rounded-pill border border-gray-200 bg-gray-100 fw-semibold" style={{ fontSize: '0.95rem', marginBottom: '4px', color: 'var(--bs-gray-700)' }}>
+                        {bncc.label}
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-icon btn-light-danger ms-2"
+                          style={{ border: 'none', background: 'transparent', padding: 0, marginLeft: 8 }}
+                          onClick={() => {
+                            const updated = formik.values.bncc.filter((id: string) => id !== bnccId);
+                            formik.setFieldValue('bncc', updated);
+                          }}
+                        >
+                          <i className="bi bi-x fs-6"></i>
+                        </button>
+                      </span>
+                    ) : null;
+                  })}
+                </div>
+              )}
+              <AsyncSelectField
                 fieldName="bncc"
                 label="BNCC"
                 placeholder="Selecione conteúdos BNCC"
-                options={bnccOptions}
-                required
-                multiselect
+                isMulti
                 formik={formik as FormikProps<any>}
-                loading={isLoadingBncc}
+                defaultOptions={bnccOptions}
+                loadOptions={(inputValue, callback) => {
+                  const filtered = bnccOptions.filter(opt =>
+                    opt.label.toLowerCase().includes(inputValue.toLowerCase())
+                  );
+                  callback(filtered);
+                }}
+                isDisabled={isLoadingBncc}
               />
             </div>
           </div>
