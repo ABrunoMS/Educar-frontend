@@ -101,6 +101,7 @@ const AsyncSelectField: FC<AsyncSelectFieldProps> = ({
             primary: theme === 'dark' ? '#6666ff' : '#2684FF',
           },
         })}
+        components={isMulti ? { MultiValue: () => null } : undefined}
       />
     </div>
   );
