@@ -20,7 +20,7 @@ export const getList = async (
       params: { page_number: page, page_size: pageSize },
     }
   );
-  return { ...response.data, pageNumber: page };
+  return { ...response.data, };
 };
 
 export const deleteItem = (id: ID): Promise<void> => {

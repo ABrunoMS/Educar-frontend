@@ -75,6 +75,11 @@ const LessonListWrapper: React.FC<Props> = ({ isTemplateView }) => {
       id: 'description'
     },
     { 
+      Header: 'Matéria', 
+      accessor: (row: any) => row.subject?.name || row.subject?.Name || '',
+      id: 'subject'
+    },
+   /* { 
       Header: 'Tipo', 
       accessor: (row: any) => row.Type || row.type || '',
       id: 'type'
@@ -93,14 +98,15 @@ const LessonListWrapper: React.FC<Props> = ({ isTemplateView }) => {
       Header: 'Total Etapas', 
       accessor: (row: any) => row.TotalQuestSteps || row.totalQuestSteps || 0,
       id: 'totalQuestSteps'
-    },
+    },*/
     { 
-      Header: 'Dificuldade', 
-      accessor: (row: any) => row.CombatDifficulty || row.combatDifficulty || '',
-      id: 'combatDifficulty'
+      Header: 'Ano escolar', 
+      accessor: (row: any) => row.grade?.name || row.grade?.Name || '',
+      id: 'grade'
     },
+    
     {
-      Header: 'Ações',
+      Header: '',
       id: 'actions',
       Cell: ({ ...props }: any) => {
         const item = props.data[props.row.index];
@@ -118,7 +124,7 @@ const LessonListWrapper: React.FC<Props> = ({ isTemplateView }) => {
          }
         return (
           <ActionsCell
-            editPath='/apps/lesson-management/lesson'
+            editPath='/apps/lesson-management/lessonEdit'
             id={id}
             callbackFunction={deleteActionCallback}
           />
