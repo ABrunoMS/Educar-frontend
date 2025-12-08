@@ -616,6 +616,24 @@ const LessonStepPage: FC = () => {
                           readOnly
                         />
                       </div>
+                     {/* <div className='col-md-6 col-lg-3 d-flex flex-column'>
+                        <span className='text-gray-600 fs-7 fw-semibold'>Combate</span>
+                        <input
+                          type='text'
+                          className='form-control form-control-sm form-control-solid'
+                          value={lessonData.combatDifficulty}
+                          readOnly
+                        />
+                      </div>*/}
+                      <div className='col-md-6 col-lg-3 d-flex flex-column'>
+                        <span className='text-gray-600 fs-7 fw-semibold'>BNCC</span>
+                        <input
+                          type='text'
+                          className='form-control form-control-sm form-control-solid'
+                          value={lessonData.bncc.join(', ')}
+                          readOnly
+                        />
+                      </div>
                       <div className='col-md-6 col-lg-3 d-flex flex-column'>
                         <span className='text-gray-600 fs-7 fw-semibold'>Total de Etapas</span>
                         <input
