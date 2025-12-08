@@ -598,7 +598,7 @@ const LessonStepPage: FC = () => {
                           readOnly
                         />
                       </div>
-                      <div className='col-md-6 col-lg-3 d-flex flex-column'>
+                     {/* <div className='col-md-6 col-lg-3 d-flex flex-column'>
                         <span className='text-gray-600 fs-7 fw-semibold'>Combate</span>
                         <input
                           type='text'
@@ -606,7 +606,7 @@ const LessonStepPage: FC = () => {
                           value={lessonData.combatDifficulty}
                           readOnly
                         />
-                      </div>
+                      </div>*/}
                       <div className='col-md-6 col-lg-3 d-flex flex-column'>
                         <span className='text-gray-600 fs-7 fw-semibold'>BNCC</span>
                         <input
