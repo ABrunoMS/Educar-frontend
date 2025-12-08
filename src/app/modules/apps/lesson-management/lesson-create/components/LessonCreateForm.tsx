@@ -141,7 +141,7 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
     maxPlayers: Yup.number().min(1).required('Máximo obrigatório'),
     totalQuestSteps: Yup.number().min(1).required('Total de etapas obrigatório'),
     combatDifficulty: Yup.string().required('Dificuldade obrigatória'),
-    bncc: Yup.array().min(1, 'Selecione ao menos uma opção BNCC'),
+    bncc: Yup.array(),
   });
 
   const formik = useFormik({
@@ -165,57 +165,60 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
     enableReinitialize: true,
     
     onSubmit: async (values, { setSubmitting }) => {
-      try {
-        setSubmitting(true);
-        // Filtra os IDs de BNCC para garantir que só IDs válidos do backend sejam enviados
-        const validBnccIds = (values.bncc || []).filter((id: string) => bnccOptions.some(opt => opt.value === id));
-        const questData: any = {
-          id: isEditing ? initialLesson?.id : undefined,
-          name: values.name,
-          description: values.description,
-          usageTemplate: values.usageTemplate,
-          type: values.type,
-          maxPlayers: values.maxPlayers,
-          totalQuestSteps: values.totalQuestSteps,
-          combatDifficulty: values.combatDifficulty,
-          subjectId: values.discipline, 
-          gradeId: values.schoolYear,
-          proficiencyIds: validBnccIds, // só IDs válidos
-          questSteps: activeData?.questSteps || [],
-        };
+  try {
+    setSubmitting(true);
 
-        if (isEditing && initialLesson?.id) {
-          await updateQuest(initialLesson.id, questData); 
-          alert('Aula atualizada com sucesso!');
-          if (onFormSubmit) onFormSubmit();
-        } else {
-          delete questData.id;
-          
-          if (questData.questSteps && questData.questSteps.length > 0) {
-              questData.questSteps = questData.questSteps.map((step: any) => ({
-                  ...step,
-                  id: undefined, 
-                  questId: undefined, 
-                  contents: step.contents.map((content: any) => ({
-                      ...content,
-                      id: undefined
-                  }))
-              }));
-          }
+    const validBnccIds = values.bncc || [];
 
-          const response = await createQuest(questData);
-          const newId = response.data.id; 
+    const questData: any = {
+      id: isEditing ? initialLesson?.id : undefined,
+      name: values.name,
+      description: values.description,
+      usageTemplate: values.usageTemplate,
+      type: values.type,
+      maxPlayers: values.maxPlayers,
+      totalQuestSteps: values.totalQuestSteps,
+      combatDifficulty: values.combatDifficulty,
+      subjectId: values.discipline,
+      gradeId: values.schoolYear,
+      
+      bnccIds: validBnccIds, 
+      
+      questSteps: activeData?.questSteps || [],
+    };
 
-          alert('Aula criada com sucesso!');
-          navigate(`../steps/${newId}`);
-        }
-      } catch (error) {
-        console.error('Erro ao salvar:', error);
-        alert('Erro ao salvar aula. Verifique os dados.');
-      } finally {
-        setSubmitting(false);
+    if (isEditing && initialLesson?.id) {
+      await updateQuest(initialLesson.id, questData);
+      alert('Aula atualizada com sucesso!');
+      if (onFormSubmit) onFormSubmit();
+    } else {
+      delete questData.id;
+
+      if (questData.questSteps && questData.questSteps.length > 0) {
+        questData.questSteps = questData.questSteps.map((step: any) => ({
+          ...step,
+          id: undefined,
+          questId: undefined,
+          contents: step.contents.map((content: any) => ({
+            ...content,
+            id: undefined
+          }))
+        }));
       }
-    },
+
+      const response = await createQuest(questData);
+      const newId = response.data.id;
+
+      alert('Aula criada com sucesso!');
+      navigate(`../steps/${newId}`);
+    }
+  } catch (error) {
+    console.error('Erro ao salvar:', error);
+    alert('Erro ao salvar aula. Verifique os dados.');
+  } finally {
+    setSubmitting(false);
+  }
+},
   });
 
   // --- ESCOLAS / TURMAS ---

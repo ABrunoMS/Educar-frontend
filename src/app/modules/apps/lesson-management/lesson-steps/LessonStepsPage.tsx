@@ -580,13 +580,14 @@ const LessonStepPage: FC = () => {
                     </div>
                   </div>
                   <button
-                    className='btn btn-icon btn-xs btn-light-primary position-absolute top-0 end-0 mt-2 me-2 d-flex align-items-center justify-content-center shadow-sm'
-                    title='Editar informações da aula'
-                    onClick={() => navigate(`/apps/lesson-management/lessonEdit/${lessonId}`)}
-                    style={{ width: 28, height: 28, zIndex: 2 }}
-                  >
-                    <i className='ki-duotone ki-pencil fs-5'></i>
-                  </button>
+                  className='btn btn-icon btn-xs btn-light-primary position-absolute top-0 end-0 mt-2 me-2 d-flex align-items-center justify-content-center shadow-sm'
+                      title='Editar informações da aula'
+                      onClick={() => navigate(`/apps/lesson-management/lessonEdit/${lessonId}`)}
+                      style={{ width: 28, height: 28, zIndex: 2 }}
+                    >
+                      {/* Ícone atualizado para o estilo quadrado */}
+                      <i className="bi bi-pencil-square fs-5"></i>
+                </button>
                   {!isLoading && lessonData.name ? (
                     <div className='row border border-gray-300 rounded p-5 mt-5 g-5'>
                       <div className='col-md-6 col-lg-3 d-flex flex-column'>
