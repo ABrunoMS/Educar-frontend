@@ -1,4 +1,6 @@
 import React, { FC, useState, useMemo, useEffect } from 'react';
+import { useFormik } from 'formik';
+import AsyncSelectField from '@components/form/AsyncSelectField';
 import { useParams, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import StepModal from './LessonStepModal';
@@ -45,6 +47,12 @@ const initialLessonData: LessonData = {
   bncc: [],
 };
 
+const bnccOptionsMock = [
+  { value: 'BNCC1', label: 'Conteúdo BNCC 1' },
+  { value: 'BNCC2', label: 'Conteúdo BNCC 2' },
+  { value: 'BNCC3', label: 'Conteúdo BNCC 3' },
+];
+
 const LessonStepPage: FC = () => {
   const { lessonId } = useParams<{ lessonId: string }>();
   const navigate = useNavigate();
@@ -54,6 +62,8 @@ const LessonStepPage: FC = () => {
   const [stepsToDelete, setStepsToDelete] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false); // Estado para controlar o salvamento
   const [isLoading, setIsLoading] = useState(true); // Estado para controlar carregamento dos dados
+  const [editingBncc, setEditingBncc] = useState(false);
+  const [bnccOptions, setBnccOptions] = useState(bnccOptionsMock);
 
   // Carregar dados da aula quando o componente montar
   useEffect(() => {
@@ -561,14 +571,22 @@ const LessonStepPage: FC = () => {
               </div>
             ) : (
               <div className='d-flex flex-wrap flex-sm-nowrap mb-6'>
-                <div className='flex-grow-1'>
+                <div className='flex-grow-1 position-relative'>
                   <div className='d-flex flex-column'>
-                    <div className='d-flex align-items-center mb-2'>
+                    <div className='d-flex align-items-center mb-2 gap-2'>
                       <h1 className='fs-2 fw-bold text-gray-900 dark:text-white me-1'>
                         Aula: {getDisplayValue(lessonData.name, lessonId || 'Não identificada')}
                       </h1>
                     </div>
                   </div>
+                  <button
+                    className='btn btn-icon btn-xs btn-light-primary position-absolute top-0 end-0 mt-2 me-2 d-flex align-items-center justify-content-center shadow-sm'
+                    title='Editar informações da aula'
+                    onClick={() => navigate(`/apps/lesson-management/lessonEdit/${lessonId}`)}
+                    style={{ width: 28, height: 28, zIndex: 2 }}
+                  >
+                    <i className='ki-duotone ki-pencil fs-5'></i>
+                  </button>
                   {!isLoading && lessonData.name ? (
                     <div className='row border border-gray-300 rounded p-5 mt-5 g-5'>
                       <div className='col-md-6 col-lg-3 d-flex flex-column'>
@@ -599,24 +617,6 @@ const LessonStepPage: FC = () => {
                         />
                       </div>
                       <div className='col-md-6 col-lg-3 d-flex flex-column'>
-                        <span className='text-gray-600 fs-7 fw-semibold'>Combate</span>
-                        <input
-                          type='text'
-                          className='form-control form-control-sm form-control-solid'
-                          value={lessonData.combatDifficulty}
-                          readOnly
-                        />
-                      </div>
-                      <div className='col-md-6 col-lg-3 d-flex flex-column'>
-                        <span className='text-gray-600 fs-7 fw-semibold'>BNCC</span>
-                        <input
-                          type='text'
-                          className='form-control form-control-sm form-control-solid'
-                          value={lessonData.bncc.join(', ')}
-                          readOnly
-                        />
-                      </div>
-                      <div className='col-md-6 col-lg-3 d-flex flex-column'>
                         <span className='text-gray-600 fs-7 fw-semibold'>Total de Etapas</span>
                         <input
                           type='text'
@@ -624,6 +624,21 @@ const LessonStepPage: FC = () => {
                           value={lessonData.totalQuestSteps}
                           readOnly
                         />
+                      </div>
+                      <div className='col-12 col-lg-12 d-flex flex-column mt-2'>
+                        <span className='text-gray-600 fs-7 fw-semibold mb-1'>BNCC</span>
+                        <div className='d-flex flex-wrap align-items-center gap-2' style={{ minHeight: 40 }}>
+                          {lessonData.bncc.length > 0 ? lessonData.bncc.map((bncc, idx) => (
+                            <span
+                              key={idx}
+                              className="d-flex align-items-center px-3 py-1 rounded-pill border border-gray-200 bg-gray-100 fw-semibold"
+                              style={{ fontSize: '0.95rem', marginBottom: '4px', color: 'var(--bs-gray-700)', maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                              title={bncc}
+                            >
+                              {bncc.length > 70 ? bncc.slice(0, 70) + '...' : bncc}
+                            </span>
+                          )) : <span className='text-muted'>Nenhum conteúdo BNCC</span>}
+                        </div>
                       </div>
                     </div>
                   ) : (
@@ -637,10 +652,11 @@ const LessonStepPage: FC = () => {
 
             <div className='d-flex justify-content-center py-5'>
               <button
-                className='btn btn-sm btn-info'
+                className='btn btn-lg btn-primary d-flex align-items-center gap-2 px-4 py-2 shadow-sm'
                 onClick={() => handleOpenStepModal(null)}
               >
-                <i className='ki-duotone ki-plus fs-5'></i> Adicionar etapas
+                <i className='ki-duotone ki-plus fs-4'></i>
+                <span className='fw-bold'>Adicionar etapas</span>
               </button>
             </div>
           </div>

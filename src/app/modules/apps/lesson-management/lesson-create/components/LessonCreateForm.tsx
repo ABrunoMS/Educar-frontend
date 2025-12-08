@@ -148,24 +148,27 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
     initialValues: {
       name: activeData?.name ? (sourceTemplateId ? `${activeData.name} (Cópia)` : activeData.name) : '',
       description: activeData?.description || '',
-      school: '', // Fica vazio na edição pois o Backend não retorna SchoolId
-      class: '',  // Fica vazio na edição pois o Backend não retorna ClassId
-      discipline: initialDisciplineId, 
+      school: '',
+      class: '',
+      discipline: initialDisciplineId,
       schoolYear: initialSchoolYearId,
       usageTemplate: sourceTemplateId ? false : (activeData?.usageTemplate ?? true),
       type: activeData?.type || 'SinglePlayer',
       maxPlayers: activeData?.maxPlayers || 2,
       totalQuestSteps: activeData?.totalQuestSteps || 1,
       combatDifficulty: activeData?.combatDifficulty || 'Passive',
-      bncc: initialBnccIds, 
+      bncc: (isEditing && initialLesson?.proficiencies)
+        ? initialLesson.proficiencies.map((p: any) => p.id || p.Id)
+        : initialBnccIds,
     },
     validationSchema,
-    enableReinitialize: true, // Essencial para carregar os dados após o fetch
+    enableReinitialize: true,
     
     onSubmit: async (values, { setSubmitting }) => {
       try {
         setSubmitting(true);
-        
+        // Filtra os IDs de BNCC para garantir que só IDs válidos do backend sejam enviados
+        const validBnccIds = (values.bncc || []).filter((id: string) => bnccOptions.some(opt => opt.value === id));
         const questData: any = {
           id: isEditing ? initialLesson?.id : undefined,
           name: values.name,
@@ -175,15 +178,9 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
           maxPlayers: values.maxPlayers,
           totalQuestSteps: values.totalQuestSteps,
           combatDifficulty: values.combatDifficulty,
-          
-          // Envia os IDs diretos
           subjectId: values.discipline, 
           gradeId: values.schoolYear,
-          bnccIds: values.bncc, // CORRIGIDO PARA 'bnccIds' conforme o backend Command
-
-          // Mantém retrocompatibilidade se necessário
-          proficiencies: values.bncc, 
-          
+          proficiencyIds: validBnccIds, // só IDs válidos
           questSteps: activeData?.questSteps || [],
         };
 
@@ -284,10 +281,17 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
             label: item.description || item.Description || item.code 
         }));
         setBnccOptions(options);
+        // Sincroniza BNCC apenas no primeiro carregamento da edição
+        if (isEditing && initialLesson?.proficiencies && formik.values.bncc.length === 0) {
+          const validIds = initialLesson.proficiencies
+            .map((p: any) => p.id || p.Id)
+            .filter((id: string) => options.some(opt => opt.value === id));
+          formik.setFieldValue('bncc', validIds);
+        }
       })
       .catch(() => setBnccOptions([]))
       .finally(() => setIsLoadingBncc(false));
-  }, []);
+  }, [isEditing, initialLesson]);
 
   if (isLoadingTemplate) {
       return <div className="text-center p-10"><h3>Carregando modelo de aula...</h3></div>;
