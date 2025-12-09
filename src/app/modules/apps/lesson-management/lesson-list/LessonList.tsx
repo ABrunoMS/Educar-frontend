@@ -4,9 +4,21 @@ import { useQuery, UseQueryResult } from 'react-query'
 import { Column } from 'react-table'
 import { getList, deleteQuest, deleteSelectedQuests } from './core/_request' // Importe as funções de Quest
 import { usePagination } from '@contexts/PaginationContext'
-import { useState } from 'react'
+import { useState, useEffect, useMemo, ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom' 
 import { ActionsCell } from '@components/list-view/table/columns/ActionsCell'
+import { getSubjects } from '@services/Subjects'
+import { getGrades } from '@services/Grades'
+import { Subject } from '@interfaces/Subject'
+import { Grade } from '@interfaces/Grade'
+import { useDebounce } from '@metronic/helpers'
+import { QueryRequestProvider, useQueryRequest } from '@components/list-view/core/QueryRequestProvider'
+import { QueryResponseProvider } from '@components/list-view/core/QueryResponseProvider'
+import { ListViewHeader } from '@components/list-view/components/header/ListViewHeader'
+import { ListTable } from '@components/list-view/table/ListTable'
+import { KTCard } from '@metronic/helpers'
+import { ToolbarWrapper } from '@metronic/layout/components/toolbar'
+import { Content } from '@metronic/layout/components/content'
 
 // Definimos a interface de resposta Metronic (usando Quest ao invés de LessonType)
 interface MetronicResponse<T> {
@@ -22,29 +34,40 @@ type Props = {
   isTemplateView: boolean;
 }
 
-const LessonListWrapper: React.FC<Props> = ({ isTemplateView }) => {
-  // 1. Hook de paginação para obter o estado atual
-  const {page, pageSize, sortBy, sortOrder, filter, search} = usePagination()
+// Componente interno que tem acesso ao QueryRequestProvider
+const LessonListContent: React.FC<Props> = ({ isTemplateView }) => {
+  // Hook de paginação para obter o estado atual
+  const {page, pageSize, sortBy, sortOrder, filter} = usePagination()
+  // Hook para obter o search do campo de busca do ListView
+  const { state } = useQueryRequest()
+  const searchFromContext = state.search || ''
+  const debouncedSearch = useDebounce(searchFromContext, 300)
+  
   const navigate = useNavigate()
   
-  // Mocks de estado da Modal de Detalhes (se você for usar)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null)
+  // Estados para filtros locais
+  const [selectedSubject, setSelectedSubject] = useState('')
+  const [selectedGrade, setSelectedGrade] = useState('')
+  const [subjects, setSubjects] = useState<Subject[]>([])
+  const [grades, setGrades] = useState<Grade[]>([])
   
-  const handleOpenModal = (lessonId: string) => {
-    setSelectedLessonId(lessonId)
-    setIsModalOpen(true)
-  }
+  // Carregar matérias e anos ao montar
+  useEffect(() => {
+    getSubjects().then(res => {
+      const items = res.data?.data || res.data || [];
+      setSubjects(Array.isArray(items) ? items : []);
+    }).catch(err => console.error('Erro ao carregar matérias:', err));
+    
+    getGrades().then(res => {
+      const items = res.data?.data || res.data || [];
+      setGrades(Array.isArray(items) ? items : []);
+    }).catch(err => console.error('Erro ao carregar anos:', err));
+  }, []);
   
-  const handleCloseModal = () => {
-    setSelectedLessonId(null)
-    setIsModalOpen(false)
-  }
-  
-  // 2. Chamada useQuery para buscar os dados das Quests (aulas)
-  const {data, isLoading}: UseQueryResult<any> = useQuery(
-    ['quest-list', page, pageSize, sortBy, sortOrder, filter, search, isTemplateView], 
-    () => getList(page, pageSize, sortBy, sortOrder, filter, search, isTemplateView),
+  // Chamada useQuery para buscar os dados das Quests (aulas)
+  const {data, isLoading, refetch}: UseQueryResult<any> = useQuery(
+    ['quest-list', page, pageSize, sortBy, sortOrder, filter, debouncedSearch, isTemplateView, selectedSubject, selectedGrade], 
+    () => getList(page, pageSize, sortBy, sortOrder, filter, debouncedSearch, isTemplateView, selectedSubject, selectedGrade),
     { keepPreviousData: true }
   )
   
@@ -141,7 +164,7 @@ const LessonListWrapper: React.FC<Props> = ({ isTemplateView }) => {
       deleteQuest(id as string)
         .then(() => {
           alert('Aula removida com sucesso!');
-          // Recarregar a lista se possível
+          refetch();
         })
         .catch((error) => {
           console.error('Erro ao remover aula:', error);
@@ -150,18 +173,80 @@ const LessonListWrapper: React.FC<Props> = ({ isTemplateView }) => {
     }
   };
 
-  // 4. Renderização
+  // Componente de filtros customizados para o dropdown
+  const customFiltersContent = (
+    <>
+      {/* Filtro por Matéria */}
+      <div className='mb-5'>
+        <label className='form-label fs-6 fw-bold'>Matéria:</label>
+        <select
+          className='form-select form-select-solid fw-bolder'
+          value={selectedSubject}
+          onChange={(e) => setSelectedSubject(e.target.value)}
+        >
+          <option value=''>Todas as matérias</option>
+          {subjects.map((subject: any) => (
+            <option key={subject.id || subject.Id} value={subject.id || subject.Id}>
+              {subject.name || subject.Name}
+            </option>
+          ))}
+        </select>
+      </div>
+      
+      {/* Filtro por Ano Escolar */}
+      <div className='mb-5'>
+        <label className='form-label fs-6 fw-bold'>Ano Escolar:</label>
+        <select
+          className='form-select form-select-solid fw-bolder'
+          value={selectedGrade}
+          onChange={(e) => setSelectedGrade(e.target.value)}
+        >
+          <option value=''>Todos os anos</option>
+          {grades.map((grade: any) => (
+            <option key={grade.id || grade.Id} value={grade.id || grade.Id}>
+              {grade.name || grade.Name}
+            </option>
+          ))}
+        </select>
+      </div>
+    </>
+  );
+
+  const handleResetFilters = () => {
+    setSelectedSubject('');
+    setSelectedGrade('');
+  };
+
+  // Renderização
   return (
     <>
-      <ListView 
-        // 4a. Passando os dados do array 'data' com fallback vazio
-        data={Array.isArray(data?.data) ? data.data : []}
-        columns={columns}
-        isLoading={isLoading}
-        // 4b. Passando o total de itens
-        totalItems={data?.payload?.pagination?.totalCount || 0}
-      />
+      <ToolbarWrapper />
+      <Content>
+        <KTCard>
+          <ListViewHeader 
+            customFilters={customFiltersContent} 
+            onResetFilters={handleResetFilters} 
+          />
+          <ListTable
+            data={Array.isArray(data?.data) ? data.data : []}
+            columns={columns}
+            isLoading={isLoading}
+            totalItems={data?.payload?.pagination?.totalCount || 0}
+          />
+        </KTCard>
+      </Content>
     </>
+  )
+}
+
+// Wrapper que provê o contexto do QueryRequest
+const LessonListWrapper: React.FC<Props> = ({ isTemplateView }) => {
+  return (
+    <QueryRequestProvider>
+      <QueryResponseProvider>
+        <LessonListContent isTemplateView={isTemplateView} />
+      </QueryResponseProvider>
+    </QueryRequestProvider>
   )
 }
 

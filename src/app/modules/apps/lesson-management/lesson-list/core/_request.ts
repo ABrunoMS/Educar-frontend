@@ -27,12 +27,18 @@ export const getList = async (
   sortOrder: 'asc' | 'desc',
   filter: string,
   search: string,
-  isTemplate: boolean = false
+  isTemplate: boolean = false,
+  subjectId: string = '',
+  gradeId: string = ''
 ): Promise<LessonsQueryResponse> => {
   try {
-    const response = await axios.get(QUESTS_URL, {
-      params: { PageNumber, PageSize, sortBy, sortOrder, filter, search, UsageTemplate: isTemplate },
-    });
+    const params: any = { PageNumber, PageSize, sortBy, sortOrder, filter, search, UsageTemplate: isTemplate };
+    
+    // Adicionar filtros opcionais (usando nomes que o backend espera)
+    if (subjectId) params.subject_id = subjectId;
+    if (gradeId) params.grade_id = gradeId;
+    
+    const response = await axios.get(QUESTS_URL, { params });
     
     console.log('Backend response for Quests:', response.data);
     

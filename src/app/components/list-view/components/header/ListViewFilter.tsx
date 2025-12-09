@@ -1,10 +1,16 @@
-import {useEffect, useState} from 'react'
+import {useEffect, useState, ReactNode} from 'react'
 import {MenuComponent} from '@metronic/assets/ts/components'
 import {initialQueryState, KTIcon} from '@metronic/helpers'
 import {useQueryRequest} from '../../core/QueryRequestProvider'
 import {useQueryResponse} from '../../core/QueryResponseProvider'
 
-const ListViewFilter = () => {
+interface ListViewFilterProps {
+  customFilters?: ReactNode;
+  onResetFilters?: () => void;
+  onApplyFilters?: () => void;
+}
+
+const ListViewFilter = ({ customFilters, onResetFilters, onApplyFilters }: ListViewFilterProps) => {
   const { updateState } = useQueryRequest()
   const { isLoading } = useQueryResponse()
   const [role, setRole] = useState<string | undefined>()
@@ -15,14 +21,22 @@ const ListViewFilter = () => {
   }, [])
 
   const resetData = () => {
-    updateState({filter: undefined, ...initialQueryState})
+    if (onResetFilters) {
+      onResetFilters()
+    } else {
+      updateState({filter: undefined, ...initialQueryState})
+    }
   }
 
   const filterData = () => {
-    updateState({
-      filter: {role, last_login: lastLogin},
-      ...initialQueryState,
-    })
+    if (onApplyFilters) {
+      onApplyFilters()
+    } else {
+      updateState({
+        filter: {role, last_login: lastLogin},
+        ...initialQueryState,
+      })
+    }
   }
 
   return (
@@ -53,55 +67,40 @@ const ListViewFilter = () => {
 
         {/* begin::Content */}
         <div className='px-7 py-5' data-kt-user-table-filter='form'>
-          {/* begin::Input group */}
-          <div className='mb-10'>
-            <label className='form-label fs-6 fw-bold'>Perfil:</label>
-            <select
-              className='form-select form-select-solid fw-bolder'
-              data-kt-select2='true'
-              data-placeholder='Select option'
-              data-allow-clear='true'
-              data-kt-user-table-filter='role'
-              data-hide-search='true'
-              onChange={(e) => setRole(e.target.value)}
-              value={role}
-            >
-              <option value=''></option>
-              <option value='Administrator'>Admin</option>
-              <option value='Analyst'>Aluno</option>
-              <option value='Developer'>Professor</option>
-            </select>
-          </div>
-          {/* end::Input group */}
-
-          {/* begin::Input group */}
-          {/* <div className='mb-10'>
-            <label className='form-label fs-6 fw-bold'>Last login:</label>
-            <select
-              className='form-select form-select-solid fw-bolder'
-              data-kt-select2='true'
-              data-placeholder='Select option'
-              data-allow-clear='true'
-              data-kt-user-table-filter='two-step'
-              data-hide-search='true'
-              onChange={(e) => setLastLogin(e.target.value)}
-              value={lastLogin}
-            >
-              <option value=''></option>
-              <option value='Yesterday'>Yesterday</option>
-              <option value='20 mins ago'>20 mins ago</option>
-              <option value='5 hours ago'>5 hours ago</option>
-              <option value='2 days ago'>2 days ago</option>
-            </select>
-          </div> */}
-          {/* end::Input group */}
+          {/* Render custom filters if provided, otherwise show default filters */}
+          {customFilters ? (
+            customFilters
+          ) : (
+            <>
+              {/* begin::Input group */}
+              <div className='mb-10'>
+                <label className='form-label fs-6 fw-bold'>Perfil:</label>
+                <select
+                  className='form-select form-select-solid fw-bolder'
+                  data-kt-select2='true'
+                  data-placeholder='Select option'
+                  data-allow-clear='true'
+                  data-kt-user-table-filter='role'
+                  data-hide-search='true'
+                  onChange={(e) => setRole(e.target.value)}
+                  value={role}
+                >
+                  <option value=''></option>
+                  <option value='Administrator'>Admin</option>
+                  <option value='Analyst'>Aluno</option>
+                  <option value='Developer'>Professor</option>
+                </select>
+              </div>
+              {/* end::Input group */}
+            </>
+          )}
 
           {/* begin::Actions */}
           <div className='d-flex justify-content-end'>
             <button
               type='button'
               disabled={isLoading}
-              onClick={filterData}
+              onClick={resetData}
               className='btn btn-light btn-active-light-primary fw-bold me-2 px-6'
               data-kt-menu-dismiss='true'
               data-kt-user-table-filter='reset'
@@ -111,7 +110,7 @@ const ListViewFilter = () => {
             <button
               disabled={isLoading}
               type='button'
-              onClick={resetData}
+              onClick={filterData}
               className='btn btn-primary fw-bold px-6'
               data-kt-menu-dismiss='true'
               data-kt-user-table-filter='filter'
