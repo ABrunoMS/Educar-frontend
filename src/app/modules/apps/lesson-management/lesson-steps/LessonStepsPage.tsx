@@ -1,4 +1,5 @@
 import React, { FC, useState, useMemo, useEffect } from 'react';
+// Drag-and-drop nativo
 import { useFormik } from 'formik';
 import AsyncSelectField from '@components/form/AsyncSelectField';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -442,8 +443,7 @@ const LessonStepPage: FC = () => {
 
   // --- Render Step Cards ---
   const renderStepCard = (step: PageStep, index: number) => (
-    <div key={step.id || `step-${index}`} className='col-xl-6 mb-7'>
-      <div className='card h-100 bg-body'>
+      <div className='card h-100 bg-body w-100'>
         <div className='card-body d-flex flex-column'>
           {/* Cabeçalho */}
           <div className='d-flex align-items-center mb-5'>
@@ -554,7 +554,6 @@ const LessonStepPage: FC = () => {
           </div>
         </div>
       </div>
-    </div>
   );
 
   return (
@@ -626,15 +625,8 @@ const LessonStepPage: FC = () => {
                           readOnly
                         />
                       </div>*/}
-                      <div className='col-md-6 col-lg-3 d-flex flex-column'>
-                        <span className='text-gray-600 fs-7 fw-semibold'>BNCC</span>
-                        <input
-                          type='text'
-                          className='form-control form-control-sm form-control-solid'
-                          value={lessonData.bncc.join(', ')}
-                          readOnly
-                        />
-                      </div>
+                      
+                      
                       <div className='col-md-6 col-lg-3 d-flex flex-column'>
                         <span className='text-gray-600 fs-7 fw-semibold'>Total de Etapas</span>
                         <input
@@ -681,12 +673,54 @@ const LessonStepPage: FC = () => {
           </div>
         </div>
 
-        {/* Etapas */}
-        <div className='row'>
+
+        {/* Etapas com Drag and Drop nativo */}
+        <div
+          className='steps-flex-container'
+          onDragOver={e => e.preventDefault()}
+        >
           {steps
             .filter(step => step.title && step.title.trim() !== '')
             .sort((a, b) => a.sequence - b.sequence)
-            .map(renderStepCard)}
+            .map((step, index) => (
+              <div
+                key={step.id || `step-${index}`}
+                className='step-card-container'
+                draggable
+                onDragStart={e => {
+                  e.dataTransfer.setData('stepIndex', String(index));
+                  e.currentTarget.classList.add('dragging-step');
+                }}
+                onDragEnd={e => {
+                  e.currentTarget.classList.remove('dragging-step');
+                }}
+                onDragEnter={e => {
+                  e.currentTarget.classList.add('drag-over-step');
+                }}
+                onDragLeave={e => {
+                  e.currentTarget.classList.remove('drag-over-step');
+                }}
+                onDrop={e => {
+                  const fromIndex = Number(e.dataTransfer.getData('stepIndex'));
+                  const toIndex = index;
+                  if (fromIndex === toIndex) return;
+                  const filteredSteps = steps.filter(s => s.title && s.title.trim() !== '');
+                  const reordered = Array.from(filteredSteps);
+                  const [removed] = reordered.splice(fromIndex, 1);
+                  reordered.splice(toIndex, 0, removed);
+                  // Atualiza sequence
+                  const updated = reordered.map((s, idx) => ({ ...s, sequence: idx + 1 }));
+                  setSteps([
+                    ...updated,
+                    ...steps.filter(s => !(s.title && s.title.trim() !== ''))
+                  ]);
+                  e.currentTarget.classList.remove('drag-over-step');
+                }}
+                style={{ cursor: 'grab', transition: 'box-shadow 0.2s, border 0.2s' }}
+              >
+                {renderStepCard(step, index)}
+              </div>
+            ))}
         </div>
 
         {/* Botões de Ação */}
@@ -742,5 +776,46 @@ const LessonStepPage: FC = () => {
     </div>
   );
 };
+
+// Estilos para feedback visual do drag-and-drop e layout dos cards
+const style = document.createElement('style');
+style.innerHTML = `
+  .steps-flex-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    padding: 0;
+    margin: 0;
+    align-items: flex-start;
+    width: 100%;
+  }
+  .step-card-container {
+    flex: 0 0 calc(50% - 12px);
+    min-width: 320px;
+    max-width: calc(50% - 12px);
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box;
+    background: none !important;
+    display: block;
+    border-radius: 8px;
+  }
+  @media (max-width: 768px) {
+    .step-card-container {
+      flex: 0 0 100%;
+      max-width: 100%;
+    }
+  }
+  .dragging-step {
+    opacity: 0.6 !important;
+    box-shadow: 0 0 16px 2px #007bff55 !important;
+  }
+  .drag-over-step {
+    border: 2px dashed #007bff !important;
+    border-radius: 8px;
+    background: rgba(0, 123, 255, 0.1) !important;
+  }
+`;
+document.head.appendChild(style);
 
 export default LessonStepPage;
