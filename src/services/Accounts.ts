@@ -58,3 +58,17 @@ export const createAccount = (accountData: Account): Promise<any> => {
 export const updateAccount = ( accountData: Account): Promise<any> => {
   return axios.put(`${ACCOUNTS_URL}/${accountData.id}`, accountData);
 }
+
+/**
+ * Busca uma lista de contas filtradas por role.
+ * Usa o endpoint /api/Accounts/role/{role}
+ * @param role - A role para filtrar (ex: 'AgenteComercial', 'Distribuidor')
+ */
+export function getAccountsByRole(role: string, page = 1, pageSize = 1000) {
+  return axios.get<PaginatedResponse<Account>>(`${ACCOUNTS_URL}/role/${role}`, {
+    params: { 
+      PageNumber: page, 
+      PageSize: pageSize,
+    },
+  });
+}

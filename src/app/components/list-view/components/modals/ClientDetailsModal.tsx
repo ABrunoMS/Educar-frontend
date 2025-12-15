@@ -66,12 +66,23 @@ const ClientDetailsModal: React.FC<Props> = ({ clientId, onClose }) => {
                   <div className="col-md-8">{client.partner || 'N/A'}</div>
                 </div>
                 <div className="row mb-4">
-                  <div className="col-md-4 fw-bold text-muted">Regional:</div>
-                  <div className="col-md-8">{client.regional || 'N/A'}</div>
+                  <div className="col-md-4 fw-bold text-muted">Subsecretarias:</div>
+                  <div className="col-md-8">
+                    {client.subsecretarias && client.subsecretarias.length > 0 
+                      ? client.subsecretarias.map(sub => sub.name).join(', ')
+                      : 'N/A'}
+                  </div>
                 </div>
                 <div className="row mb-4">
-                  <div className="col-md-4 fw-bold text-muted">Subsecretaria:</div>
-                  <div className="col-md-8">{client.subSecretary || 'N/A'}</div>
+                  <div className="col-md-4 fw-bold text-muted">Regionais:</div>
+                  <div className="col-md-8">
+                    {client.subsecretarias && client.subsecretarias.length > 0 
+                      ? client.subsecretarias
+                          .flatMap(sub => sub.regionais || [])
+                          .map(reg => reg.name)
+                          .join(', ') || 'N/A'
+                      : 'N/A'}
+                  </div>
                 </div>
                 <div className="row mb-4">
                   <div className="col-md-4 fw-bold text-muted">Total de Contas:</div>

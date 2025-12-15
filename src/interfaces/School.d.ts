@@ -4,6 +4,7 @@ export interface School {
   description: string;
   address: string;
   client: string;
+  regionalId?: string;
 }
 
 export interface SchoolType {
@@ -12,6 +13,7 @@ export interface SchoolType {
   description?: string;
   addressId?: string | null;
   clientId?: string;
+  regionalId?: string;
   address?: {
     id: string;
     street?: string;
@@ -27,4 +29,21 @@ export interface SchoolType {
     name?: string;
     description?: string;
   };
+  regional?: {
+    id: string;
+    name?: string;
+    subsecretariaId?: string;
+  };
+}
+
+export interface Regional {
+  id: string;
+  name: string;
+  subsecretariaId: string;
+}
+
+export interface Subsecretaria {
+  id: string;
+  name: string;
+  clientId: string;
 }
