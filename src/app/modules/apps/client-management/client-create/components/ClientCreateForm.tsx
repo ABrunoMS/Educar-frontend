@@ -4,7 +4,7 @@ import { useFormik } from 'formik'
 import clsx from 'clsx'
 import { useIntl } from 'react-intl'
 import Select from 'react-select'
-import { ClientType } from '@interfaces/Client'
+import { ClientType, SubsecretariaDto, RegionalDto } from '@interfaces/Client'
 import { SelectOptions } from '@interfaces/Forms'
 import BasicField from '@components/form/BasicField'
 import SelectField from '@components/form/SelectField'
@@ -13,6 +13,7 @@ import { CreateOptionModal } from './CreateOptionModal'
 import { isNotEmpty } from '@metronic/helpers'
 import Flatpickr from 'react-flatpickr'
 import "flatpickr/dist/themes/material_green.css";
+import { getAccountsByRole } from '@services/Accounts'
 
 type Props = {
   isUserLoading?: boolean
@@ -37,8 +38,7 @@ export const initialClient: ClientType = {
   signatureDate: undefined,
   implantationDate: undefined,
   totalAccounts: 0,
-  subSecretary: '',
-  regional: '',
+  subsecretarias: [],
   selectedProducts: [],
   selectedContents: [],
 }
@@ -68,16 +68,12 @@ const allContents = ['BNCC', 'SAEB', 'ENEM', 'Jornada do Trabalho', 'Educação 
 */
 
 const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
-  // Estrutura hierárquica dinâmica
-  const [subsecretarias, setSubsecretarias] = useState<{
-    value: string
-    label: string
-    regionais: { value: string; label: string }[]
-  }[]>([])
+  // Estrutura hierárquica dinâmica - agora usa SubsecretariaDto[]
+  const [subsecretarias, setSubsecretarias] = useState<SubsecretariaDto[]>([])
   const [showSubsecretariaModal, setShowSubsecretariaModal] = useState(false)
   const [showRegionalModal, setShowRegionalModal] = useState(false)
-  // Este estado guarda o ID da subsecretaria cujo botão "Adicionar regional" foi clicado
-  const [regionalModalSubsecretaria, setRegionalModalSubsecretaria] = useState<string>('')
+  // Este estado guarda o nome da subsecretaria cujo botão "Adicionar regional" foi clicado
+  const [regionalModalSubsecretariaName, setRegionalModalSubsecretariaName] = useState<string>('')
 
   const intl = useIntl()
 
@@ -86,27 +82,63 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
   const [isLoadingProducts, setIsLoadingProducts] = useState(false)
   const [isLoadingContents, setIsLoadingContents] = useState(false)
 
+  // Estados para opções de parceiro (Distribuidor) e contato (Agente Comercial)
+  const [partnerOptions, setPartnerOptions] = useState<SelectOptions[]>([])
+  const [contactOptions, setContactOptions] = useState<SelectOptions[]>([])
+  const [isLoadingPartners, setIsLoadingPartners] = useState(false)
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false)
+
   useEffect(() => {
-    // Mock inicial de opções hierárquicas
-    setSubsecretarias([
-      
-    ])
+    // Inicializa com lista vazia
+    setSubsecretarias([])
+  }, [])
+
+  // Buscar usuários com role Distribuidor (para campo Partner)
+  useEffect(() => {
+    const fetchPartners = async () => {
+      setIsLoadingPartners(true)
+      try {
+        const response = await getAccountsByRole('Distribuidor')
+        const options = (response.data.data || []).map((account: any) => ({
+          value: account.id,
+          label: account.name || account.userName || account.email,
+        }))
+        setPartnerOptions(options)
+      } catch (error) {
+        console.error('Erro ao buscar distribuidores:', error)
+      } finally {
+        setIsLoadingPartners(false)
+      }
+    }
+    fetchPartners()
+  }, [])
+
+  // Buscar usuários com role Agente Comercial (para campo Contacts)
+  useEffect(() => {
+    const fetchContacts = async () => {
+      setIsLoadingContacts(true)
+      try {
+        const response = await getAccountsByRole('AgenteComercial')
+        const options = (response.data.data || []).map((account: any) => ({
+          value: account.id,
+          label: account.name || account.userName || account.email,
+        }))
+        setContactOptions(options)
+      } catch (error) {
+        console.error('Erro ao buscar agentes comerciais:', error)
+      } finally {
+        setIsLoadingContacts(false)
+      }
+    }
+    fetchContacts()
   }, [])
 
 
   // Preenche os estados de subsecretaria e regional ao editar
   useEffect(() => {
     // Verifica se estamos no modo de edição e se os dados do cliente já chegaram
-    if (client && client.subSecretary) {
-      setSubsecretarias([
-        {
-          value: client.subSecretary, 
-          label: client.subSecretary,
-          regionais: client.regional 
-            ? [{ value: client.regional, label: client.regional }] 
-            : []
-        }
-      ]);
+    if (client && client.subsecretarias && client.subsecretarias.length > 0) {
+      setSubsecretarias(client.subsecretarias);
     }
   }, [client]);
 
@@ -141,8 +173,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     signatureDate: client?.signatureDate ? new Date(client.signatureDate) : null,
     implantationDate: client?.implantationDate ? new Date(client.implantationDate) : null,
     totalAccounts: client?.totalAccounts || initialClient.totalAccounts,
-    subSecretary: client?.subSecretary || initialClient.subSecretary,
-    regional: client?.regional || initialClient.regional,
+    subsecretarias: client?.subsecretarias || [],
     products: client?.products || [], 
     contents: client?.contents || [],
     selectedProducts: client?.products 
@@ -163,11 +194,8 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     signatureDate: Yup.date().nullable().required('Data de assinatura é obrigatória'),
     implantationDate: Yup.date().nullable().optional(),
     totalAccounts: Yup.number().moreThan(0).required('Número de contas é obrigatório'),
-    subSecretary: Yup.string().required('Subsecretaria é obrigatória'),
-    regional: Yup.string().required('Regional é obrigatória'),
     selectedProducts: Yup.array().of(Yup.string()).min(1, 'Selecione pelo menos um produto'),
     selectedContents: Yup.array().of(Yup.string()).min(1, 'Selecione pelo menos um conteúdo'),
-
   })
 
   const formik = useFormik<ClientFormValues>({
@@ -195,6 +223,12 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
         implantationDate: values.implantationDate 
           ? (values.implantationDate as Date).toISOString() 
           : undefined,
+
+        // Envia a estrutura de subsecretarias com regionais aninhadas
+        subsecretarias: subsecretarias.map(sub => ({
+          name: sub.name,
+          regionais: (sub.regionais || []).map(reg => ({ name: reg.name }))
+        })),
 
         productIds: values.selectedProducts,
         contentIds: values.selectedContents,
@@ -283,39 +317,35 @@ useEffect(() => {
     return Array.from(contents);
   }, [formik.values.selectedProducts]);
 */
-  const handleCreateSubsecretaria = (subsecretariaValue: string, subsecretariaLabel: string) => {
+  const handleCreateSubsecretaria = (subsecretariaName: string) => {
     setSubsecretarias(prev => [
       ...prev,
-      { value: subsecretariaValue, label: subsecretariaLabel, regionais: [] }
+      { name: subsecretariaName, regionais: [] }
     ])
-    // Atualiza o campo subSecretary do formik
-    formik.setFieldValue('subSecretary', subsecretariaValue)
     setShowSubsecretariaModal(false)
   }
 
   // Adiciona regional à subsecretaria selecionada
-  const handleCreateRegional = (regionalValue: string, regionalLabel: string, subsecretariaValue: string) => {
+  const handleCreateRegional = (regionalName: string, subsecretariaName: string) => {
     setSubsecretarias(prev => prev.map(sub =>
-      sub.value === subsecretariaValue
-        ? { ...sub, regionais: [...sub.regionais, { value: regionalValue, label: regionalLabel }] }
+      sub.name === subsecretariaName
+        ? { ...sub, regionais: [...(sub.regionais || []), { name: regionalName }] }
         : sub
     ))
-    // Atualiza o campo regional do formik
-    formik.setFieldValue('regional', regionalValue)
     setShowRegionalModal(false)
-    setRegionalModalSubsecretaria('')
+    setRegionalModalSubsecretariaName('')
   }
 
   // Remover subsecretaria
-  const handleRemoveSubsecretaria = (subValue: string) => {
-    setSubsecretarias(prev => prev.filter(sub => sub.value !== subValue))
+  const handleRemoveSubsecretaria = (subName: string) => {
+    setSubsecretarias(prev => prev.filter(sub => sub.name !== subName))
   }
 
   // Remover regional
-  const handleRemoveRegional = (subValue: string, regValue: string) => {
+  const handleRemoveRegional = (subName: string, regName: string) => {
     setSubsecretarias(prev => prev.map(sub =>
-      sub.value === subValue
-        ? { ...sub, regionais: sub.regionais.filter(reg => reg.value !== regValue) }
+      sub.name === subName
+        ? { ...sub, regionais: (sub.regionais || []).filter(reg => reg.name !== regName) }
         : sub
     ))
   }
@@ -406,31 +436,31 @@ const updateCalendarValue = (newValue: Date | undefined, field: keyof ClientForm
             </button>
           </div>
           <div className='row g-4'>
-            {subsecretarias.map((sub: { value: string; label: string; regionais: { value: string; label: string }[] }) => (
-              <div key={sub.value} className='col-12 col-md-6'>
+            {subsecretarias.map((sub: SubsecretariaDto, subIndex: number) => (
+              <div key={`sub-${subIndex}-${sub.name}`} className='col-12 col-md-6'>
                 <div className='card shadow-sm h-100 border border-primary'>
                   <div className='card-header d-flex justify-content-between align-items-center bg-primary bg-opacity-10'>
-                    <span className='fw-semibold fs-5 text-primary'>{sub.label}</span>
-                    <button type='button' className='btn btn-icon btn-sm btn-light-danger' title='Remover subsecretaria' onClick={() => handleRemoveSubsecretaria(sub.value)}>
+                    <span className='fw-semibold fs-5 text-primary'>{sub.name}</span>
+                    <button type='button' className='btn btn-icon btn-sm btn-light-danger' title='Remover subsecretaria' onClick={() => handleRemoveSubsecretaria(sub.name)}>
                       <i className='fas fa-trash'></i>
                     </button>
                   </div>
                   <div className='card-body'>
                     <div className='mb-2 fw-semibold text-gray-700'>Regionais vinculadas:</div>
-                    {sub.regionais.length === 0 && (
+                    {(!sub.regionais || sub.regionais.length === 0) && (
                       <div className='text-gray-500 mb-2'>Nenhuma regional cadastrada.</div>
                     )}
                     <ul className='list-group mb-3'>
-                      {sub.regionais.map((reg: { value: string; label: string }) => (
-                        <li key={reg.value} className='list-group-item d-flex justify-content-between align-items-center px-2 py-1 border-0 bg-light bg-opacity-75'>
-                          <span className='text-gray-800'>{reg.label}</span>
-                          <button type='button' className='btn btn-icon btn-xs btn-light-danger' title='Remover regional' onClick={() => handleRemoveRegional(sub.value, reg.value)}>
+                      {(sub.regionais || []).map((reg: RegionalDto, regIndex: number) => (
+                        <li key={`reg-${subIndex}-${regIndex}-${reg.name}`} className='list-group-item d-flex justify-content-between align-items-center px-2 py-1 border-0 bg-light bg-opacity-75'>
+                          <span className='text-gray-800'>{reg.name}</span>
+                          <button type='button' className='btn btn-icon btn-xs btn-light-danger' title='Remover regional' onClick={() => handleRemoveRegional(sub.name, reg.name)}>
                             <i className='fas fa-trash'></i>
                           </button>
                         </li>
                       ))}
                     </ul>
-                    <button type='button' className='btn btn-sm btn-light-primary w-100' onClick={() => { setShowRegionalModal(true); setRegionalModalSubsecretaria(sub.value) }}>
+                    <button type='button' className='btn btn-sm btn-light-primary w-100' onClick={() => { setShowRegionalModal(true); setRegionalModalSubsecretariaName(sub.name) }}>
                       <i className='fas fa-plus me-1'></i> Adicionar regional
                     </button>
                   </div>
@@ -522,8 +552,8 @@ const updateCalendarValue = (newValue: Date | undefined, field: keyof ClientForm
         <div className='d-flex flex-column me-n7 pe-7'>
           {renderBasicFieldset('name', 'Client name', 'Full name')}
           {renderBasicFieldset('description', 'Description', 'Description', false)}
-          {renderSelectFieldset('partner', 'Partner', 'Select a partner...', [{ value: '1', label: 'Option 1' }])}
-          {renderSelectFieldset('contacts', 'Contacts', 'Select contacts...', [{ value: '1', label: 'Contato 1' }])}
+          {renderSelectFieldset('partner', 'Parceiro ', isLoadingPartners ? 'Carregando...' : 'Selecione um parceiro...', partnerOptions)}
+          {renderSelectFieldset('contacts', 'Contato ', isLoadingContacts ? 'Carregando...' : 'Selecione um contato...', contactOptions)}
           {renderSelectFieldset('contract', 'Contract', 'Select a contract...', [{ value: '1', label: 'Contrato 1' }])}
           {renderCalendarField('validity', 'Validade', 'Selecione a data de validade', true)}
           {renderCalendarField('signatureDate', 'Signature date', 'Select date', true)}
@@ -556,28 +586,25 @@ const updateCalendarValue = (newValue: Date | undefined, field: keyof ClientForm
         title='Criar nova subsecretaria'
         placeholder='Nome da subsecretaria'
         onClose={() => setShowSubsecretariaModal(false)}
-        onCreate={(newValue) => handleCreateSubsecretaria(newValue, newValue)}
+        onCreate={(newValue) => handleCreateSubsecretaria(newValue)}
       />
 
-      {/* Modal de criar regional: **Corrigido para vincular diretamente** à subsecretaria clicada. */}
+      {/* Modal de criar regional: vincular diretamente à subsecretaria clicada. */}
       <CreateOptionModal
         show={showRegionalModal}
-        title={`Criar nova regional para: ${subsecretarias.find(s => s.value === regionalModalSubsecretaria)?.label || 'Subsecretaria'}`}
+        title={`Criar nova regional para: ${subsecretarias.find(s => s.name === regionalModalSubsecretariaName)?.name || 'Subsecretaria'}`}
         placeholder='Nome da regional'
-        // REMOVIDOS os props de seleção: subsecretariaOptions, selectedSubsecretaria, onSelectSubsecretaria
-        onClose={() => { setShowRegionalModal(false); setRegionalModalSubsecretaria('') }}
-        // CORREÇÃO: regionalValue é usado como valor e label. O subValue vem do estado pre-definido.
-        onCreate={(regionalValue: string) => {
-          const subValue: string = regionalModalSubsecretaria || subsecretarias[0]?.value || ''
+        onClose={() => { setShowRegionalModal(false); setRegionalModalSubsecretariaName('') }}
+        onCreate={(regionalName: string) => {
+          const subName: string = regionalModalSubsecretariaName || subsecretarias[0]?.name || ''
 
           // Verifica se há uma subsecretaria válida antes de criar
-          if (!subValue) {
+          if (!subName) {
             alert('Erro: Nenhuma subsecretaria selecionada para vincular a regional.')
             return;
           }
 
-          // regionalValue é usado como valor E label.
-          handleCreateRegional(regionalValue, regionalValue, subValue)
+          handleCreateRegional(regionalName, subName)
         }}
       />
     </>

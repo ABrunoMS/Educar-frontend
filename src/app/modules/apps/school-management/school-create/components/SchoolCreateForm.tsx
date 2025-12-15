@@ -4,12 +4,13 @@ import {useFormik} from 'formik'
 import clsx from 'clsx'
 import { useIntl } from 'react-intl'
 import Select from 'react-select'
-import { School, SchoolType } from '@interfaces/School'
+import { School, SchoolType, Regional } from '@interfaces/School'
 import { SelectOptions } from '@interfaces/Forms'
 import BasicField from '@components/form/BasicField'
 import SelectField from '@components/form/SelectField'
 import { getClients } from '@services/Clients'
 import { getAddresses } from '@services/Addresses'
+import { getRegionais } from '@services/Regionais'
 import { createSchool, updateSchool } from '@services/Schools'
 import { isNotEmpty } from '@metronic/helpers'
 import { AddressModal } from './AddressModal'
@@ -26,12 +27,14 @@ const initialSchool: School = {
   name: '',
   description: '',
   address: '',
-  client: ''
+  client: '',
+  regionalId: ''
 }
 
 const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onFormSubmit }) => {
   const [clientOptions, setClientOptions] = useState<SelectOptions[]>([]);
   const [addressOptions, setAddressOptions] = useState<SelectOptions[]>([]);
+  const [regionalOptions, setRegionalOptions] = useState<SelectOptions[]>([]);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   
   // Utiliza schoolItem se disponível (modo edição), senão usa school (modo criação)
@@ -46,7 +49,8 @@ const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onForm
              '',
     client: (currentSchool as SchoolType)?.clientId || 
             (typeof currentSchool?.client === 'string' ? currentSchool.client : '') ||
-            ''
+            '',
+    regionalId: (currentSchool as SchoolType)?.regionalId || ''
   })
 
   const intl = useIntl()
@@ -73,6 +77,18 @@ const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onForm
     }).catch((error) => {
       console.error('Erro ao buscar endereços:', error);
     });
+
+    // Buscar regionais da API
+    getRegionais().then((response) => {
+      const data = Array.isArray(response.data) ? response.data : response.data.data || [];
+      const options = data.map((regional: any) => ({
+        value: regional.id,
+        label: regional.name,
+      }));
+      setRegionalOptions(options);
+    }).catch((error) => {
+      console.error('Erro ao buscar regionais:', error);
+    });
   }, []);
 
   const editSchema = Yup.object().shape({
@@ -84,6 +100,8 @@ const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onForm
       .optional(),
     client: Yup.string()
       .required('Cliente é obrigatório'),
+    regionalId: Yup.string()
+      .required('Regional é obrigatório'),
   })
 
   const handleAddressCreated = (addressId: string, addressLabel: string) => {
@@ -107,12 +125,20 @@ const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onForm
       console.log('Valores do formulário antes de enviar:', values);
       setSubmitting(true);
       try {
-        const schoolData: SchoolType = {
+        // Montar payload apenas com campos necessários
+        const schoolData: any = {
           name: values.name,
-          description: values.description,
-          addressId: values.address || null,
           clientId: values.client,
+          regionalId: values.regionalId,
         };
+        
+        // Adicionar campos opcionais somente se tiverem valor
+        if (values.description) {
+          schoolData.description = values.description;
+        }
+        if (values.address) {
+          schoolData.addressId = values.address;
+        }
         
         console.log('Dados da escola para enviar:', schoolData);
         
@@ -260,6 +286,9 @@ const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onForm
 
           {/* Client */}
           {renderSelectFieldset('client', 'Client', 'Select a client', clientOptions, false, true)}
+
+          {/* Regional */}
+          {renderSelectFieldset('regionalId', 'Regional', 'Selecione uma regional', regionalOptions, false, true)}
         </div>
 
         <div className='text-center pt-15'>

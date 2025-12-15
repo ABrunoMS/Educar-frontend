@@ -26,7 +26,8 @@ const SchoolEdit = () => {
             ...schoolData,
             id: schoolData.id?.toString() || '',
             clientId: schoolData.clientId?.toString() || '',
-            addressId: schoolData.addressId?.toString() || ''
+            addressId: schoolData.addressId?.toString() || '',
+            regionalId: schoolData.regionalId?.toString() || ''
           };
           console.log('Dados mapeados para o frontend:', mappedSchool);
           setSchoolItem(mappedSchool);

@@ -19,6 +19,11 @@ const SchoolListWrapper = () => {
     { Header: 'Nome', accessor: 'name' },
     { Header: 'Descrição', accessor: 'description' },
     { 
+      Header: 'Regional', 
+      accessor: 'regional',
+      Cell: ({ value }) => value ? value.name : '-'
+    },
+    { 
       Header: 'Endereço', 
       accessor: 'address',
       Cell: ({ value }) => value ? `${value.street}, ${value.city} - ${value.state}` : '-'
