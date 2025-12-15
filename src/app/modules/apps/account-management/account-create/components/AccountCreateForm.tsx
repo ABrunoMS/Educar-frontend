@@ -98,7 +98,13 @@ const AccountCreateForm: FC<Props> = ({
     onSubmit: async (values, { setSubmitting, resetForm }) => {
       setSubmitting(true)
       
-      const payload = { ...values }
+      const payload = { ...values,  // Se clientId for string vazia, envia null. Caso contrário, envia o valor.
+        clientId: values.clientId ? values.clientId : null,
+        
+        // Opcional: Garantir que arrays vazios sejam enviados corretamente se necessário
+        schoolIds: values.schoolIds?.length ? values.schoolIds : [],
+        classIds: values.classIds?.length ? values.classIds : [],
+      }
       // Não envia senha/confirmação se estiver editando e não foram alteradas
       if (isNotEmpty(values.id) && !isNotEmpty(values.password)) {
         delete (payload as Partial<Account>).password
@@ -107,10 +113,10 @@ const AccountCreateForm: FC<Props> = ({
       
       try {
         if (isNotEmpty(payload.id)) {
-          await updateAccount(payload)
+          await updateAccount(payload as Account)
           alert('Usuário atualizado com sucesso!')
         } else {
-          await createAccount(payload)
+          await createAccount(payload as Account)
           alert('Usuário criado com sucesso!')
         }
         resetForm()
