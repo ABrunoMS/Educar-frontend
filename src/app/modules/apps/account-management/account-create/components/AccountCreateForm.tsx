@@ -3,7 +3,7 @@ import * as Yup from 'yup'
 import { useFormik } from 'formik'
 import clsx from 'clsx'
 import { useIntl } from 'react-intl'
-
+import { useQueryClient } from 'react-query'
 import BasicField from '@components/form/BasicField'
 import { SelectField } from '@components/form'
 import { SelectOptions } from '@interfaces/Forms'
@@ -47,6 +47,7 @@ const AccountCreateForm: FC<Props> = ({
   clientId, // <-- Recebe a prop
   onFormSubmit,
 }) => {
+  const queryClient = useQueryClient()
   // MODIFICADO: Preenche o 'clientId' da prop se ele existir
   const [accountForEdit] = useState<Account>({
     ...initialAccount,
@@ -85,10 +86,10 @@ const AccountCreateForm: FC<Props> = ({
         then: (schema) => schema.required('A confirmação de senha é obrigatória'),
       }),
     email: Yup.string().email('Invalid email').required('Field is required'),
-    clientId: Yup.string().optional(), // <-- TORNADO OPCIONAL (vem da prop)
+    clientId: Yup.string().nullable(), // <-- TORNADO OPCIONAL (vem da prop)
     role: Yup.string().required('Field is required'),
-    schoolIds: Yup.array().of(Yup.string()).optional(), // <-- TORNADO OPCIONAL
-    classIds: Yup.array().of(Yup.string()).optional(),
+    schoolIds: Yup.array().of(Yup.string()).nullable(), // <-- TORNADO OPCIONAL
+    classIds: Yup.array().of(Yup.string()).nullable(),
   })
 
   const formik = useFormik({
@@ -98,7 +99,13 @@ const AccountCreateForm: FC<Props> = ({
     onSubmit: async (values, { setSubmitting, resetForm }) => {
       setSubmitting(true)
       
-      const payload = { ...values }
+      const payload = { ...values,
+        // Se for string vazia, envia null. Se tiver ID, envia o ID.
+        clientId: values.clientId ? values.clientId : null,
+        // Garante que array vazio vai como array vazio (ou null se preferires, mas array vazio é mais seguro para listas)
+        schoolIds: values.schoolIds || [],
+        classIds: values.classIds || []
+      }
       // Não envia senha/confirmação se estiver editando e não foram alteradas
       if (isNotEmpty(values.id) && !isNotEmpty(values.password)) {
         delete (payload as Partial<Account>).password
@@ -107,12 +114,13 @@ const AccountCreateForm: FC<Props> = ({
       
       try {
         if (isNotEmpty(payload.id)) {
-          await updateAccount(payload)
+          await updateAccount(payload as Account)
           alert('Usuário atualizado com sucesso!')
         } else {
-          await createAccount(payload)
+          await createAccount(payload as Account)
           alert('Usuário criado com sucesso!')
         }
+        await queryClient.invalidateQueries(['users-list'])
         resetForm()
         onFormSubmit() // <-- Chama o callback para fechar o modal
       } catch (ex) {
@@ -223,13 +231,16 @@ const AccountCreateForm: FC<Props> = ({
             options={clientOptions}
             formik={formik}
             multiselect={false}
-            required
+            required={false}
             onChange={(value) => {
               if (typeof value === 'string') {
                 setSelectedClientId(value)
                 formik.setFieldValue('schoolIds', [])
                 formik.setFieldValue('classIds', [])
                 setSelectedSchoolIds([])
+              }
+              if (!value) {
+                 setSelectedClientId(undefined)
               }
             }}
           />
