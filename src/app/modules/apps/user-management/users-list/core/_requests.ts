@@ -1,28 +1,34 @@
 import axios, { AxiosResponse } from "axios";
 import { ID, Response } from "../../../../../../_metronic/helpers";
-import { User, UsersQueryResponse } from "./_models";
+import { User } from "./_models";
 import { PaginatedResponse } from "@contexts/PaginationContext";
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-//const USER_URL = `${API_URL}/api/Accounts/{id}`;
 const USERS_URL = `${API_URL}/api/Accounts`;
 
+// Tipo de resposta para a lista de usuários
+export type UsersQueryResponse = PaginatedResponse<User>;
 
-
-const getUsers = (
+// Função para buscar a lista de usuários com paginação, ordenação e filtros
+const getUsers = async (
   PageNumber: number, 
   PageSize: number, 
-  //search: string,
+  sortBy: string = '',
+  sortOrder: 'asc' | 'desc' = 'asc',
+  filter: string = '',
+  search: string = ''
 ): Promise<UsersQueryResponse> => {
-  return axios
-    .get(USERS_URL, {
-      params: {
-        PageNumber: PageNumber,
-        PageSize: PageSize,
-       // Search: search,
-      }
-    })
-    .then((response: AxiosResponse<UsersQueryResponse>) => response.data);
+  const response: AxiosResponse<UsersQueryResponse> = await axios.get(USERS_URL, {
+    params: { 
+      PageNumber, 
+      PageSize,
+      sortBy,
+      sortOrder,
+      filter,
+      search
+    }
+  });
+  return response.data;
 };
 
 const getUserById = (id: ID): Promise<User | undefined> => {
