@@ -72,3 +72,7 @@ export function getAccountsByRole(role: string, page = 1, pageSize = 1000) {
     },
   });
 }
+
+export const deleteAccount = (accountId: string): Promise<void> => {
+  return axios.delete(`${ACCOUNTS_URL}/${accountId}`);
+};

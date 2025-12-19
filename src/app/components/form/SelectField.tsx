@@ -17,6 +17,7 @@ interface FieldProps {
   onChange?: (value: string | string[]) => void;
   options: SelectOptions[];
   formik: FormikProps<any>;
+  isClearable?: boolean;
 }
 
 const CustomMultiValue = (props: any) => (

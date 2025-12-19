@@ -99,13 +99,17 @@ const AccountCreateForm: FC<Props> = ({
     onSubmit: async (values, { setSubmitting, resetForm }) => {
       setSubmitting(true)
       
-      const payload = { ...values,
+      const payload: any = { ...values,
         // Se for string vazia, envia null. Se tiver ID, envia o ID.
         clientId: values.clientId ? values.clientId : null,
         // Garante que array vazio vai como array vazio (ou null se preferires, mas array vazio é mais seguro para listas)
         schoolIds: values.schoolIds || [],
         classIds: values.classIds || []
       }
+      delete payload.client;
+      delete payload.schools; 
+      delete payload.classes;  
+      delete payload.roles
       // Não envia senha/confirmação se estiver editando e não foram alteradas
       if (isNotEmpty(values.id) && !isNotEmpty(values.password)) {
         delete (payload as Partial<Account>).password
@@ -232,15 +236,34 @@ const AccountCreateForm: FC<Props> = ({
             formik={formik}
             multiselect={false}
             required={false}
+            
+            // 1. FORÇA O ÍCONE DE LIMPAR APARECER
+            isClearable={true} 
+
             onChange={(value) => {
+              // CENÁRIO A: Selecionou um cliente
               if (typeof value === 'string') {
                 setSelectedClientId(value)
+                // Opcional: Limpar filhos se trocar de cliente
                 formik.setFieldValue('schoolIds', [])
                 formik.setFieldValue('classIds', [])
                 setSelectedSchoolIds([])
               }
+              
+              // CENÁRIO B: Limpou o campo (clicou no X)
+              // O 'value' vem como null ou undefined
               if (!value) {
                  setSelectedClientId(undefined)
+                 
+                 // 2. LIMPEZA TOTAL NO FORMIK
+                 // É essencial setar null no formik para o backend entender
+                 formik.setFieldValue('clientId', null) 
+                 
+                 // Limpa as dependências visuais e lógicas
+                 formik.setFieldValue('schoolIds', [])
+                 formik.setFieldValue('classIds', [])
+                 setSelectedSchoolIds([])
+                 setSchoolOptions([]) // Remove as opções de escola da lista
               }
             }}
           />
