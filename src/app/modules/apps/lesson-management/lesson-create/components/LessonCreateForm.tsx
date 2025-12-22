@@ -13,6 +13,7 @@ import { Class } from '@interfaces/Class';
 import { SchoolType } from '@interfaces/School';
 import { PaginatedResponse } from '@contexts/PaginationContext';
 import { Quest, ProductDto, ContentDto } from '@interfaces/Lesson';
+import { useRole } from '@contexts/RoleContext';
 
 // Serviços
 import { getSchools } from '@services/Schools';
@@ -34,6 +35,10 @@ type OptionType = SelectOptions;
 const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = false, onFormSubmit }) => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const { hasAnyRole } = useRole();
+  
+  // Apenas Admin e TeacherEducar podem criar aulas template
+  const canCreateTemplate = hasAnyRole(['Admin', 'TeacherEducar']);
   
   const [searchParams] = useSearchParams();
   const sourceTemplateId = searchParams.get('sourceTemplateId');
@@ -176,7 +181,7 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
       class: '',
       discipline: initialDisciplineId,
       schoolYear: initialSchoolYearId,
-      usageTemplate: sourceTemplateId ? false : (activeData?.usageTemplate ?? true),
+      usageTemplate: canCreateTemplate ? (sourceTemplateId ? false : (activeData?.usageTemplate ?? false)) : false,
       type: activeData?.type || 'SinglePlayer',
       maxPlayers: activeData?.maxPlayers || 2,
       totalQuestSteps: activeData?.totalQuestSteps || 1,
@@ -392,12 +397,14 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
         <div className="bg-body rounded-2xl shadow-sm p-4">
           <h6 className="fw-semibold text-muted mb-3">Configurações da Aula</h6>
           <div className="row g-4">
-            <div className="col-md-4 d-flex align-items-center pt-5">
-              <div className="form-check form-switch form-check-custom form-check-solid">
-                <input className="form-check-input" type="checkbox" id="usageTemplateToggle" name="usageTemplate" checked={formik.values.usageTemplate} onChange={formik.handleChange} onBlur={formik.handleBlur} />
-                <label className="form-check-label ms-3 text-gray-700" htmlFor="usageTemplateToggle">Template Global</label>
+            {canCreateTemplate && (
+              <div className="col-md-4 d-flex align-items-center pt-5">
+                <div className="form-check form-switch form-check-custom form-check-solid">
+                  <input className="form-check-input" type="checkbox" id="usageTemplateToggle" name="usageTemplate" checked={formik.values.usageTemplate} onChange={formik.handleChange} onBlur={formik.handleBlur} />
+                  <label className="form-check-label ms-3 text-gray-700" htmlFor="usageTemplateToggle">Template Global</label>
+                </div>
               </div>
-            </div>
+            )}
             {/*<div className="col-md-4">
               <BasicField fieldName="maxPlayers" label="Máximo de Jogadores" placeholder="2" required formik={formik} type="number" />
             </div>*/}
