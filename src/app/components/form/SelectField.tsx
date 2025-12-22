@@ -1,112 +1,153 @@
-import React from "react";
-import clsx from "clsx";
-import { FormikProps } from "formik";
-import Select from "react-select";
-import { SelectOptions } from "@interfaces/Forms";
-import { components } from "react-select";
+import React, { FC } from 'react';
+import Select from 'react-select';
+import { SelectOptions } from '@interfaces/Forms';
+import { FormikProps } from 'formik';
+import { ThemeModeComponent } from '../../../_metronic/assets/ts/layout/ThemeMode';
 
-interface FieldProps {
-  fieldName: string;
+interface SelectFieldProps {
   label: string;
-  placeholder?: string | null;
-  required?: boolean;
-  loading?: boolean;
-  isDisabled?: boolean;
-  disabled?: boolean;
-  multiselect?: boolean;
-  onChange?: (value: string | string[]) => void;
+  fieldName: string;
   options: SelectOptions[];
   formik: FormikProps<any>;
+  
+  // Compatibilidade: aceita tanto isMulti (novo) quanto multiselect (antigo)
+  isMulti?: boolean;
+  multiselect?: boolean;
+  
+  placeholder?: string;
+  
+  // Compatibilidade: aceita tanto isDisabled (novo) quanto disabled (antigo)
+  isDisabled?: boolean;
+  disabled?: boolean; // <--- ADICIONADO PARA CORRIGIR O ERRO
+  
   isClearable?: boolean;
+  isSearchable?: boolean;
+  onChange?: (value: any) => void;
+  required?: boolean; 
 }
 
-const CustomMultiValue = (props: any) => (
-  <components.MultiValue {...props}>
-    <span className="badge bg-primary text-white px-2 py-1 me-1 mb-1 rounded-pill d-flex align-items-center">
-      {props.data.label}
-      <span
-        style={{ cursor: "pointer", marginLeft: 6 }}
-        onClick={(e) => {
-          e.stopPropagation();
-          props.removeProps.onClick();
-        }}
-      >
-        &times;
-      </span>
-    </span>
-  </components.MultiValue>
-);
-
-const SelectField: React.FC<FieldProps> = ({
-  fieldName,
+const SelectField: FC<SelectFieldProps> = ({
   label,
-  placeholder,
-  required = false,
-  loading = false,
-  isDisabled = false,
-  disabled,
-  formik,
+  fieldName,
   options,
+  formik,
+  isMulti = false,
   multiselect = false,
-  onChange
+  placeholder,
+  isDisabled = false,
+  disabled = false, // <--- Recebe a prop aqui
+  isClearable = false,
+  isSearchable = true,
+  onChange,
+  required = false,
 }) => {
-  const finalDisabledState = formik.isSubmitting || loading || isDisabled || disabled;
-  const formikValue = formik.values[fieldName];
+  const themeMode = ThemeModeComponent.getMode();
+  const currentTheme = themeMode === 'system' ? ThemeModeComponent.getSystemMode() : themeMode;
+  const theme: 'light' | 'dark' = currentTheme as 'light' | 'dark';
 
-  // Monta o valor para o Select
-  const selectValue = multiselect
-    ? (formikValue || []).map((val: string) => {
-        const option = options.find((o) => o.value === val);
-        return option || { value: val, label: val };
-      })
-    : formikValue
-    ? options.find((o) => o.value === formikValue) || { value: formikValue, label: formikValue }
-    : null;
+  const isMultiple = isMulti || multiselect;
+  
+  // Unifica as propriedades de desabilitar
+  const disabledState = isDisabled || disabled;
 
-  const handleUpdate = (selected: any) => {
-    let finalValue: string | string[];
-    if (multiselect) {
-      finalValue = selected ? selected.map((opt: SelectOptions) => opt.value) : [];
-    } else {
-      finalValue = selected ? selected.value : '';
-    }
-    formik.setFieldValue(fieldName, finalValue);
-    formik.setFieldTouched(fieldName, true);
-    if (onChange) onChange(finalValue);
+  const customStyles = {
+    control: (provided: any) => ({
+      ...provided,
+      backgroundColor: theme === 'dark' ? '#1e1e2f' : '#fff',
+      borderColor: theme === 'dark' ? '#555' : '#ccc',
+      color: theme === 'dark' ? '#fff' : '#000',
+    }),
+    menu: (provided: any) => ({
+      ...provided,
+      backgroundColor: theme === 'dark' ? '#1e1e2f' : '#fff',
+      color: theme === 'dark' ? '#fff' : '#000',
+      zIndex: 9999,
+    }),
+    singleValue: (provided: any) => ({
+      ...provided,
+      color: theme === 'dark' ? '#fff' : '#000',
+    }),
+    multiValue: (provided: any) => ({
+      ...provided,
+      backgroundColor: theme === 'dark' ? '#333' : '#eee',
+    }),
+    multiValueLabel: (provided: any) => ({
+      ...provided,
+      color: theme === 'dark' ? '#fff' : '#000',
+    }),
+    input: (provided: any) => ({
+      ...provided,
+      color: theme === 'dark' ? '#fff' : '#000',
+    }),
+    placeholder: (provided: any) => ({
+      ...provided,
+      color: theme === 'dark' ? '#aaa' : '#666',
+    }),
   };
 
-  const meta = formik.getFieldMeta(fieldName);
-  const showError = formik.submitCount > 0 && meta.error;
+  const handleChange = (selected: any) => {
+    const finalValue = isMultiple
+      ? selected?.map((s: any) => s.value) || []
+      : selected?.value || null;
+
+    formik.setFieldValue(fieldName, finalValue);
+
+    if (onChange) {
+      onChange(finalValue);
+    }
+  };
 
   return (
     <div className='mb-7'>
-      <label className='fw-bold fs-6 mb-2'>
-        {label} {required && showError && <span className='text-danger'>*</span>}
+      <label className={`form-label fw-bold ${required ? 'required' : ''}`}>
+        {label}
       </label>
+      
       <Select
-        className={clsx(
-          'react-select-styled react-select-solid mb-3 mb-lg-0',
-          { 'is-invalid': showError }
-        )}
-        classNamePrefix='react-select'
-        options={options}
-        placeholder={placeholder}
-        value={selectValue}
         name={fieldName}
-        onChange={handleUpdate}
-        onBlur={() => formik.setFieldTouched(fieldName, true)}
-        isMulti={multiselect}
-        isDisabled={finalDisabledState}
+        isMulti={isMultiple}
+        placeholder={placeholder}
+        options={options}
+        
+        // Passamos o estado combinado
+        isDisabled={disabledState}
+        
+        isClearable={isClearable}
+        isSearchable={isSearchable}
+        onChange={handleChange}
+        value={
+          isMultiple
+            ? (formik.values[fieldName] || []).map((val: string) => {
+                const option = options.find((o) => o.value === val);
+                return option || { value: val, label: val };
+              })
+            : formik.values[fieldName]
+            ? options.find((o) => o.value === formik.values[fieldName]) || {
+                value: formik.values[fieldName],
+                label: formik.values[fieldName],
+              }
+            : null
+        }
+        styles={customStyles}
+        theme={(baseTheme) => ({
+          ...baseTheme,
+          colors: {
+            ...baseTheme.colors,
+            primary25: theme === 'dark' ? '#444' : '#ddd',
+            primary: theme === 'dark' ? '#6666ff' : '#2684FF',
+          },
+        })}
       />
-      {showError && (
+      
+      {formik.touched[fieldName] && formik.errors[fieldName] && (
         <div className='fv-plugins-message-container'>
           <div className='fv-help-block'>
-            <span role='alert'>{meta.error}</span>
+            <span role='alert'>{String(formik.errors[fieldName])}</span>
           </div>
         </div>
       )}
     </div>
   );
-}
+};
 
 export default SelectField;
