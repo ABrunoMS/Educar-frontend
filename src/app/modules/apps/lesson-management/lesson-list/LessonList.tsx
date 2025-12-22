@@ -1,5 +1,5 @@
 import { ListView } from '@components/list-view/ListView'
-import { LessonType, Quest } from '@interfaces/Lesson' // Importe o tipo Quest
+import { LessonType, Quest, ProductDto, ContentDto } from '@interfaces/Lesson' // Importe o tipo Quest
 import { useQuery, UseQueryResult } from 'react-query'
 import { Column } from 'react-table'
 import { getList, deleteQuest, deleteSelectedQuests } from './core/_request' // Importe as funções de Quest
@@ -9,6 +9,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { ActionsCell } from '@components/list-view/table/columns/ActionsCell'
 import { getSubjects } from '@services/Subjects'
 import { getGrades } from '@services/Grades'
+import { getAllProducts, getCompatibleContents } from '@services/Lesson'
 import { Subject } from '@interfaces/Subject'
 import { Grade } from '@interfaces/Grade'
 import { useDebounce } from '@metronic/helpers'
@@ -48,8 +49,14 @@ const LessonListContent: React.FC<Props> = ({ isTemplateView }) => {
   // Estados para filtros locais
   const [selectedSubject, setSelectedSubject] = useState('')
   const [selectedGrade, setSelectedGrade] = useState('')
+  const [selectedProduct, setSelectedProduct] = useState('')
+  const [selectedContent, setSelectedContent] = useState('')
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [grades, setGrades] = useState<Grade[]>([])
+  const [products, setProducts] = useState<ProductDto[]>([])
+  const [contents, setContents] = useState<ContentDto[]>([])
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false)
+  const [isLoadingContents, setIsLoadingContents] = useState(false)
   
   // Carregar matérias e anos ao montar
   useEffect(() => {
@@ -62,12 +69,37 @@ const LessonListContent: React.FC<Props> = ({ isTemplateView }) => {
       const items = res.data?.data || res.data || [];
       setGrades(Array.isArray(items) ? items : []);
     }).catch(err => console.error('Erro ao carregar anos:', err));
+
+    // Carregar produtos
+    setIsLoadingProducts(true);
+    getAllProducts().then(res => {
+      setProducts(res.data || []);
+    }).catch(err => console.error('Erro ao carregar produtos:', err))
+    .finally(() => setIsLoadingProducts(false));
   }, []);
+
+  // Carregar conteúdos quando o produto é selecionado
+  useEffect(() => {
+    if (!selectedProduct) {
+      setContents([]);
+      setSelectedContent('');
+      return;
+    }
+    setIsLoadingContents(true);
+    getCompatibleContents(selectedProduct).then(contentList => {
+      setContents(contentList);
+      // Limpar conteúdo selecionado se não for mais válido
+      if (selectedContent && !contentList.some(c => c.id === selectedContent)) {
+        setSelectedContent('');
+      }
+    }).catch(err => console.error('Erro ao carregar conteúdos:', err))
+    .finally(() => setIsLoadingContents(false));
+  }, [selectedProduct]);
   
   // Chamada useQuery para buscar os dados das Quests (aulas)
   const {data, isLoading, refetch}: UseQueryResult<any> = useQuery(
-    ['quest-list', page, pageSize, sortBy, sortOrder, filter, debouncedSearch, isTemplateView, selectedSubject, selectedGrade], 
-    () => getList(page, pageSize, sortBy, sortOrder, filter, debouncedSearch, isTemplateView, selectedSubject, selectedGrade),
+    ['quest-list', page, pageSize, sortBy, sortOrder, filter, debouncedSearch, isTemplateView, selectedSubject, selectedGrade, selectedProduct, selectedContent], 
+    () => getList(page, pageSize, sortBy, sortOrder, filter, debouncedSearch || '', isTemplateView, selectedSubject, selectedGrade, selectedProduct, selectedContent),
     { keepPreviousData: true }
   )
   
@@ -126,6 +158,16 @@ const LessonListContent: React.FC<Props> = ({ isTemplateView }) => {
       Header: 'Ano escolar', 
       accessor: (row: any) => row.grade?.name || row.grade?.Name || '',
       id: 'grade'
+    },
+    { 
+      Header: 'Produto', 
+      accessor: (row: any) => row.product?.name || row.product?.Name || '',
+      id: 'product'
+    },
+    { 
+      Header: 'Conteúdo', 
+      accessor: (row: any) => row.content?.name || row.content?.Name || '',
+      id: 'content'
     },
     
     {
@@ -209,12 +251,56 @@ const LessonListContent: React.FC<Props> = ({ isTemplateView }) => {
           ))}
         </select>
       </div>
+
+      {/* Filtro por Produto */}
+      <div className='mb-5'>
+        <label className='form-label fs-6 fw-bold'>Produto:</label>
+        <select
+          className='form-select form-select-solid fw-bolder'
+          value={selectedProduct}
+          onChange={(e) => setSelectedProduct(e.target.value)}
+          disabled={isLoadingProducts}
+        >
+          <option value=''>{isLoadingProducts ? 'Carregando...' : 'Todos os produtos'}</option>
+          {products.map((product) => (
+            <option key={product.id} value={product.id}>
+              {product.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Filtro por Conteúdo */}
+      <div className='mb-5'>
+        <label className='form-label fs-6 fw-bold'>Conteúdo:</label>
+        <select
+          className='form-select form-select-solid fw-bolder'
+          value={selectedContent}
+          onChange={(e) => setSelectedContent(e.target.value)}
+          disabled={!selectedProduct || isLoadingContents}
+        >
+          <option value=''>
+            {isLoadingContents 
+              ? 'Carregando...' 
+              : !selectedProduct 
+                ? 'Selecione um produto primeiro' 
+                : 'Todos os conteúdos'}
+          </option>
+          {contents.map((content) => (
+            <option key={content.id} value={content.id}>
+              {content.name}
+            </option>
+          ))}
+        </select>
+      </div>
     </>
   );
 
   const handleResetFilters = () => {
     setSelectedSubject('');
     setSelectedGrade('');
+    setSelectedProduct('');
+    setSelectedContent('');
   };
 
   // Renderização
