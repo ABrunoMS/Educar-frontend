@@ -95,17 +95,19 @@ const SidebarMenuMain = () => {
             title='Nova Aula'
             hasBullet
           />
-          <SidebarMenuItem
-            to='/apps/lesson-management/templates'
-            icon='abstract-28' // ícone de "layers" ou "templates"
-            title='Aulas Template'
-            hasBullet
-         />
+          <RoleBasedMenuItem rolesAllowed={['Admin', 'TeacherEducar']}>
+            <SidebarMenuItem
+              to='/apps/lesson-management/templates'
+              icon='abstract-28' // ícone de "layers" ou "templates"
+              title='Aulas Template'
+              hasBullet
+           />
+          </RoleBasedMenuItem>
         </SidebarMenuItemWithSub>
         
       </RoleBasedMenuItem>
 
-      <RoleBasedMenuItem rolesAllowed={['Admin']}>
+      <RoleBasedMenuItem rolesAllowed={['Admin']}>>
         
         <SidebarMenuItemWithSub
           to='/apps/grade-management/'
