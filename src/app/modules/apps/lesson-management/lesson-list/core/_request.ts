@@ -29,14 +29,18 @@ export const getList = async (
   search: string,
   isTemplate: boolean = false,
   subjectId: string = '',
-  gradeId: string = ''
+  gradeId: string = '',
+  productId: string = '',
+  contentId: string = ''
 ): Promise<LessonsQueryResponse> => {
   try {
     const params: any = { PageNumber, PageSize, sortBy, sortOrder, filter, search, UsageTemplate: isTemplate };
     
     // Adicionar filtros opcionais (usando nomes que o backend espera)
-    if (subjectId) params.subject_id = subjectId;
-    if (gradeId) params.grade_id = gradeId;
+    if (subjectId) params.SubjectId = subjectId;
+    if (gradeId) params.GradeId = gradeId;
+    if (productId) params.ProductId = productId;
+    if (contentId) params.ContentId = contentId;
     
     const response = await axios.get(QUESTS_URL, { params });
     

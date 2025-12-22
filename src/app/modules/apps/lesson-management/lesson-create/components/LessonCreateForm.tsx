@@ -12,12 +12,12 @@ import { SelectOptions } from '@interfaces/Forms';
 import { Class } from '@interfaces/Class';
 import { SchoolType } from '@interfaces/School';
 import { PaginatedResponse } from '@contexts/PaginationContext';
-import { Quest } from '@interfaces/Lesson';
+import { Quest, ProductDto, ContentDto } from '@interfaces/Lesson';
 
 // Serviços
 import { getSchools } from '@services/Schools';
 import { getClassesBySchools } from '@services/Classes';
-import { createQuest, updateQuest, getQuestById, getBnccContents } from '@services/Lesson';
+import { createQuest, updateQuest, getQuestById, getBnccContents, getAllProducts, getCompatibleContents } from '@services/Lesson';
 import { getSubjects } from '@services/Subjects'; 
 import { useAuth } from '../../../../auth/core/Auth';
 
@@ -55,6 +55,12 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
   const [isLoadingDisciplines, setIsLoadingDisciplines] = useState(false);
   const [isLoadingSchoolYears, setIsLoadingSchoolYears] = useState(false);
 
+  // Estados para Produtos e Conteúdos (como no ClientCreateForm)
+  const [allProducts, setAllProducts] = useState<ProductDto[]>([]);
+  const [availableContents, setAvailableContents] = useState<ContentDto[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [isLoadingContents, setIsLoadingContents] = useState(false);
+
   // 1. CARREGAR DADOS REAIS (Matérias e Anos)
   useEffect(() => {
     const fetchData = async () => {
@@ -79,6 +85,22 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
       }
     };
     fetchData();
+  }, []);
+
+  // CARREGAR PRODUTOS NA MONTAGEM
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setIsLoadingProducts(true);
+      try {
+        const productData = await getAllProducts();
+        setAllProducts(productData.data || []);
+      } catch (error) {
+        console.error('Falha ao buscar produtos:', error);
+      } finally {
+        setIsLoadingProducts(false);
+      }
+    };
+    fetchProducts();
   }, []);
 
   // 2. CARREGAR TEMPLATE
@@ -142,6 +164,8 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
     totalQuestSteps: Yup.number().min(1).required('Total de etapas obrigatório'),
     combatDifficulty: Yup.string().required('Dificuldade obrigatória'),
     bncc: Yup.array(),
+    productId: Yup.string().required('Produto é obrigatório'),
+    contentId: Yup.string().required('Conteúdo é obrigatório'),
   });
 
   const formik = useFormik({
@@ -160,6 +184,8 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
       bncc: (isEditing && initialLesson?.proficiencies)
         ? initialLesson.proficiencies.map((p: any) => p.id || p.Id)
         : initialBnccIds,
+      productId: activeData?.productId || getIdFromField(activeData?.product) || '',
+      contentId: activeData?.contentId || getIdFromField(activeData?.content) || '',
     },
     validationSchema,
     enableReinitialize: true,
@@ -181,6 +207,8 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
       combatDifficulty: values.combatDifficulty,
       subjectId: values.discipline,
       gradeId: values.schoolYear,
+      productId: values.productId,
+      contentId: values.contentId,
       
       bnccIds: validBnccIds, 
       
@@ -296,6 +324,40 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
       .finally(() => setIsLoadingBncc(false));
   }, [isEditing, initialLesson]);
 
+  // --- CARREGAR CONTEÚDOS COMPATÍVEIS COM O PRODUTO SELECIONADO ---
+  useEffect(() => {
+    const fetchCompatibleContents = async () => {
+      const selectedProductId = formik.values.productId;
+      
+      if (!selectedProductId) {
+        setAvailableContents([]);
+        formik.setFieldValue('contentId', '');
+        return;
+      }
+
+      setIsLoadingContents(true);
+      try {
+        const contentList = await getCompatibleContents(selectedProductId);
+        setAvailableContents(contentList);
+
+        // Limpa o conteúdo se não for mais compatível
+        if (formik.values.contentId) {
+          const isStillValid = contentList.some(c => c.id === formik.values.contentId);
+          if (!isStillValid) {
+            formik.setFieldValue('contentId', '');
+          }
+        }
+      } catch (error) {
+        console.error('Falha ao buscar conteúdos compatíveis:', error);
+        setAvailableContents([]);
+      } finally {
+        setIsLoadingContents(false);
+      }
+    };
+
+    fetchCompatibleContents();
+  }, [formik.values.productId]);
+
   if (isLoadingTemplate) {
       return <div className="text-center p-10"><h3>Carregando modelo de aula...</h3></div>;
   }
@@ -360,6 +422,90 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
               </div>
             </div>
         </div>*/}
+
+        {/* Produto e Conteúdo */}
+        <div className="bg-body rounded-2xl shadow-sm p-4">
+          <h6 className="fw-semibold text-muted mb-3">Produto e Conteúdo</h6>
+          <div className="row g-4">
+            {/* Coluna de Produto */}
+            <div className="col-md-6">
+              <label className="form-label fw-bold required">Produto</label>
+              {isLoadingProducts && (
+                <div className="d-flex align-items-center text-muted fs-7">
+                  <span className="spinner-border spinner-border-sm me-2"></span>
+                  Carregando produtos...
+                </div>
+              )}
+              {!isLoadingProducts && (
+                <select
+                  className={clsx('form-select form-select-solid', {
+                    'is-invalid': formik.touched.productId && formik.errors.productId,
+                  })}
+                  name="productId"
+                  value={formik.values.productId}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                >
+                  <option value="">Selecione um produto...</option>
+                  {allProducts.map((product) => (
+                    <option key={product.id} value={product.id}>
+                      {product.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {formik.touched.productId && formik.errors.productId && (
+                <div className="fv-plugins-message-container">
+                  <div className="fv-help-block">
+                    <span role="alert">{formik.errors.productId}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Coluna de Conteúdo */}
+            <div className="col-md-6">
+              <label className="form-label fw-bold required">Conteúdo</label>
+              {isLoadingContents && (
+                <div className="d-flex align-items-center text-muted fs-7">
+                  <span className="spinner-border spinner-border-sm me-2"></span>
+                  Buscando conteúdos...
+                </div>
+              )}
+              {!isLoadingContents && (
+                <select
+                  className={clsx('form-select form-select-solid', {
+                    'is-invalid': formik.touched.contentId && formik.errors.contentId,
+                  })}
+                  name="contentId"
+                  value={formik.values.contentId}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  disabled={!formik.values.productId}
+                >
+                  <option value="">
+                    {!formik.values.productId ? 'Selecione um produto primeiro' : 'Selecione um conteúdo...'}
+                  </option>
+                  {availableContents.map((content) => (
+                    <option key={content.id} value={content.id}>
+                      {content.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {formik.touched.contentId && formik.errors.contentId && (
+                <div className="fv-plugins-message-container">
+                  <div className="fv-help-block">
+                    <span role="alert">{formik.errors.contentId}</span>
+                  </div>
+                </div>
+              )}
+              {!isLoadingContents && availableContents.length === 0 && formik.values.productId && (
+                <div className="text-muted fs-7 mt-1">Nenhum conteúdo compatível encontrado.</div>
+              )}
+            </div>
+          </div>
+        </div>
 
         {/* BNCC */}
         <div className="bg-body rounded-2xl shadow-sm p-4">

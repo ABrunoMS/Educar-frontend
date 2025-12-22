@@ -1,34 +1,71 @@
-import React, { FC } from 'react';
+import React, { FC, useState, useEffect } from 'react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { createQuest, createQuestStep } from '@services/Lesson';
-import { Quest, QuestStep } from '@interfaces/Lesson';
+import { createQuest, createQuestStep, getAllProducts, getCompatibleContents } from '@services/Lesson';
+import { QuestStep, ProductDto, ContentDto } from '@interfaces/Lesson';
 
 type Props = {
   onSuccess?: () => void;
 };
 
+// Tipo para o formulário de criação de Quest
+interface QuestFormValues {
+  name: string;
+  description: string;
+  usageTemplate: string;
+  type: string;
+  maxPlayers: number;
+  totalQuestSteps: number;
+  combatDifficulty: string;
+  productId: string;
+  contentId: string;
+}
+
 // Schema de validação para Quest
 const questSchema = Yup.object().shape({
-  Name: Yup.string().required('Nome da aula é obrigatório'),
-  Description: Yup.string().required('Descrição é obrigatória'),
-  UsageTemplate: Yup.string().required('Template é obrigatório'),
-  Type: Yup.string().required('Tipo é obrigatório'),
-  MaxPlayers: Yup.number().min(1).required('Máximo de jogadores é obrigatório'),
-  TotalQuestSteps: Yup.number().min(1).required('Total de etapas é obrigatório'),
-  CombatDifficulty: Yup.string().required('Dificuldade é obrigatória'),
+  name: Yup.string().required('Nome da aula é obrigatório'),
+  description: Yup.string().required('Descrição é obrigatória'),
+  usageTemplate: Yup.string().required('Template é obrigatório'),
+  type: Yup.string().required('Tipo é obrigatório'),
+  maxPlayers: Yup.number().min(1).required('Máximo de jogadores é obrigatório'),
+  totalQuestSteps: Yup.number().min(1).required('Total de etapas é obrigatório'),
+  combatDifficulty: Yup.string().required('Dificuldade é obrigatória'),
+  productId: Yup.string().required('Produto é obrigatório'),
+  contentId: Yup.string().required('Conteúdo é obrigatório'),
 });
 
 const CreateLessonForm: FC<Props> = ({ onSuccess }) => {
-  const formik = useFormik<Quest>({
+  const [products, setProducts] = useState<ProductDto[]>([]);
+  const [contents, setContents] = useState<ContentDto[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [loadingContents, setLoadingContents] = useState(false);
+
+  // Carregar produtos ao montar o componente
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await getAllProducts();
+        setProducts(response.data || []);
+      } catch (error) {
+        console.error('Erro ao carregar produtos:', error);
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+    fetchProducts();
+  }, []);
+
+  const formik = useFormik<QuestFormValues>({
     initialValues: {
-      Name: '',
-      Description: '',
-      UsageTemplate: 'Global',
-      Type: 'SinglePlayer',
-      MaxPlayers: 2,
-      TotalQuestSteps: 1,
-      CombatDifficulty: 'Passive',
+      name: '',
+      description: '',
+      usageTemplate: 'Global',
+      type: 'SinglePlayer',
+      maxPlayers: 2,
+      totalQuestSteps: 1,
+      combatDifficulty: 'Passive',
+      productId: '',
+      contentId: '',
     },
     validationSchema: questSchema,
     onSubmit: async (values, { setSubmitting, resetForm }) => {
@@ -41,7 +78,7 @@ const CreateLessonForm: FC<Props> = ({ onSuccess }) => {
 
         // 2. Criar uma etapa de exemplo
         const questStepData: QuestStep = {
-          name: `Etapa 1 - ${values.Name}`,
+          name: `Etapa 1 - ${values.name}`,
           description: 'Etapa inicial da aula',
           order: 1,
           npcType: 'Passive',
@@ -104,10 +141,10 @@ const CreateLessonForm: FC<Props> = ({ onSuccess }) => {
                 type="text"
                 className="form-control"
                 placeholder="Digite o nome da aula"
-                {...formik.getFieldProps('Name')}
+                {...formik.getFieldProps('name')}
               />
-              {formik.touched.Name && formik.errors.Name && (
-                <div className="text-danger">{formik.errors.Name}</div>
+              {formik.touched.name && formik.errors.name && (
+                <div className="text-danger">{formik.errors.name}</div>
               )}
             </div>
 
@@ -118,17 +155,17 @@ const CreateLessonForm: FC<Props> = ({ onSuccess }) => {
                 type="text"
                 className="form-control"
                 placeholder="Digite a descrição"
-                {...formik.getFieldProps('Description')}
+                {...formik.getFieldProps('description')}
               />
-              {formik.touched.Description && formik.errors.Description && (
-                <div className="text-danger">{formik.errors.Description}</div>
+              {formik.touched.description && formik.errors.description && (
+                <div className="text-danger">{formik.errors.description}</div>
               )}
             </div>
 
             {/* Template */}
             <div className="col-md-6 mb-7">
               <label className="form-label required">Template</label>
-              <select className="form-control" {...formik.getFieldProps('UsageTemplate')}>
+              <select className="form-control" {...formik.getFieldProps('usageTemplate')}>
                 <option value="Global">Global</option>
                 <option value="Local">Local</option>
               </select>
@@ -137,7 +174,7 @@ const CreateLessonForm: FC<Props> = ({ onSuccess }) => {
             {/* Tipo */}
             <div className="col-md-6 mb-7">
               <label className="form-label required">Tipo</label>
-              <select className="form-control" {...formik.getFieldProps('Type')}>
+              <select className="form-control" {...formik.getFieldProps('type')}>
                 <option value="SinglePlayer">SinglePlayer</option>
                 <option value="MultiPlayer">MultiPlayer</option>
               </select>
@@ -150,7 +187,7 @@ const CreateLessonForm: FC<Props> = ({ onSuccess }) => {
                 type="number"
                 className="form-control"
                 min="1"
-                {...formik.getFieldProps('MaxPlayers')}
+                {...formik.getFieldProps('maxPlayers')}
               />
             </div>
 
@@ -161,19 +198,85 @@ const CreateLessonForm: FC<Props> = ({ onSuccess }) => {
                 type="number"
                 className="form-control"
                 min="1"
-                {...formik.getFieldProps('TotalQuestSteps')}
+                {...formik.getFieldProps('totalQuestSteps')}
               />
             </div>
 
             {/* Dificuldade */}
             <div className="col-md-6 mb-7">
               <label className="form-label required">Dificuldade de Combate</label>
-              <select className="form-control" {...formik.getFieldProps('CombatDifficulty')}>
+              <select className="form-control" {...formik.getFieldProps('combatDifficulty')}>
                 <option value="Passive">Passive</option>
                 <option value="Easy">Easy</option>
                 <option value="Medium">Medium</option>
                 <option value="Hard">Hard</option>
               </select>
+            </div>
+
+            {/* Produto */}
+            <div className="col-md-6 mb-7">
+              <label className="form-label required">Produto</label>
+              <select
+                className="form-control"
+                {...formik.getFieldProps('productId')}
+                onChange={async (e) => {
+                  const productId = e.target.value;
+                  formik.setFieldValue('productId', productId);
+                  formik.setFieldValue('contentId', ''); // Limpar conteúdo ao trocar produto
+                  setContents([]);
+                  
+                  if (productId) {
+                    setLoadingContents(true);
+                    try {
+                      const contentList = await getCompatibleContents(productId);
+                      setContents(contentList);
+                    } catch (error) {
+                      console.error('Erro ao carregar conteúdos:', error);
+                    } finally {
+                      setLoadingContents(false);
+                    }
+                  }
+                }}
+                disabled={loadingProducts}
+              >
+                <option value="">
+                  {loadingProducts ? 'Carregando...' : 'Selecione um produto'}
+                </option>
+                {products.map((product) => (
+                  <option key={product.id} value={product.id}>
+                    {product.name}
+                  </option>
+                ))}
+              </select>
+              {formik.touched.productId && formik.errors.productId && (
+                <div className="text-danger">{formik.errors.productId}</div>
+              )}
+            </div>
+
+            {/* Conteúdo */}
+            <div className="col-md-6 mb-7">
+              <label className="form-label required">Conteúdo</label>
+              <select
+                className="form-control"
+                {...formik.getFieldProps('contentId')}
+                disabled={!formik.values.productId || loadingContents}
+              >
+                <option value="">
+                  {loadingContents
+                    ? 'Carregando...'
+                    : !formik.values.productId
+                    ? 'Selecione um produto primeiro'
+                    : 'Selecione um conteúdo'}
+                </option>
+                {contents.map((content) => (
+                  <option key={content.id} value={content.id}>
+                    {content.name}
+                  </option>
+                ))}
+              </select>
+              {formik.touched.contentId && formik.errors.contentId && (
+                <div className="text-danger">{formik.errors.contentId}</div>
+              )}
             </div>
           </div>
         </div>

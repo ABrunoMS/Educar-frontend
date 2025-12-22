@@ -11,6 +11,18 @@ export interface LessonType {
   content?: string; 
 }
 
+// Interface para Produto
+export interface ProductDto {
+  id: string;
+  name: string;
+}
+
+// Interface para Conteúdo
+export interface ContentDto {
+  id: string;
+  name: string;
+}
+
 // Interfaces para Quest (Aula) baseadas no modelo do backend
 export interface Quest {
   id?: string;             
@@ -24,8 +36,12 @@ export interface Quest {
   questSteps: QuestStep[];
   subjectId: string | null;
   gradeId: string | null;
+  contentId: string;       // ID do conteúdo (obrigatório)
+  productId: string;       // ID do produto (obrigatório)
   subject: string | { id?: string; name: string; [key: string]: any };  
   grade: string | { id?: string; name: string; [key: string]: any };     
+  content?: ContentDto;    // Objeto de conteúdo (retornado pelo backend)
+  product?: ProductDto;    // Objeto de produto (retornado pelo backend)
   proficiencies: string[];
 }
 

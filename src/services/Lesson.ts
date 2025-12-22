@@ -1,6 +1,6 @@
 import axios from 'axios';
 // Importe as interfaces de Aula que você definiu
-import { LessonType, Quest, QuestStep } from '@interfaces/Lesson'; 
+import { LessonType, Quest, QuestStep, ProductDto, ContentDto } from '@interfaces/Lesson'; 
 import { PaginatedResponse } from '@contexts/PaginationContext';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
@@ -34,7 +34,7 @@ export const getLessonById = (id: string): Promise<{ data: LessonType }> => {
  * @param data Dados da Quest a ser criada.
  * @returns Promessa com a resposta contendo o ID da Quest criada.
  */
-export const createQuest = (data: Quest): Promise<{ data: { id: string } }> => {
+export const createQuest = (data: any): Promise<{ data: { id: string } }> => {
   return axios.post(QUESTS_URL, data);
 };
 
@@ -119,4 +119,25 @@ export const deleteQuestStep = (id: string): Promise<any> => {
  */
 export const getBnccContents = (): Promise<{ data: any[] }> => {
   return axios.get(`${API_URL}/api/Bncc`);
+};
+
+/**
+ * Busca todos os produtos disponíveis.
+ * @returns Promessa com a lista de produtos.
+ */
+export const getAllProducts = (): Promise<PaginatedResponse<ProductDto>> => {
+  return axios
+    .get<PaginatedResponse<ProductDto>>(`${API_URL}/api/Products?pageNumber=1&pageSize=9999`)
+    .then((response) => response.data);
+};
+
+/**
+ * Busca os conteúdos compatíveis com um produto específico.
+ * @param productId ID do produto.
+ * @returns Promessa com a lista de conteúdos.
+ */
+export const getCompatibleContents = (productId: string): Promise<ContentDto[]> => {
+  return axios
+    .get<ContentDto[]>(`${API_URL}/api/Products/${productId}/contents`)
+    .then((response) => response.data);
 };
