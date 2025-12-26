@@ -166,7 +166,6 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
     usageTemplate: Yup.boolean().required('Template obrigatório'),
     type: Yup.string().required('Tipo obrigatório'),
     maxPlayers: Yup.number().min(1).required('Máximo obrigatório'),
-    totalQuestSteps: Yup.number().min(1).required('Total de etapas obrigatório'),
     combatDifficulty: Yup.string().required('Dificuldade obrigatória'),
     bncc: Yup.array(),
     productId: Yup.string().required('Produto é obrigatório'),
@@ -184,7 +183,6 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
       usageTemplate: canCreateTemplate ? (sourceTemplateId ? false : (activeData?.usageTemplate ?? false)) : false,
       type: activeData?.type || 'SinglePlayer',
       maxPlayers: activeData?.maxPlayers || 2,
-      totalQuestSteps: activeData?.totalQuestSteps || 1,
       combatDifficulty: activeData?.combatDifficulty || 'Passive',
       bncc: (isEditing && initialLesson?.proficiencies)
         ? initialLesson.proficiencies.map((p: any) => p.id || p.Id)
@@ -208,7 +206,6 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
       usageTemplate: values.usageTemplate,
       type: values.type,
       maxPlayers: values.maxPlayers,
-      totalQuestSteps: values.totalQuestSteps,
       combatDifficulty: values.combatDifficulty,
       subjectId: values.discipline,
       gradeId: values.schoolYear,
@@ -408,9 +405,6 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
             {/*<div className="col-md-4">
               <BasicField fieldName="maxPlayers" label="Máximo de Jogadores" placeholder="2" required formik={formik} type="number" />
             </div>*/}
-            <div className="col-md-4">
-              <BasicField fieldName="totalQuestSteps" label="Total de Etapas" placeholder="1" required formik={formik} type="number" />
-            </div>
             {/*<div className="col-md-6">
               <SelectField fieldName="combatDifficulty" label="Dificuldade de Combate" placeholder="---" options={[{ value: 'Passive', label: 'Passivo' }, { value: 'Easy', label: 'Fácil' }, { value: 'Medium', label: 'Médio' }, { value: 'Hard', label: 'Difícil' }]} required multiselect={false} formik={formik as FormikProps<any>} />
             </div>*/}

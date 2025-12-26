@@ -15,7 +15,6 @@ interface QuestFormValues {
   usageTemplate: string;
   type: string;
   maxPlayers: number;
-  totalQuestSteps: number;
   combatDifficulty: string;
   productId: string;
   contentId: string;
@@ -28,7 +27,6 @@ const questSchema = Yup.object().shape({
   usageTemplate: Yup.string().required('Template é obrigatório'),
   type: Yup.string().required('Tipo é obrigatório'),
   maxPlayers: Yup.number().min(1).required('Máximo de jogadores é obrigatório'),
-  totalQuestSteps: Yup.number().min(1).required('Total de etapas é obrigatório'),
   combatDifficulty: Yup.string().required('Dificuldade é obrigatória'),
   productId: Yup.string().required('Produto é obrigatório'),
   contentId: Yup.string().required('Conteúdo é obrigatório'),
@@ -62,7 +60,6 @@ const CreateLessonForm: FC<Props> = ({ onSuccess }) => {
       usageTemplate: 'Global',
       type: 'SinglePlayer',
       maxPlayers: 2,
-      totalQuestSteps: 1,
       combatDifficulty: 'Passive',
       productId: '',
       contentId: '',
@@ -188,17 +185,6 @@ const CreateLessonForm: FC<Props> = ({ onSuccess }) => {
                 className="form-control"
                 min="1"
                 {...formik.getFieldProps('maxPlayers')}
-              />
-            </div>
-
-            {/* Total de Etapas */}
-            <div className="col-md-6 mb-7">
-              <label className="form-label required">Total de Etapas</label>
-              <input
-                type="number"
-                className="form-control"
-                min="1"
-                {...formik.getFieldProps('totalQuestSteps')}
               />
             </div>
 
