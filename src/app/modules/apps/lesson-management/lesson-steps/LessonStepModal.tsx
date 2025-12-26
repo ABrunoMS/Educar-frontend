@@ -11,7 +11,7 @@ interface Step {
   active: boolean
   sequence: number
   character: string
-  suggestion: string
+  statement: string
 }
 
 // Props do Modal
@@ -25,11 +25,8 @@ interface StepModalProps {
 
 const stepSchema = Yup.object().shape({
   title: Yup.string().required('O título (apelido) é obrigatório'),
-  type: Yup.string().required('O tipo de etapa é obrigatório'),
-  character: Yup.string().required('O personagem é obrigatório'),
-  sequence: Yup.number().min(1, 'A sequência deve ser 1 ou mais').required('A sequência é obrigatória'),
   active: Yup.boolean().required('O status é obrigatório'),
-  suggestion: Yup.string(),
+  statement: Yup.string(),
 })
 
 const StepModal: FC<StepModalProps> = ({ show, handleClose, step, lessonSequence, onSave }) => {
@@ -38,11 +35,11 @@ const StepModal: FC<StepModalProps> = ({ show, handleClose, step, lessonSequence
   const formik = useFormik({
     initialValues: {
       title: step?.title || '',
-      type: step?.type || '',
+      type: step?.type || 'Npc',
       active: step?.active ?? true,
       sequence: step?.sequence || lessonSequence,
-      character: step?.character || '',
-      suggestion: step?.suggestion || '',
+      character: step?.character || 'Passive',
+      statement: step?.statement || '',
     },
     validationSchema: stepSchema,
     enableReinitialize: true,
@@ -83,60 +80,8 @@ const StepModal: FC<StepModalProps> = ({ show, handleClose, step, lessonSequence
               )}
             </div>
 
-            {/* Tipo */}
-            <div className='col-md-6 fv-row mb-5'>
-              <label className='form-label required text-gray-700 dark:text-gray-300'>Tipo da Etapa</label>
-              <select
-                className='form-select form-select-solid'
-                {...formik.getFieldProps('type')}
-              >
-                <option value=''>Selecione o Tipo</option>
-                <option value='Item'>Item</option>
-                <option value='Npc'>Npc</option>
-              </select>
-              {formik.touched.type && formik.errors.type && (
-                <div className='fv-plugins-message-container'>
-                  <div className='fv-help-block'>{formik.errors.type}</div>
-                </div>
-              )}
-            </div>
-
-            {/* Sequência */}
-            <div className='col-md-4 fv-row mb-5'>
-              <label className='form-label required text-gray-700 dark:text-gray-300'>Sequência</label>
-              <input
-                type='number'
-                className='form-control form-control-solid'
-                {...formik.getFieldProps('sequence')}
-              />
-              {formik.touched.sequence && formik.errors.sequence && (
-                <div className='fv-plugins-message-container'>
-                  <div className='fv-help-block'>{formik.errors.sequence}</div>
-                </div>
-              )}
-            </div>
-
-            {/* Personagem */}
-            <div className='col-md-4 fv-row mb-5'>
-              <label className='form-label required text-gray-700 dark:text-gray-300'>Tipo de NPC</label>
-              <select
-                className='form-select form-select-solid'
-                {...formik.getFieldProps('character')}
-              >
-                <option value=''>Selecione o Tipo de NPC</option>
-                <option value='Passive'>Passive</option>
-                <option value='Enemy'>Enemy</option>
-                <option value='Friend'>Friend</option>
-              </select>
-              {formik.touched.character && formik.errors.character && (
-                <div className='fv-plugins-message-container'>
-                  <div className='fv-help-block'>{formik.errors.character}</div>
-                </div>
-              )}
-            </div>
-
             {/* Checkbox Ativo */}
-            <div className='col-md-4 fv-row mb-5 pt-10'>
+            <div className='col-md-6 fv-row mb-5 pt-10'>
               <div className='form-check form-check-custom form-check-solid'>
                 <input
                   className='form-check-input'
@@ -152,18 +97,18 @@ const StepModal: FC<StepModalProps> = ({ show, handleClose, step, lessonSequence
             </div>
           </div>
 
-          {/* Sugestões */}
+          {/* Enunciado */}
           <div className='fv-row mb-5'>
-            <label className='form-label text-gray-700 dark:text-gray-300'>Sugestões</label>
+            <label className='form-label text-gray-700 dark:text-gray-300'>Enunciado</label>
             <textarea
               className='form-control form-control-solid'
               rows={3}
-              placeholder='Sugestões de conteúdo ou links...'
-              {...formik.getFieldProps('suggestion')}
+              placeholder='Enunciado da etapa...'
+              {...formik.getFieldProps('statement')}
             />
-            {formik.touched.suggestion && formik.errors.suggestion && (
+            {formik.touched.statement && formik.errors.statement && (
               <div className='fv-plugins-message-container'>
-                <div className='fv-help-block'>{formik.errors.suggestion}</div>
+                <div className='fv-help-block'>{formik.errors.statement}</div>
               </div>
             )}
           </div>

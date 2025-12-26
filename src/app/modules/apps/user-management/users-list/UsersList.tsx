@@ -139,10 +139,7 @@ const UsersList = () => {
 
 const UsersListWrapper = () => (
   <ListViewProvider>
-    <ToolbarWrapper />
-    <Content>
-      <UsersList />
-    </Content>
+    <UsersList />
   </ListViewProvider>
 )
 

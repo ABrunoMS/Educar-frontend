@@ -17,7 +17,7 @@ interface PageStep {
  active: boolean;
  sequence: number;
  character: string;
- suggestion: string;
+ statement: string;
  questions: Question[];
 }
 
@@ -162,7 +162,7 @@ const LessonStepPage: FC = () => {
               active: true,
               sequence: index + 1,
               character: questStep.npcType || 'Passive',
-              suggestion: questStep.description || '',
+              statement: questStep.description || '',
               questions: (questStep.contents || []).map((content, qIndex) => ({ // Mapeia questões
                 id: content.id || Date.now() + qIndex,
                 activityType: content.questStepContentType || 'Exercise',
@@ -261,7 +261,7 @@ const LessonStepPage: FC = () => {
     setIsSaving(true);
     const stepPayload = {
         name: stepData.title,
-        description: stepData.suggestion || stepData.title,
+        description: stepData.statement || stepData.title,
         order: stepData.sequence,
         npcType: stepData.character || 'Passive',
         npcBehaviour: 'StandStill', // Valor padrão
@@ -396,7 +396,7 @@ const LessonStepPage: FC = () => {
           // Monta o payload (dados) da etapa
           const questStepData = {
              name: step.title,
-             description: step.suggestion || step.title || 'Descrição da etapa',
+             description: step.statement || step.title || 'Descrição da etapa',
              order: step.sequence,
              npcType: step.character || 'Passive',
              npcBehaviour: 'StandStill',
