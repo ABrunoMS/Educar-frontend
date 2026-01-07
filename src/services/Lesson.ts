@@ -8,6 +8,7 @@ const API_URL = import.meta.env.VITE_API_BASE_URL;
 const LESSONS_URL = `${API_URL}/api/Lessons`; 
 const QUESTS_URL = `${API_URL}/api/Quests`;
 const FULLSTEPS_URL = `${API_URL}/api/fullsteps/full`;
+const FULLSTEPS_BULK_URL = `${API_URL}/api/fullsteps/full/bulk`;
 
 /**
  * Busca a lista completa de aulas (ou as primeiras 1000) para uso em Selects, etc.
@@ -140,4 +141,59 @@ export const getCompatibleContents = (productId: string): Promise<ContentDto[]> 
   return axios
     .get<ContentDto[]>(`${API_URL}/api/Products/${productId}/contents`)
     .then((response) => response.data);
+};
+
+/**
+ * Atualiza uma etapa existente deletando-a e recriando com conteúdos completos.
+ * Esta é uma solução alternativa já que não existe um endpoint UpdateFullQuestStep.
+ * @param stepId ID da etapa a ser atualizada.
+ * @param data Dados completos da etapa com conteúdos.
+ * @returns Promessa com o ID da nova etapa criada.
+ */
+export const updateQuestStepWithContents = async (stepId: string, data: any): Promise<{ data: { id: string } }> => {
+  // 1. Deleta a etapa antiga (cascata deleta os conteúdos)
+  await deleteQuestStep(stepId);
+  
+  // 2. Cria uma nova etapa com todos os conteúdos
+  return createQuestStep(data);
+};
+
+/**
+ * Cria múltiplas etapas (QuestSteps) de uma vez para uma Quest.
+ * @param questId ID da Quest.
+ * @param steps Array com os dados das etapas a serem criadas.
+ * @returns Promessa com array de IDs das etapas criadas.
+ */
+export const createQuestStepsBulk = (questId: string, steps: any[]): Promise<{ data: { id: string }[] }> => {
+  return axios.post(FULLSTEPS_BULK_URL, {
+    questId,
+    steps
+  });
+};
+
+/**
+ * Substitui todas as etapas de uma Quest.
+ * Deleta todas as etapas existentes e cria novas com os conteúdos fornecidos.
+ * @param questId ID da Quest.
+ * @param existingStepIds IDs das etapas existentes (para deletar).
+ * @param newSteps Dados das novas etapas com conteúdos.
+ * @returns Promessa com array de IDs das novas etapas criadas.
+ */
+export const replaceAllQuestSteps = async (
+  questId: string, 
+  existingStepIds: string[], 
+  newSteps: any[]
+): Promise<{ data: { id: string }[] }> => {
+  // 1. Deleta todas as etapas antigas (se houver)
+  if (existingStepIds && existingStepIds.length > 0) {
+    await Promise.all(existingStepIds.map(id => 
+      deleteQuestStep(id).catch(err => {
+        console.warn(`Aviso: Não foi possível deletar etapa ${id}:`, err.message);
+        // Continua mesmo se falhar (a etapa pode não existir mais)
+      })
+    ));
+  }
+  
+  // 2. Cria todas as novas etapas de uma vez usando bulk
+  return createQuestStepsBulk(questId, newSteps);
 };
