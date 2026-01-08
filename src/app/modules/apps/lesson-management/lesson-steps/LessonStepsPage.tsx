@@ -7,7 +7,7 @@ import clsx from 'clsx';
 import StepModal from './LessonStepModal';
 import QuestionModal from './LessonQuestionModal';
 import { LessonType, Step, Question, AnswerOption, Quest, QuestStep } from '@interfaces/Lesson';
-import { createQuestStep, getQuestById, updateQuestStep, deleteQuestStep } from '@services/Lesson';  // Importa as funções para salvar e buscar aula
+import { createQuestStep, getQuestById, updateQuestStep, deleteQuestStep, replaceAllQuestSteps } from '@services/Lesson';  // Importa as funções para salvar e buscar aula
 
 
 interface PageStep {
@@ -155,7 +155,14 @@ const LessonStepPage: FC = () => {
           console.log('QuestSteps do backend:', questSteps);
           
           if (Array.isArray(questSteps) && questSteps.length > 0) {
-            const mappedSteps: PageStep[] = questSteps.map((questStep: QuestStep, index: number) => ({
+            console.log('Mapeando', questSteps.length, 'etapas...');
+            const mappedSteps: PageStep[] = questSteps.map((questStep: QuestStep, index: number) => {
+              console.log(`Etapa ${index + 1}:`, questStep.name, '- Contents:', questStep.contents?.length || 0);
+              if (questStep.contents && questStep.contents.length > 0) {
+                console.log('  Contents completos:', JSON.stringify(questStep.contents, null, 2));
+              }
+              
+              return {
               id: questStep.id || null,
               title: questStep.name || '',
               type: questStep.questStepType || 'Npc',
@@ -183,7 +190,7 @@ const LessonStepPage: FC = () => {
                 shuffleAnswers: false,
                 alwaysCorrect: false,
               }))
-          }));
+            }});
           setSteps(mappedSteps);
           } else {
             // Aula criada pela primeira vez: garantir que steps fique vazio
@@ -238,7 +245,7 @@ const LessonStepPage: FC = () => {
   // States QuestionModal
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
- 
+  const [nextQuestionSequence, setNextQuestionSequence] = useState(1);
 
   const nextSequence = useMemo(() => {
     return steps.length > 0 ? Math.max(...steps.map(s => s.sequence)) + 1 : 1;
@@ -255,49 +262,86 @@ const LessonStepPage: FC = () => {
     setEditingStep(null);
   };
 
-  const handleSaveStep = async (stepData: Omit<Step, 'id' | 'questions'>) => {
-    if (!lessonId) return;
+  const handleSaveStep = async (stepData: Omit<PageStep, 'id' | 'questions'>) => {
+     if (!lessonId) return;
     
-    setIsSaving(true);
-    const stepPayload = {
-        name: stepData.title,
-        description: stepData.statement || stepData.title,
-        order: stepData.sequence,
-        npcType: stepData.character || 'Passive',
-        npcBehaviour: 'StandStill', // Valor padrão
-        type: stepData.type || 'Npc',
-        questId: lessonId,
-        contents: [] // Salva a etapa primeiro, depois as questões
-    };
+     setIsSaving(true);
+    
+    
+    const targetSequence = stepData.sequence;
 
-    try {
-        if (editingStep && editingStep.id) {
-            // --- MODO DE ATUALIZAÇÃO ---
-            await updateQuestStep(editingStep.id, stepPayload); // Usa updateQuestStep
-            setSteps(steps.map(s =>
-                s.id === editingStep.id
-                ? { ...s, ...stepData } // Atualiza o estado local
-                : s
-            ));
-        } else {
-            // --- MODO DE CRIAÇÃO ---
-            const response = await createQuestStep(stepPayload); // Usa createQuestStep
-            const newStep: PageStep = { 
-              ...stepData, 
-              id: response.data.id, // <-- Usa o ID real retornado pela API
-              questions: [] 
+     const stepPayload = {
+          name: stepData.title,
+          description: stepData.statement || stepData.title,
+          order: targetSequence, // Usa a sequência nova
+          npcType: stepData.character || 'Passive',
+          npcBehaviour: 'StandStill', 
+          questStepType: stepData.type || 'Npc', // Campo correto: questStepType
+          questId: lessonId,
+          contents: [] 
+     };
+
+     try {
+        let savedStep: PageStep;
+
+          if (editingStep && editingStep.id) {
+               // --- MODO DE ATUALIZAÇÃO ---
+            // 1. Atualiza a etapa atual no backend imediatamente
+               await updateQuestStep(editingStep.id, stepPayload);
+            
+            // 2. Prepara o objeto atualizado para o estado local
+            savedStep = { 
+                ...editingStep, 
+                ...stepData, 
+                sequence: targetSequence 
             };
-            setSteps([...steps, newStep].sort((a, b) => a.sequence - b.sequence));
-        }
-        handleCloseStepModal();
-    } catch (error) {
-        console.error("Erro ao salvar etapa:", error);
-        alert("Erro ao salvar etapa.");
-    } finally {
-        setIsSaving(false);
-    }
-  };
+          } else {
+           
+               const response = await createQuestStep(stepPayload);
+            
+            
+               savedStep = { 
+                  ...stepData, 
+                  id: response.data.id, 
+              sequence: targetSequence,
+                  questions: [] 
+               };
+          }
 
+        
+        setSteps(prevSteps => {
+            // A. Removemos a etapa que estamos salvando da lista (para não duplicar/colidir com ela mesma)
+            const otherSteps = prevSteps.filter(s => s.id !== savedStep.id);
+
+            // B. Verificamos se existe conflito de sequência
+            const hasCollision = otherSteps.some(s => s.sequence === targetSequence);
+
+            let newStepList = otherSteps;
+
+            // C. Se houver colisão, aumentamos +1 em quem estiver na frente
+            if (hasCollision) {
+                newStepList = otherSteps.map(s => {
+                    // Se a etapa da lista for >= à sequência nova, ela sobe um número
+                    if (s.sequence >= targetSequence) {
+                        return { ...s, sequence: s.sequence + 1 };
+                    }
+                    return s;
+                });
+            }
+
+            // D. Adiciona a etapa salva e reordena visualmente
+            return [...newStepList, savedStep].sort((a, b) => a.sequence - b.sequence);
+        });
+
+          handleCloseStepModal();
+
+     } catch (error) {
+          console.error("Erro ao salvar etapa:", error);
+          alert("Erro ao salvar etapa.");
+     } finally {
+          setIsSaving(false);
+     }
+   };
   const handleRemoveStep = async (stepId: string | null) => {
     if (!stepId) { // Se for uma etapa nova (id=null) que ainda não foi salva
       setSteps(steps.filter(s => s.id !== null));
@@ -322,6 +366,15 @@ const LessonStepPage: FC = () => {
       alert("Salve a etapa primeiro antes de adicionar questões.");
       return;
     }
+    const step = steps.find(s => s.id === stepId);
+    let nextSeq = 1;
+
+    // Se a etapa existe e tem questões, pegamos a maior sequência e somamos 1
+    if (step && step.questions && step.questions.length > 0) {
+        const maxSeq = Math.max(...step.questions.map(q => q.sequence));
+        nextSeq = maxSeq + 1;
+    }
+     setNextQuestionSequence(nextSeq);
      setCurrentStepId(stepId);
      setEditingQuestion(question);
      setIsQuestionModalOpen(true);
@@ -333,39 +386,68 @@ const LessonStepPage: FC = () => {
     setCurrentStepId(null);
   };
 
-  const handleSaveQuestion = (newQuestionData: Partial<Question>) => {
+const handleSaveQuestion = (newQuestionData: Partial<Question>) => {
     if (currentStepId === null) return;
 
-    setSteps(
-      steps.map(step => {
+    // Pega a sequência que o usuário digitou no modal
+    const targetSequence = newQuestionData.sequence || 1;
+
+    setSteps(prevSteps => 
+      prevSteps.map(step => {
+        // Encontramos a etapa que está sendo editada
         if (step.id === currentStepId) {
-          if (editingQuestion) {
-            // Atualiza questão existente
-            const updatedQuestions = step.questions.map(q =>
-              q.id === newQuestionData.id
-                ? { ...q, ...newQuestionData } as Question
-                : q
+            
+            // 1. Removemos a questão que está sendo salva da lista temporária
+            // (para não compararmos ela com ela mesma se for edição)
+            let otherQuestions = step.questions.filter(q => 
+                editingQuestion ? q.id !== editingQuestion.id : true
             );
-            return { ...step, questions: updatedQuestions };
-          } else {
-            // Adiciona nova questão
-            const finalQuestion: Question = {
-              id: Date.now(),
-              title: newQuestionData.title || 'Nova Questão',
-              activityType: newQuestionData.activityType || 'Pergunta',
-              sequence: step.questions.length + 1,
-              questionType: newQuestionData.questionType || 'Escolha Única',
-              weight: newQuestionData.weight || 1,
-              isActive: newQuestionData.isActive ?? true,
-              contentImage: newQuestionData.contentImage || '',
-              description: newQuestionData.description || '',
-              comments: newQuestionData.comments || '',
-              options: newQuestionData.options || [],
-              shuffleAnswers: newQuestionData.shuffleAnswers ?? false,
-              alwaysCorrect: newQuestionData.alwaysCorrect ?? false,
-            };
-            return { ...step, questions: [...step.questions, finalQuestion] };
-          }
+
+            // 2. Verificamos se existe colisão na sequência (alguém já usa esse número?)
+            const hasCollision = otherQuestions.some(q => q.sequence === targetSequence);
+
+            // 3. Se houver colisão, empurramos as questões existentes para frente (+1)
+            if (hasCollision) {
+                otherQuestions = otherQuestions.map(q => {
+                    // Se a questão já existente tem uma sequência igual ou maior que a nova,
+                    // ela precisa "dar espaço" e subir um número.
+                    if (q.sequence >= targetSequence) {
+                        return { ...q, sequence: q.sequence + 1 };
+                    }
+                    return q;
+                });
+            }
+
+            // 4. Montamos o objeto final da questão salva
+            let finalQuestion: Question;
+            
+            if (editingQuestion) {
+                 // --- MODO EDIÇÃO ---
+                 // Mantém os dados antigos e sobrepõe com os novos
+                 finalQuestion = { ...editingQuestion, ...newQuestionData, sequence: targetSequence } as Question;
+            } else {
+                 // --- MODO CRIAÇÃO ---
+                 finalQuestion = {
+                    id: Date.now(), // ID temporário para o front
+                    title: newQuestionData.title || 'Nova Questão',
+                    activityType: newQuestionData.activityType || 'Exercise',
+                    sequence: targetSequence,
+                    questionType: newQuestionData.questionType || 'MultipleChoice',
+                    weight: newQuestionData.weight || 1,
+                    isActive: newQuestionData.isActive ?? true,
+                    contentImage: newQuestionData.contentImage || '',
+                    description: newQuestionData.description || '',
+                    comments: newQuestionData.comments || '',
+                    options: newQuestionData.options || [],
+                    shuffleAnswers: newQuestionData.shuffleAnswers ?? false,
+                    alwaysCorrect: newQuestionData.alwaysCorrect ?? false,
+                 };
+            }
+
+            // 5. Junta a lista atualizada com a questão salva e reordena visualmente
+            const updatedList = [...otherQuestions, finalQuestion].sort((a, b) => a.sequence - b.sequence);
+
+            return { ...step, questions: updatedList };
         }
         return step;
       })
@@ -373,7 +455,6 @@ const LessonStepPage: FC = () => {
 
     handleCloseQuestionModal();
   };
-
   const handleSaveLesson = async () => {
     if (!lessonId) {
       alert('ID da aula não encontrado!');
@@ -387,59 +468,141 @@ const LessonStepPage: FC = () => {
 
     setIsSaving(true);
     try {
-      console.log('Iniciando salvamento das etapas...', { lessonId, steps });
+      console.log('=== INICIANDO SALVAMENTO COMPLETO ===');
+      console.log('LessonId:', lessonId);
+      console.log('Total de etapas:', steps.length);
       
-        // Usamos Promise.all para rodar as atualizações em paralelo
-        await Promise.all(steps.map((step, index) => {
-          console.log(`Processando etapa ${index + 1}:`, step);
+      // Coleta todos os IDs das etapas existentes (do backend)
+      const existingStepIds = steps
+        .filter(step => step.id && typeof step.id === 'string' && step.id.includes('-'))
+        .map(step => step.id as string);
+      
+      console.log('IDs de etapas existentes para deletar:', existingStepIds);
+      
+      // Monta o payload de todas as etapas com seus conteúdos
+      const stepsPayload = steps.map((step, index) => {
+        console.log(`\n--- Processando etapa ${index + 1}/${steps.length} ---`);
+        console.log('Etapa título:', step.title);
+        console.log('Total de questões:', step.questions?.length || 0);
 
-          // Monta o payload (dados) da etapa
-          const questStepData = {
-             name: step.title,
-             description: step.statement || step.title || 'Descrição da etapa',
-             order: step.sequence,
-             npcType: step.character || 'Passive',
-             npcBehaviour: 'StandStill',
-             type: step.type || 'Npc',
-             questId: lessonId,
-             contents: step.questions?.map((question) => ({
-               questStepContentType: question.activityType || 'Exercise',
-               questionType: question.questionType || 'MultipleChoice',
-               description: question.description || question.title || 'Pergunta sem descrição',
-               weight: question.weight || 1,
-               expectedAnswers: {
-                  questionType: question.questionType || 'MultipleChoice',
-                  options: question.options?.map(opt => ({
-                    description: opt.text || '',
-                    is_correct: opt.isCorrect || false
-                  })) || []
-               }
-             })) || []
-          };
-
-          // --- LÓGICA DA CORREÇÃO ---
-          // Se a etapa tem um ID, ela já existe no backend -> ATUALIZAR
-          if (step.id) {
-             console.log(`Atualizando etapa ID: ${step.id}`);
-             return updateQuestStep(step.id, questStepData);
-          } else {
-             // Se a etapa não tem ID, ela é nova -> CRIAR
-             // (Nota: A sua lógica atual de salvar modal já deve dar um ID)
-             console.log(`Criando nova etapa: ${step.title}`);
-             return createQuestStep(questStepData);
+        // Monta o ExpectedAnswers para cada questão
+        const contents = (step.questions || []).map((question) => {
+          console.log('  -> Mapeando questão:', question.title);
+          
+          // IMPORTANTE: O backend requer o campo "questionType" no expectedAnswers para deserialização
+          let expectedAnswers: any;
+          
+          switch (question.questionType) {
+            case 'Dissertative':
+              expectedAnswers = { 
+                questionType: 'Dissertative',
+                text: question.description || question.title || 'Resposta esperada' // Backend valida que text não pode ser vazio
+              };
+              break;
+            case 'MultipleChoice':
+              const mcOptions = (question.options || []).map(opt => ({
+                description: opt.text || 'Opção sem descrição', // Backend valida que description não pode ser vazio
+                is_correct: opt.isCorrect || false
+              }));
+              // Backend valida que deve ter pelo menos uma opção correta
+              const hasCorrectOption = mcOptions.some(opt => opt.is_correct);
+              if (!hasCorrectOption && mcOptions.length > 0) {
+                mcOptions[0].is_correct = true; // Marca a primeira como correta se nenhuma estiver marcada
+              }
+              expectedAnswers = {
+                questionType: 'MultipleChoice',
+                options: mcOptions
+              };
+              break;
+            case 'TrueOrFalse':
+              expectedAnswers = {
+                questionType: 'TrueOrFalse',
+                options: (question.options || []).map(opt => ({
+                  description: opt.text || 'Opção sem descrição',
+                  is_correct: opt.isCorrect || false
+                }))
+              };
+              break;
+            case 'SingleChoice':
+              expectedAnswers = {
+                questionType: 'SingleChoice',
+                option: question.options && question.options.length > 0 
+                  ? (question.options[0].text || 'Opção sem descrição')
+                  : 'Opção sem descrição' // Backend valida que option não pode ser vazio
+              };
+              break;
+            default:
+              expectedAnswers = {
+                questionType: 'MultipleChoice',
+                options: (question.options || []).map(opt => ({
+                  description: opt.text || 'Opção sem descrição',
+                  is_correct: opt.isCorrect || false
+                }))
+              };
           }
-          // --- FIM DA CORREÇÃO ---
-        }));
+          
+          return {
+            questStepContentType: question.activityType || 'Exercise',
+            questionType: question.questionType || 'MultipleChoice',
+            description: question.description || question.title || 'Pergunta sem descrição',
+            weight: question.weight || 1,
+            expectedAnswers: expectedAnswers
+          };
+        });
 
-        alert('Aula salva com sucesso!');
-        navigate('/apps/lesson-management/lessons');
-     } catch (error: any) {
-        console.error('Erro detalhado ao salvar aula:', error);
+        console.log(`  -> Total de contents mapeados: ${contents.length}`);
+        console.log(`  -> Contents:`, JSON.stringify(contents, null, 2));
+
+        // Retorna o payload da etapa no formato esperado pelo bulk endpoint
+        const stepPayload = {
+          name: step.title,
+          description: step.statement || step.title || 'Descrição da etapa',
+          order: step.sequence,
+          npcType: step.character || 'Passive',
+          npcBehaviour: 'StandStill',
+          type: step.type || 'Npc', // Note: aqui é "type", não "questStepType" para o FullQuestStepDto
+          contents: contents,
+          npcIds: [],
+          mediaIds: [],
+          itemIds: []
+        };
+        
+        console.log(`  -> Payload da etapa completo:`, JSON.stringify(stepPayload, null, 2));
+        return stepPayload;
+      });
+
+      console.log('\n=== PAYLOAD COMPLETO PARA BULK ===');
+      console.log(JSON.stringify({ questId: lessonId, steps: stepsPayload }, null, 2));
+
+      // Deleta todas as etapas antigas e cria as novas usando o endpoint bulk
+      const response = await replaceAllQuestSteps(lessonId, existingStepIds, stepsPayload);
+      
+      console.log('\n=== SALVAMENTO CONCLUÍDO COM SUCESSO ===');
+      console.log('Novas etapas criadas:', response.data);
+      
+      alert('Aula e todas as questões foram salvas com sucesso!');
+      navigate('/apps/lesson-management/lessons');
+    } catch (error: any) {
+      console.error('❌ ERRO DETALHADO AO SALVAR:', error);
+      console.error('Resposta do servidor:', error.response?.data);
+      console.error('Status:', error.response?.status);
+      console.error('Headers:', error.response?.headers);
+      
+      // Tenta extrair detalhes de validação se existirem
+      const validationErrors = error.response?.data?.errors || error.response?.data?.Errors;
+      if (validationErrors) {
+        console.error('Erros de validação detalhados:', validationErrors);
+        const errorMessages = Object.entries(validationErrors)
+          .map(([field, messages]: [string, any]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+          .join('\n');
+        alert(`Erro de validação:\n\n${errorMessages}`);
+      } else {
         alert(`Erro ao salvar aula: ${error.response?.data?.message || error.message}`);
-     } finally {
-        setIsSaving(false);
-     }
-   };
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // --- Render Step Cards ---
   const renderStepCard = (step: PageStep, index: number) => (
@@ -770,6 +933,7 @@ const LessonStepPage: FC = () => {
             question={editingQuestion}
             onSave={handleSaveQuestion}
             stepTitle={steps.find(s => s.id === currentStepId)?.title || 'Etapa'}
+            defaultSequence={nextQuestionSequence}
           />
         )}
       </div>

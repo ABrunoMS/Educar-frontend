@@ -365,70 +365,67 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
   }
 
   return (
+
     <div className="w-100">
       <form onSubmit={formik.handleSubmit} className="form pb-8 d-flex flex-column gap-4" noValidate>
-        
-        {/* Campos Básicos */}
-        <div className="bg-body rounded-2xl shadow-sm p-4">
-          <h6 className="fw-semibold text-muted mb-3">Informações básicas</h6>
+        {/* HEADER DISCRETO */}
+        <div className="d-flex align-items-center gap-3 mb-4">
+          <span className="bg-light rounded-circle p-3 d-flex align-items-center justify-content-center" style={{ width: 48, height: 48 }}>
+            <i className="bi bi-journal-plus fs-3 text-gray-600"></i>
+          </span>
+          <div>
+            <h2 className="fw-bold mb-0 text-gray-800">Criar Aula</h2>
+            <div className="text-muted fs-6">Preencha os campos para criar uma nova aula. Os campos obrigatórios estão marcados com <span className='text-danger'>*</span>.</div>
+          </div>
+        </div>
+
+        {/* CARD: Informações Básicas */}
+        <div className="bg-body rounded-3 shadow-sm p-4 animated-card mb-2 border border-gray-200">
+          <div className="d-flex align-items-center mb-3 gap-2">
+            <i className="bi bi-info-circle text-gray-500 fs-5"></i>
+            <h5 className="fw-bold mb-0 text-gray-700">Informações Básicas</h5>
+          </div>
           <div className="row g-4">
             <div className="col-md-6">
               <BasicField fieldName="name" label="Nome da Aula" placeholder="Digite o nome da aula" required formik={formik} />
             </div>
             <div className="col-md-6">
-              <SelectField fieldName="schoolYear" label="Ano escolar" placeholder={isLoadingSchoolYears ? "Carregando..." : "Selecione..."} options={schoolYears} required multiselect={false} formik={formik as FormikProps<any>} loading={isLoadingSchoolYears} />
+              <SelectField fieldName="schoolYear" label="Ano escolar" placeholder={isLoadingSchoolYears ? "Carregando..." : "Selecione..."} options={schoolYears} required multiselect={false} formik={formik as FormikProps<any>} />
             </div>
             <div className="col-md-6">
-              <SelectField fieldName="discipline" label="Disciplina" placeholder={isLoadingDisciplines ? "Carregando..." : "Selecione..."} options={disciplines} required multiselect={false} formik={formik as FormikProps<any>} loading={isLoadingDisciplines} />
+              <SelectField fieldName="discipline" label="Disciplina" placeholder={isLoadingDisciplines ? "Carregando..." : "Selecione..."} options={disciplines} required multiselect={false} formik={formik as FormikProps<any>} />
             </div>
-           {/* <div className="col-md-6">
-              <SelectField fieldName="type" label="Tipo da Aula" placeholder="---" options={[{ value: 'SinglePlayer', label: 'Individual' }, { value: 'MultiPlayer', label: 'Multiplayer' }]} required multiselect={false} formik={formik as FormikProps<any>} />
-            </div>*/}
             <div className="col-12">
               <BasicField fieldName="description" label="Descrição" placeholder="Descrição da aula" required formik={formik} rows={2} />
             </div>
           </div>
         </div>
 
-        {/* Configurações */}
-        <div className="bg-body rounded-2xl shadow-sm p-4">
-          <h6 className="fw-semibold text-muted mb-3">Configurações da Aula</h6>
+        {/* CARD: Configurações da Aula */}
+        <div className="bg-body rounded-3 shadow-sm p-4 animated-card mb-2 border border-gray-200">
+          <div className="d-flex align-items-center mb-3 gap-2">
+            <i className="bi bi-gear text-gray-500 fs-5"></i>
+            <h5 className="fw-bold mb-0 text-gray-700">Configurações da Aula</h5>
+          </div>
           <div className="row g-4">
             {canCreateTemplate && (
-              <div className="col-md-4 d-flex align-items-center pt-5">
+              <div className="col-md-4 d-flex align-items-center pt-3">
                 <div className="form-check form-switch form-check-custom form-check-solid">
                   <input className="form-check-input" type="checkbox" id="usageTemplateToggle" name="usageTemplate" checked={formik.values.usageTemplate} onChange={formik.handleChange} onBlur={formik.handleBlur} />
                   <label className="form-check-label ms-3 text-gray-700" htmlFor="usageTemplateToggle">Template Global</label>
                 </div>
               </div>
             )}
-            {/*<div className="col-md-4">
-              <BasicField fieldName="maxPlayers" label="Máximo de Jogadores" placeholder="2" required formik={formik} type="number" />
-            </div>*/}
-            {/*<div className="col-md-6">
-              <SelectField fieldName="combatDifficulty" label="Dificuldade de Combate" placeholder="---" options={[{ value: 'Passive', label: 'Passivo' }, { value: 'Easy', label: 'Fácil' }, { value: 'Medium', label: 'Médio' }, { value: 'Hard', label: 'Difícil' }]} required multiselect={false} formik={formik as FormikProps<any>} />
-            </div>*/}
           </div>
         </div>
 
-        {/* Escola e Turma (Opcionais na Edição/Template) */}
-       {/* <div className="bg-body rounded-2xl shadow-sm p-4">
-            <h6 className="fw-semibold text-muted mb-3">Escola e Turma</h6>
-            <div className="row g-4">
-              <div className="col-md-6">
-                <SelectField fieldName="school" label="Escola" placeholder="---" options={schoolOptions} required={false} multiselect={false} formik={formik as FormikProps<any>} loading={isLoadingSchools} />
-              </div>
-              <div className="col-md-6">
-                <SelectField fieldName="class" label="Turma" placeholder={formik.values.school ? '---' : 'Selecione uma escola primeiro'} options={classOptions} required={false} multiselect={false} formik={formik as FormikProps<any>} loading={isLoadingClasses} isDisabled={!formik.values.school || isLoadingClasses} />
-              </div>
-            </div>
-        </div>*/}
-
-        {/* Produto e Conteúdo */}
-        <div className="bg-body rounded-2xl shadow-sm p-4">
-          <h6 className="fw-semibold text-muted mb-3">Produto e Conteúdo</h6>
+        {/* CARD: Produto e Conteúdo */}
+        <div className="bg-body rounded-3 shadow-sm p-4 animated-card mb-2 border border-gray-200">
+          <div className="d-flex align-items-center mb-3 gap-2">
+            <i className="bi bi-box-seam text-gray-500 fs-5"></i>
+            <h5 className="fw-bold mb-0 text-gray-700">Produto e Conteúdo</h5>
+          </div>
           <div className="row g-4">
-            {/* Coluna de Produto */}
             <div className="col-md-6">
               <label className="form-label fw-bold required">Produto</label>
               {isLoadingProducts && (
@@ -463,8 +460,6 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
                 </div>
               )}
             </div>
-
-            {/* Coluna de Conteúdo */}
             <div className="col-md-6">
               <label className="form-label fw-bold required">Conteúdo</label>
               {isLoadingContents && (
@@ -508,12 +503,14 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
           </div>
         </div>
 
-        {/* BNCC */}
-        <div className="bg-body rounded-2xl shadow-sm p-4">
-          <h6 className="fw-semibold text-muted mb-3">Diretrizes</h6>
+        {/* CARD: Diretrizes BNCC */}
+        <div className="bg-body rounded-3 shadow-sm p-4 animated-card mb-2 border border-gray-200">
+          <div className="d-flex align-items-center mb-3 gap-2">
+            <i className="bi bi-bookmark-check text-gray-500 fs-5"></i>
+            <h5 className="fw-bold mb-0 text-gray-700">Diretrizes BNCC</h5>
+          </div>
           <div className="row g-4">
             <div className="col-12">
-              {/* Renderiza tags BNCC fora do campo de input */}
               {formik.values.bncc && formik.values.bncc.length > 0 && (
                 <div className="d-flex flex-wrap mb-2 gap-2">
                   {formik.values.bncc.map((bnccId: string) => {
@@ -556,12 +553,13 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
           </div>
         </div>
 
-        <div className="d-flex justify-content-end gap-3 mt-3">
-          <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => { if (onFormSubmit) onFormSubmit(); else navigate('/apps/lesson-management/lessons'); }}>
-            {isEditing ? 'Cancelar' : 'Voltar'}
+        {/* FOOTER: Ações */}
+        <div className="d-flex justify-content-end gap-3 mt-4">
+          <button type="button" className="btn btn-outline-secondary btn-lg" onClick={() => { if (onFormSubmit) onFormSubmit(); else navigate('/apps/lesson-management/lessons'); }}>
+            <i className="bi bi-arrow-left me-2"></i> {isEditing ? 'Cancelar' : 'Voltar'}
           </button>
-          <button type="submit" className="btn btn-primary px-5 fw-bold" disabled={formik.isSubmitting || isLoadingSchools || isLoadingClasses}>
-            {formik.isSubmitting ? (<><span>Aguarde...</span><span className="spinner-border spinner-border-sm ms-2"></span></>) : (isEditing ? 'Atualizar aula' : 'Salvar e continuar')}
+          <button type="submit" className="btn btn-primary btn-lg px-5 fw-bold" disabled={formik.isSubmitting || isLoadingSchools || isLoadingClasses}>
+            {formik.isSubmitting ? (<><span>Aguarde...</span><span className="spinner-border spinner-border-sm ms-2"></span></>) : (<><i className="bi bi-save me-2"></i>{isEditing ? 'Atualizar aula' : 'Salvar e continuar'}</>)}
           </button>
         </div>
       </form>
