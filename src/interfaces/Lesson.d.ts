@@ -60,8 +60,11 @@ export interface QuestStepContent {
   id?: string;
   questStepContentType: string;
   questionType: string;
+  title?: string;
   description: string;
   weight: number;
+  isActive?: boolean;
+  sequence: number;
   expectedAnswers: QuestStepContentExpectedAnswers;
 }
 
@@ -73,6 +76,7 @@ export interface QuestStep {
   npcType: string;
   npcBehaviour: string;
   questStepType: string;
+  isActive?: boolean;
   questId?: string;
   contents: QuestStepContent[];
 }

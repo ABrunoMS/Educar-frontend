@@ -82,9 +82,9 @@ const LessonQuestionModal: FC<QuestionModalProps> = ({
       const finalQuestion: Question = {
         ...values,
         activityType,
-        questionType: activityType === 'Exercise' ? questionType : '',
+        questionType: activityType === 'Exercise' ? questionType : 'AlwaysCorrect',
         options: activityType === 'Exercise' && questionType !== 'Dissertative' ? answerOptions : [],
-        weight: activityType === 'Exercise' ? values.weight : 0,
+        weight: activityType === 'Exercise' ? values.weight : 1,
       }
       onSave(finalQuestion)
       setSubmitting(false)
