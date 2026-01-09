@@ -166,30 +166,37 @@ const LessonStepPage: FC = () => {
               id: questStep.id || null,
               title: questStep.name || '',
               type: questStep.questStepType || 'Npc',
-              active: true,
-              sequence: index + 1,
+              active: questStep.isActive ?? true,
+              sequence: questStep.order || (index + 1),
               character: questStep.npcType || 'Passive',
               statement: questStep.description || '',
-              questions: (questStep.contents || []).map((content, qIndex) => ({ // Mapeia questões
-                id: content.id || Date.now() + qIndex,
-                activityType: content.questStepContentType || 'Exercise',
-                sequence: qIndex + 1,
-                questionType: content.questionType || 'MultipleChoice',
-                weight: content.weight || 1,
-                isActive: true,
-                contentImage: '', // TODO: Mapear se existir
-                description: content.description || 'Descrição da questão',
-                title: content.description || 'Questão',
-                comments: '', // TODO: Mapear se existir
-                options: (content.expectedAnswers?.options || []).map((opt, oIndex) => ({
-                  id: Date.now() + oIndex, // TODO: Usar ID real da opção
-                  image: '',
-                  text: opt.description,
-                  isCorrect: opt.is_correct
-                })),
-                shuffleAnswers: false,
-                alwaysCorrect: false,
-              }))
+              questions: (questStep.contents || [])
+                .sort((a, b) => (a.sequence || 0) - (b.sequence || 0)) // Ordenar por sequence
+                .map((content, qIndex) => {
+                // Backend agora tem campos separados para title e description
+                const isInformative = content.questStepContentType === 'Informative';
+                
+                return {
+                  id: content.id || Date.now() + qIndex,
+                  activityType: content.questStepContentType || 'Exercise',
+                  sequence: content.sequence || (qIndex + 1),
+                  questionType: content.questionType || 'MultipleChoice',
+                  weight: content.weight || 1,
+                  isActive: content.isActive ?? true,
+                  contentImage: '', // TODO: Mapear se existir
+                  description: content.description || '',
+                  title: content.title || content.description || 'Questão',
+                  comments: '', // TODO: Mapear se existir
+                  options: (content.expectedAnswers?.options || []).map((opt, oIndex) => ({
+                    id: Date.now() + oIndex,
+                    image: '',
+                    text: opt.description,
+                    isCorrect: opt.is_correct
+                  })),
+                  shuffleAnswers: false,
+                  alwaysCorrect: false,
+                };
+              })
             }});
           setSteps(mappedSteps);
           } else {
@@ -427,13 +434,14 @@ const handleSaveQuestion = (newQuestionData: Partial<Question>) => {
                  finalQuestion = { ...editingQuestion, ...newQuestionData, sequence: targetSequence } as Question;
             } else {
                  // --- MODO CRIAÇÃO ---
+                 const isInformative = newQuestionData.activityType === 'Informative';
                  finalQuestion = {
                     id: Date.now(), // ID temporário para o front
                     title: newQuestionData.title || 'Nova Questão',
                     activityType: newQuestionData.activityType || 'Exercise',
                     sequence: targetSequence,
-                    questionType: newQuestionData.questionType || 'MultipleChoice',
-                    weight: newQuestionData.weight || 1,
+                    questionType: isInformative ? 'AlwaysCorrect' : (newQuestionData.questionType || 'MultipleChoice'),
+                    weight: isInformative ? 1 : (newQuestionData.weight || 1),
                     isActive: newQuestionData.isActive ?? true,
                     contentImage: newQuestionData.contentImage || '',
                     description: newQuestionData.description || '',
@@ -455,6 +463,26 @@ const handleSaveQuestion = (newQuestionData: Partial<Question>) => {
 
     handleCloseQuestionModal();
   };
+
+  const handleRemoveQuestion = (stepId: string | null, questionId: string | number) => {
+    if (window.confirm('Tem certeza que deseja remover esta questão?')) {
+      setSteps(prevSteps => 
+        prevSteps.map(step => {
+          if (step.id === stepId) {
+            const updatedQuestions = step.questions.filter(q => q.id !== questionId);
+            // Reorganiza as sequências após a remoção
+            const reorderedQuestions = updatedQuestions.map((q, index) => ({
+              ...q,
+              sequence: index + 1
+            }));
+            return { ...step, questions: reorderedQuestions };
+          }
+          return step;
+        })
+      );
+    }
+  };
+
   const handleSaveLesson = async () => {
     if (!lessonId) {
       alert('ID da aula não encontrado!');
@@ -488,6 +516,24 @@ const handleSaveQuestion = (newQuestionData: Partial<Question>) => {
         // Monta o ExpectedAnswers para cada questão
         const contents = (step.questions || []).map((question) => {
           console.log('  -> Mapeando questão:', question.title);
+          console.log('  -> activityType:', question.activityType);
+          console.log('  -> questionType:', question.questionType);
+          
+          // Para conteúdo informativo, usa AlwaysCorrect (qualquer resposta é válida)
+          if (question.activityType === 'Informative') {
+            return {
+              questStepContentType: 'Informative',
+              questionType: 'AlwaysCorrect',
+              title: question.title || 'Título',
+              description: question.description || 'Conteúdo informativo',
+              weight: 1, // Backend requires weight > 0
+              isActive: question.isActive ?? true,
+              sequence: question.sequence || 1,
+              expectedAnswers: {
+                questionType: 'AlwaysCorrect'
+              }
+            };
+          }
           
           // IMPORTANTE: O backend requer o campo "questionType" no expectedAnswers para deserialização
           let expectedAnswers: any;
@@ -544,8 +590,11 @@ const handleSaveQuestion = (newQuestionData: Partial<Question>) => {
           return {
             questStepContentType: question.activityType || 'Exercise',
             questionType: question.questionType || 'MultipleChoice',
+            title: question.title || 'Título',
             description: question.description || question.title || 'Pergunta sem descrição',
             weight: question.weight || 1,
+            isActive: question.isActive ?? true,
+            sequence: question.sequence || 1,
             expectedAnswers: expectedAnswers
           };
         });
@@ -561,6 +610,7 @@ const handleSaveQuestion = (newQuestionData: Partial<Question>) => {
           npcType: step.character || 'Passive',
           npcBehaviour: 'StandStill',
           type: step.type || 'Npc', // Note: aqui é "type", não "questStepType" para o FullQuestStepDto
+          isActive: step.active ?? true,
           contents: contents,
           npcIds: [],
           mediaIds: [],
@@ -604,6 +654,27 @@ const handleSaveQuestion = (newQuestionData: Partial<Question>) => {
     }
   };
 
+  // Helper para mapear tipos de questão para nomes amigáveis
+  const getQuestionTypeLabel = (question: Question): string => {
+    // Se for informativo, retorna "Informativo"
+    if (question.activityType === 'Informative') {
+      return 'Informativo';
+    }
+    
+    // Mapeia os tipos de exercício
+    const typeMap: Record<string, string> = {
+      'MultipleChoice': 'Múltipla Escolha',
+      'SingleChoice': 'Escolha Única',
+      'TrueOrFalse': 'Verdadeiro ou Falso',
+      'Dissertative': 'Dissertativa',
+      'AlwaysCorrect': 'Informativo',
+      'ColumnFill': 'Preencher Colunas',
+      'None': 'Informativo'
+    };
+    
+    return typeMap[question.questionType] || question.questionType;
+  };
+
   // --- Render Step Cards ---
   const renderStepCard = (step: PageStep, index: number) => (
       <div className='card h-100 bg-body w-100'>
@@ -613,25 +684,25 @@ const handleSaveQuestion = (newQuestionData: Partial<Question>) => {
             <span className='fs-4 fw-bold text-gray-900 dark:text-white me-3'>
               {step.sequence}º - {step.title}
             </span>
-            <div
-              className={clsx('bullet ms-auto', {
-                'bg-success': step.active,
-                'bg-danger': !step.active
-              })}
-              style={{ width: '10px', height: '10px' }}
-            ></div>
+            <div className='d-flex align-items-center ms-auto'>
+              <div
+                className={clsx('bullet me-2', {
+                  'bg-success': step.active,
+                  'bg-danger': !step.active
+                })}
+                style={{ width: '10px', height: '10px' }}
+              ></div>
+              <span className={clsx('fw-semibold fs-7', {
+                'text-success': step.active,
+                'text-danger': !step.active
+              })}>
+                {step.active ? 'Ativo' : 'Inativo'}
+              </span>
+            </div>
           </div>
 
           {/* Detalhes */}
           <div className='d-flex flex-column gap-2 mb-5'>
-            <div className='d-flex justify-content-between'>
-              <span className='fw-semibold text-gray-600'>Tipo</span>
-              <span className='fw-bold text-gray-900 dark:text-white'>{step.type}</span>
-            </div>
-            <div className='d-flex justify-content-between'>
-              <span className='fw-semibold text-gray-600'>Personagem</span>
-              <span className='fw-bold text-gray-900 dark:text-white'>{step.character}</span>
-            </div>
             <div className='d-flex justify-content-between'>
               <span className='fw-semibold text-gray-600'>Total de Questões</span>
               <span className='fw-bold text-gray-900 dark:text-white'>{step.questions.length}</span>
@@ -639,9 +710,6 @@ const handleSaveQuestion = (newQuestionData: Partial<Question>) => {
           </div>
 
           {/* Questões */}
-          <h5 className='text-gray-900 dark:text-white mt-5 mb-3 fw-bold'>
-            Atividades da Etapa ({step.questions.length})
-          </h5>
           <div className='p-5 rounded-3 shadow-sm mb-5 flex-grow-1 bg-light dark:bg-gray-800'>
             {step.questions.length > 0 ? (
               <div className='table-responsive'>
@@ -659,15 +727,15 @@ const handleSaveQuestion = (newQuestionData: Partial<Question>) => {
                     {step.questions.map(q => (
                       <tr key={q.id} className='fw-semibold fs-7 text-gray-900 dark:text-white'>
                         <td>{q.sequence}</td>
-                        <td>{q.questionType}</td>
+                        <td>{getQuestionTypeLabel(q)}</td>
                         <td>{q.title.length > 30 ? q.title.substring(0, 30) + '...' : q.title}</td>
                         <td className='text-center'>
-                          <i
-                            className={clsx('ki-duotone fs-4', {
-                              'ki-check-circle text-success': q.isActive,
-                              'ki-cross-circle text-danger': !q.isActive
-                            })}
-                          ></i>
+                          <span className={clsx('badge badge-sm', {
+                            'badge-light-success': q.isActive,
+                            'badge-light-danger': !q.isActive
+                          })}>
+                            {q.isActive ? 'Ativo' : 'Inativo'}
+                          </span>
                         </td>
                         <td className='text-end'>
                           <button
@@ -676,7 +744,24 @@ const handleSaveQuestion = (newQuestionData: Partial<Question>) => {
                             onClick={() => handleOpenQuestionModal(step.id, q)}
                             title='Editar Questão'
                           >
-                            <i className='ki-duotone ki-pencil fs-6'></i>
+                            <i className='ki-duotone ki-pencil fs-6'>
+                              <span className='path1'></span>
+                              <span className='path2'></span>
+                            </i>
+                          </button>
+                          <button
+                            type='button'
+                            className='btn btn-icon btn-sm btn-light-danger'
+                            onClick={() => handleRemoveQuestion(step.id, q.id)}
+                            title='Deletar Questão'
+                          >
+                            <i className='ki-duotone ki-trash fs-6'>
+                              <span className='path1'></span>
+                              <span className='path2'></span>
+                              <span className='path3'></span>
+                              <span className='path4'></span>
+                              <span className='path5'></span>
+                            </i>
                           </button>
                         </td>
                       </tr>
@@ -692,7 +777,7 @@ const handleSaveQuestion = (newQuestionData: Partial<Question>) => {
 
             <div className='text-end mt-4'>
               <button
-                className='btn btn-sm btn-info'
+                className='btn btn-sm btn-primary'
                 onClick={() => handleOpenQuestionModal(step.id)}
               >
                 <i className='ki-duotone ki-plus fs-5'></i> Adicionar Questão
@@ -795,7 +880,7 @@ const handleSaveQuestion = (newQuestionData: Partial<Question>) => {
                         <input
                           type='text'
                           className='form-control form-control-sm form-control-solid'
-                          value={lessonData.totalQuestSteps}
+                          value={steps.length}
                           readOnly
                         />
                       </div>

@@ -220,7 +220,7 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
     if (isEditing && initialLesson?.id) {
       await updateQuest(initialLesson.id, questData);
       alert('Aula atualizada com sucesso!');
-      if (onFormSubmit) onFormSubmit();
+      navigate(`../steps/${initialLesson.id}`);
     } else {
       delete questData.id;
 
@@ -365,201 +365,285 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
   }
 
   return (
-
     <div className="w-100">
-      <form onSubmit={formik.handleSubmit} className="form pb-8 d-flex flex-column gap-4" noValidate>
-        {/* HEADER DISCRETO */}
-        <div className="d-flex align-items-center gap-3 mb-4">
-          <span className="bg-light rounded-circle p-3 d-flex align-items-center justify-content-center" style={{ width: 48, height: 48 }}>
-            <i className="bi bi-journal-plus fs-3 text-gray-600"></i>
-          </span>
-          <div>
-            <h2 className="fw-bold mb-0 text-gray-800">Criar Aula</h2>
-            <div className="text-muted fs-6">Preencha os campos para criar uma nova aula. Os campos obrigatórios estão marcados com <span className='text-danger'>*</span>.</div>
+      <form onSubmit={formik.handleSubmit} className="form" noValidate>
+        {/* HEADER SIMPLES */}
+        {!isEditing && (
+          <div className="mb-8">
+            <h2 className="fw-bold text-gray-900 mb-2">Nova Aula</h2>
+            <p className="text-muted fs-7 mb-0">
+              {sourceTemplateId ? 'Criando a partir de um modelo' : 'Preencha as informações básicas da aula'}
+            </p>
           </div>
-        </div>
+        )}
 
-        {/* CARD: Informações Básicas */}
-        <div className="bg-body rounded-3 shadow-sm p-4 animated-card mb-2 border border-gray-200">
-          <div className="d-flex align-items-center mb-3 gap-2">
-            <i className="bi bi-info-circle text-gray-500 fs-5"></i>
-            <h5 className="fw-bold mb-0 text-gray-700">Informações Básicas</h5>
-          </div>
-          <div className="row g-4">
-            <div className="col-md-6">
-              <BasicField fieldName="name" label="Nome da Aula" placeholder="Digite o nome da aula" required formik={formik} />
-            </div>
-            <div className="col-md-6">
-              <SelectField fieldName="schoolYear" label="Ano escolar" placeholder={isLoadingSchoolYears ? "Carregando..." : "Selecione..."} options={schoolYears} required multiselect={false} formik={formik as FormikProps<any>} />
-            </div>
-            <div className="col-md-6">
-              <SelectField fieldName="discipline" label="Disciplina" placeholder={isLoadingDisciplines ? "Carregando..." : "Selecione..."} options={disciplines} required multiselect={false} formik={formik as FormikProps<any>} />
-            </div>
-            <div className="col-12">
-              <BasicField fieldName="description" label="Descrição" placeholder="Descrição da aula" required formik={formik} rows={2} />
-            </div>
-          </div>
-        </div>
-
-        {/* CARD: Configurações da Aula */}
-        <div className="bg-body rounded-3 shadow-sm p-4 animated-card mb-2 border border-gray-200">
-          <div className="d-flex align-items-center mb-3 gap-2">
-            <i className="bi bi-gear text-gray-500 fs-5"></i>
-            <h5 className="fw-bold mb-0 text-gray-700">Configurações da Aula</h5>
-          </div>
-          <div className="row g-4">
-            {canCreateTemplate && (
-              <div className="col-md-4 d-flex align-items-center pt-3">
-                <div className="form-check form-switch form-check-custom form-check-solid">
-                  <input className="form-check-input" type="checkbox" id="usageTemplateToggle" name="usageTemplate" checked={formik.values.usageTemplate} onChange={formik.handleChange} onBlur={formik.handleBlur} />
-                  <label className="form-check-label ms-3 text-gray-700" htmlFor="usageTemplateToggle">Template Global</label>
-                </div>
+        {/* INFORMAÇÕES BÁSICAS */}
+        <div className="card mb-5">
+          <div className="card-body p-9">
+            <h3 className="card-title mb-7">Informações Básicas</h3>
+            
+            <div className="row g-7">
+              <div className="col-12">
+                <label className="form-label required fw-semibold">Nome da Aula</label>
+                <input
+                  type="text"
+                  className={clsx('form-control form-control-lg', {
+                    'is-invalid': formik.touched.name && formik.errors.name,
+                  })}
+                  placeholder="Ex: Introdução à Biologia"
+                  {...formik.getFieldProps('name')}
+                />
+                {formik.touched.name && formik.errors.name && (
+                  <div className="fv-plugins-message-container">
+                    <div className="fv-help-block">
+                      <span role="alert">{formik.errors.name}</span>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </div>
 
-        {/* CARD: Produto e Conteúdo */}
-        <div className="bg-body rounded-3 shadow-sm p-4 animated-card mb-2 border border-gray-200">
-          <div className="d-flex align-items-center mb-3 gap-2">
-            <i className="bi bi-box-seam text-gray-500 fs-5"></i>
-            <h5 className="fw-bold mb-0 text-gray-700">Produto e Conteúdo</h5>
-          </div>
-          <div className="row g-4">
-            <div className="col-md-6">
-              <label className="form-label fw-bold required">Produto</label>
-              {isLoadingProducts && (
-                <div className="d-flex align-items-center text-muted fs-7">
-                  <span className="spinner-border spinner-border-sm me-2"></span>
-                  Carregando produtos...
-                </div>
-              )}
-              {!isLoadingProducts && (
+              <div className="col-md-6">
+                <label className="form-label required fw-semibold">Disciplina</label>
                 <select
-                  className={clsx('form-select form-select-solid', {
-                    'is-invalid': formik.touched.productId && formik.errors.productId,
+                  className={clsx('form-select form-select-lg', {
+                    'is-invalid': formik.touched.discipline && formik.errors.discipline,
                   })}
-                  name="productId"
-                  value={formik.values.productId}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
+                  {...formik.getFieldProps('discipline')}
+                  disabled={isLoadingDisciplines}
                 >
-                  <option value="">Selecione um produto...</option>
-                  {allProducts.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.name}
+                  <option value="">{isLoadingDisciplines ? 'Carregando...' : 'Selecione'}</option>
+                  {disciplines.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
                     </option>
                   ))}
                 </select>
-              )}
-              {formik.touched.productId && formik.errors.productId && (
-                <div className="fv-plugins-message-container">
-                  <div className="fv-help-block">
-                    <span role="alert">{formik.errors.productId}</span>
+                {formik.touched.discipline && formik.errors.discipline && (
+                  <div className="fv-plugins-message-container">
+                    <div className="fv-help-block">
+                      <span role="alert">{formik.errors.discipline}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label required fw-semibold">Ano Escolar</label>
+                <select
+                  className={clsx('form-select form-select-lg', {
+                    'is-invalid': formik.touched.schoolYear && formik.errors.schoolYear,
+                  })}
+                  {...formik.getFieldProps('schoolYear')}
+                  disabled={isLoadingSchoolYears}
+                >
+                  <option value="">{isLoadingSchoolYears ? 'Carregando...' : 'Selecione'}</option>
+                  {schoolYears.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                {formik.touched.schoolYear && formik.errors.schoolYear && (
+                  <div className="fv-plugins-message-container">
+                    <div className="fv-help-block">
+                      <span role="alert">{formik.errors.schoolYear}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="col-12">
+                <label className="form-label required fw-semibold">Descrição</label>
+                <textarea
+                  className={clsx('form-control form-control-lg', {
+                    'is-invalid': formik.touched.description && formik.errors.description,
+                  })}
+                  rows={3}
+                  placeholder="Descreva os objetivos e conteúdo desta aula"
+                  {...formik.getFieldProps('description')}
+                />
+                {formik.touched.description && formik.errors.description && (
+                  <div className="fv-plugins-message-container">
+                    <div className="fv-help-block">
+                      <span role="alert">{formik.errors.description}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {canCreateTemplate && (
+                <div className="col-12">
+                  <div className="form-check form-switch form-check-custom form-check-solid">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id="usageTemplateToggle"
+                      {...formik.getFieldProps('usageTemplate')}
+                      checked={formik.values.usageTemplate}
+                    />
+                    <label className="form-check-label fw-semibold ms-2" htmlFor="usageTemplateToggle">
+                      Usar como modelo (template)
+                    </label>
                   </div>
                 </div>
               )}
             </div>
-            <div className="col-md-6">
-              <label className="form-label fw-bold required">Conteúdo</label>
-              {isLoadingContents && (
-                <div className="d-flex align-items-center text-muted fs-7">
-                  <span className="spinner-border spinner-border-sm me-2"></span>
-                  Buscando conteúdos...
-                </div>
-              )}
-              {!isLoadingContents && (
-                <select
-                  className={clsx('form-select form-select-solid', {
-                    'is-invalid': formik.touched.contentId && formik.errors.contentId,
-                  })}
-                  name="contentId"
-                  value={formik.values.contentId}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  disabled={!formik.values.productId}
-                >
-                  <option value="">
-                    {!formik.values.productId ? 'Selecione um produto primeiro' : 'Selecione um conteúdo...'}
-                  </option>
-                  {availableContents.map((content) => (
-                    <option key={content.id} value={content.id}>
-                      {content.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-              {formik.touched.contentId && formik.errors.contentId && (
-                <div className="fv-plugins-message-container">
-                  <div className="fv-help-block">
-                    <span role="alert">{formik.errors.contentId}</span>
+          </div>
+        </div>
+
+        {/* PRODUTO E CONTEÚDO */}
+        <div className="card mb-5">
+          <div className="card-body p-9">
+            <h3 className="card-title mb-7">Produto e Conteúdo</h3>
+            
+            <div className="row g-7">
+              <div className="col-md-6">
+                <label className="form-label required fw-semibold">Produto</label>
+                {isLoadingProducts ? (
+                  <div className="text-muted">
+                    <span className="spinner-border spinner-border-sm me-2"></span>
+                    Carregando...
                   </div>
-                </div>
-              )}
-              {!isLoadingContents && availableContents.length === 0 && formik.values.productId && (
-                <div className="text-muted fs-7 mt-1">Nenhum conteúdo compatível encontrado.</div>
-              )}
+                ) : (
+                  <>
+                    <select
+                      className={clsx('form-select form-select-lg', {
+                        'is-invalid': formik.touched.productId && formik.errors.productId,
+                      })}
+                      {...formik.getFieldProps('productId')}
+                    >
+                      <option value="">Selecione</option>
+                      {allProducts.map((product) => (
+                        <option key={product.id} value={product.id}>
+                          {product.name}
+                        </option>
+                      ))}
+                    </select>
+                    {formik.touched.productId && formik.errors.productId && (
+                      <div className="fv-plugins-message-container">
+                        <div className="fv-help-block">
+                          <span role="alert">{formik.errors.productId}</span>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label required fw-semibold">Conteúdo</label>
+                {isLoadingContents ? (
+                  <div className="text-muted">
+                    <span className="spinner-border spinner-border-sm me-2"></span>
+                    Carregando...
+                  </div>
+                ) : (
+                  <>
+                    <select
+                      className={clsx('form-select form-select-lg', {
+                        'is-invalid': formik.touched.contentId && formik.errors.contentId,
+                      })}
+                      {...formik.getFieldProps('contentId')}
+                      disabled={!formik.values.productId}
+                    >
+                      <option value="">
+                        {!formik.values.productId ? 'Selecione um produto primeiro' : 'Selecione'}
+                      </option>
+                      {availableContents.map((content) => (
+                        <option key={content.id} value={content.id}>
+                          {content.name}
+                        </option>
+                      ))}
+                    </select>
+                    {formik.touched.contentId && formik.errors.contentId && (
+                      <div className="fv-plugins-message-container">
+                        <div className="fv-help-block">
+                          <span role="alert">{formik.errors.contentId}</span>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* CARD: Diretrizes BNCC */}
-        <div className="bg-body rounded-3 shadow-sm p-4 animated-card mb-2 border border-gray-200">
-          <div className="d-flex align-items-center mb-3 gap-2">
-            <i className="bi bi-bookmark-check text-gray-500 fs-5"></i>
-            <h5 className="fw-bold mb-0 text-gray-700">Diretrizes BNCC</h5>
-          </div>
-          <div className="row g-4">
-            <div className="col-12">
-              {formik.values.bncc && formik.values.bncc.length > 0 && (
-                <div className="d-flex flex-wrap mb-2 gap-2">
+        {/* BNCC (OPCIONAL) */}
+        <div className="card mb-5">
+          <div className="card-body p-9">
+            <h3 className="card-title mb-2">Diretrizes BNCC</h3>
+            <p className="text-muted fs-7 mb-7">Opcional - Vincule competências da Base Nacional Comum Curricular</p>
+            
+            {formik.values.bncc && formik.values.bncc.length > 0 && (
+              <div className="mb-5">
+                <div className="d-flex flex-wrap gap-2">
                   {formik.values.bncc.map((bnccId: string) => {
-                    const bncc = bnccOptions.find(opt => opt.value === bnccId);
+                    const bncc = bnccOptions.find((opt) => opt.value === bnccId);
                     return bncc ? (
-                      <span key={bnccId} className="d-flex align-items-center px-3 py-1 rounded-pill border border-gray-200 bg-gray-100 fw-semibold" style={{ fontSize: '0.95rem', marginBottom: '4px', color: 'var(--bs-gray-700)' }}>
+                      <span key={bnccId} className="badge badge-light badge-lg d-inline-flex align-items-center gap-2">
                         {bncc.label}
                         <button
                           type="button"
-                          className="btn btn-sm btn-icon btn-light-danger ms-2"
-                          style={{ border: 'none', background: 'transparent', padding: 0, marginLeft: 8 }}
+                          className="btn btn-sm btn-icon btn-active-color-primary p-0"
                           onClick={() => {
                             const updated = formik.values.bncc.filter((id: string) => id !== bnccId);
                             formik.setFieldValue('bncc', updated);
                           }}
                         >
-                          <i className="bi bi-x fs-6"></i>
+                          <i className="bi bi-x fs-3"></i>
                         </button>
                       </span>
                     ) : null;
                   })}
                 </div>
-              )}
-              <AsyncSelectField
-                fieldName="bncc"
-                label="BNCC"
-                placeholder="Selecione conteúdos BNCC"
-                isMulti
-                formik={formik as FormikProps<any>}
-                defaultOptions={bnccOptions}
-                loadOptions={(inputValue, callback) => {
-                  const filtered = bnccOptions.filter(opt =>
-                    opt.label.toLowerCase().includes(inputValue.toLowerCase())
-                  );
-                  callback(filtered);
-                }}
-                isDisabled={isLoadingBncc}
-              />
-            </div>
+              </div>
+            )}
+
+            <AsyncSelectField
+              fieldName="bncc"
+              label="Buscar Competências"
+              placeholder="Digite para buscar..."
+              isMulti
+              formik={formik as FormikProps<any>}
+              defaultOptions={bnccOptions}
+              loadOptions={(inputValue, callback) => {
+                const filtered = bnccOptions.filter((opt) =>
+                  opt.label.toLowerCase().includes(inputValue.toLowerCase())
+                );
+                callback(filtered);
+              }}
+              isDisabled={isLoadingBncc}
+            />
           </div>
         </div>
 
-        {/* FOOTER: Ações */}
-        <div className="d-flex justify-content-end gap-3 mt-4">
-          <button type="button" className="btn btn-outline-secondary btn-lg" onClick={() => { if (onFormSubmit) onFormSubmit(); else navigate('/apps/lesson-management/lessons'); }}>
-            <i className="bi bi-arrow-left me-2"></i> {isEditing ? 'Cancelar' : 'Voltar'}
+        {/* AÇÕES */}
+        <div className="d-flex justify-content-end gap-3 mt-10">
+          <button
+            type="button"
+            className="btn btn-light btn-lg"
+            onClick={() => {
+              if (onFormSubmit) onFormSubmit();
+              else navigate('/apps/lesson-management/lessons');
+            }}
+          >
+            Cancelar
           </button>
-          <button type="submit" className="btn btn-primary btn-lg px-5 fw-bold" disabled={formik.isSubmitting || isLoadingSchools || isLoadingClasses}>
-            {formik.isSubmitting ? (<><span>Aguarde...</span><span className="spinner-border spinner-border-sm ms-2"></span></>) : (<><i className="bi bi-save me-2"></i>{isEditing ? 'Atualizar aula' : 'Salvar e continuar'}</>)}
+
+          <button
+            type="submit"
+            className="btn btn-primary btn-lg"
+            disabled={formik.isSubmitting}
+          >
+            {formik.isSubmitting ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2"></span>
+                Salvando...
+              </>
+            ) : (
+              <>{isEditing ? 'Atualizar' : 'Salvar e Continuar'}</>
+            )}
           </button>
         </div>
       </form>

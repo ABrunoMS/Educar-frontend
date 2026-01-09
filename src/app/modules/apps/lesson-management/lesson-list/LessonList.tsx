@@ -5,7 +5,7 @@ import { Column } from 'react-table'
 import { getList, deleteQuest, deleteSelectedQuests } from './core/_request' // Importe as funções de Quest
 import { usePagination } from '@contexts/PaginationContext'
 import { useState, useEffect, useMemo, ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router-dom' 
+import { useNavigate } from 'react-router-dom' 
 import { ActionsCell } from '@components/list-view/table/columns/ActionsCell'
 import { getSubjects } from '@services/Subjects'
 import { getGrades } from '@services/Grades'
@@ -109,19 +109,9 @@ const LessonListContent: React.FC<Props> = ({ isTemplateView }) => {
       Header: 'Nome', 
       accessor: (row: any) => row.Name || row.name || '',
       id: 'name',
-      // Tornando o nome clicável para navegar para etapas
       Cell: ({ row }: any) => {
-        const id = row.original.Id || row.original.id || row.original.Name || row.original.name;
         const name = row.original.Name || row.original.name || 'Sem nome';
-        if(isTemplateView) return <span className='text-gray-800 fw-bold'>{name}</span>;
-        return (
-          <Link
-            to={`/apps/lesson-management/steps/${id}`}
-            className='text-primary fw-bold'
-          >
-            {name}
-          </Link>
-        );
+        return <span className='text-gray-800 fw-bold'>{name}</span>;
       }
     },
     { 
