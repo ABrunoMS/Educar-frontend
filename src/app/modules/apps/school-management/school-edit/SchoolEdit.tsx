@@ -11,25 +11,35 @@ import { SchoolType } from '@interfaces/School';
 const SchoolEdit = () => {
   const [schoolItem, setSchoolItem] = useState<SchoolType>();
   const navigate = useNavigate();
-
   const { id } = useParams();
 
   useEffect(() => {
     if (id) {
       getSchoolById(id)
         .then((response) => {
-          const schoolData = response.data;
-          const mappedSchool = {
+          const schoolData: any = response.data; // Use any para facilitar acesso a props dinâmicas
+          
+          // --- LÓGICA CRÍTICA DA MAIN (Mantida) ---
+          // Mapeamento Robusto: Garante que pegamos o ID mesmo se vier aninhado em objetos
+          const mappedSchool: SchoolType = {
             ...schoolData,
             id: schoolData.id?.toString() || '',
-            clientId: schoolData.clientId?.toString() || '',
-            addressId: schoolData.addressId?.toString() || '',
-            regionalId: schoolData.regionalId?.toString() || ''
+            
+            // Corrige problema do Cliente não vir
+            clientId: schoolData.clientId?.toString() || schoolData.client?.id?.toString() || '',
+            
+            // Corrige problema do Endereço não vir
+            addressId: schoolData.addressId?.toString() || schoolData.address?.id?.toString() || '',
+            
+            // Corrige problema da Regional não vir
+            regionalId: schoolData.regionalId?.toString() || schoolData.regional?.id?.toString() || ''
           };
+          
           setSchoolItem(mappedSchool);
         })
         .catch((error) => {
-          toast.error(`Erro ao recuperar dados no servidor: ${error}`);
+          console.error('Erro ao carregar escola:', error);
+          toast.error('Erro ao carregar dados da escola');
         });
     }
   }, [id]);
@@ -39,22 +49,17 @@ const SchoolEdit = () => {
   };
 
   return (
-    <>
-      <KTCard className='h-100'>
-        <div className='p-9'>
-          {schoolItem ? (
-            <SchoolCreateForm schoolItem={schoolItem} onFormSubmit={handleFormSubmit} />
-          ) : (
-            <div className='text-center'>
-              <span className='indicator-progress'>
-                Carregando...{' '}
-                <span className='spinner-border spinner-border-sm align-middle ms-2'></span>
-              </span>
-            </div>
-          )}
+    <KTCard className='p-5 h-100'>
+      {schoolItem ? (
+        <SchoolCreateForm schoolItem={schoolItem} onFormSubmit={handleFormSubmit} />
+      ) : (
+        <div className='text-center'>
+           <span className='indicator-progress'>
+             Carregando... <span className='spinner-border spinner-border-sm align-middle ms-2'></span>
+           </span>
         </div>
-      </KTCard>
-    </>
+      )}
+    </KTCard>
   );
 };
 

@@ -1,9 +1,8 @@
-import React, { FC, useState, useEffect, useMemo } from 'react' // <--- Importe useMemo
+import React, { FC, useState, useEffect, useMemo } from 'react'
 import * as Yup from 'yup'
 import { useFormik } from 'formik'
 import clsx from 'clsx'
 import { useIntl } from 'react-intl'
-import Select from 'react-select'
 import { ClientType, SubsecretariaDto, RegionalDto } from '@interfaces/Client'
 import { SelectOptions } from '@interfaces/Forms'
 import BasicField from '@components/form/BasicField'
@@ -61,11 +60,17 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
   const [isLoadingPartners, setIsLoadingPartners] = useState(false)
   const [isLoadingContacts, setIsLoadingContacts] = useState(false)
 
+  // 1. Inicialização segura das Subsecretarias
+  // Dependência [client?.id] impede que re-renderizações do pai sobrescrevam edições locais
   useEffect(() => {
-    setSubsecretarias([])
-  }, [])
+    if (client && client.subsecretarias && client.subsecretarias.length > 0) {
+      setSubsecretarias(client.subsecretarias);
+    } else {
+      setSubsecretarias([]);
+    }
+  }, [client?.id]);
 
-  // Buscar usuários Distribuidor
+  // Buscar Parceiros
   useEffect(() => {
     const fetchPartners = async () => {
       setIsLoadingPartners(true)
@@ -85,7 +90,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     fetchPartners()
   }, [])
 
-  // Buscar usuários Agente Comercial
+  // Buscar Contatos
   useEffect(() => {
     const fetchContacts = async () => {
       setIsLoadingContacts(true)
@@ -105,12 +110,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     fetchContacts()
   }, [])
 
-  useEffect(() => {
-    if (client && client.subsecretarias && client.subsecretarias.length > 0) {
-      setSubsecretarias(client.subsecretarias);
-    }
-  }, [client]);
-
+  // Buscar Produtos
   useEffect(() => {
     const fetchProducts = async () => {
       setIsLoadingProducts(true)
@@ -126,9 +126,8 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     fetchProducts()
   }, [])
 
-  // --- CORREÇÃO DO LOOPING: useMemo ---
-  // Utilizamos useMemo para garantir que o objeto initialValues não mude de referência
-  // a cada render, o que causava o reset do Formik e o loop com o useEffect.
+  // 2. Valores Iniciais com useMemo seguro
+  // Dependência [client?.id] evita o reset indesejado do formulário
   const dialogueForEdit = useMemo((): ClientFormValues => {
     return {
       ...initialClient,
@@ -138,7 +137,6 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
       partner: client?.partner || initialClient.partner,
       contacts: client?.contacts || initialClient.contacts,
       contract: client?.contract || initialClient.contract,
-      // Garante que se for inválido, seja null ou undefined, mas não quebra
       validity: client?.validity ? new Date(client.validity) : null,
       signatureDate: client?.signatureDate ? new Date(client.signatureDate) : null,
       implantationDate: client?.implantationDate ? new Date(client.implantationDate) : null,
@@ -153,7 +151,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
         ? client.contents.map(c => c.id)
         : (client?.selectedContents || []),
     }
-  }, [client]) // Só recria se o objeto client mudar
+  }, [client?.id]) 
 
   const editSchema = Yup.object().shape({
     name: Yup.string().min(3).max(50).required('Nome é obrigatório'),
@@ -172,7 +170,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     initialValues: dialogueForEdit,
     validationSchema: editSchema,
     validateOnChange: true,
-    enableReinitialize: true, // Isso agora é seguro por causa do useMemo acima
+    enableReinitialize: true,
     onSubmit: async (values, { setSubmitting, resetForm }) => {
       setSubmitting(true)
       const { products, contents, ...formValues } = values;
@@ -183,10 +181,17 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
         validity: values.validity ? (values.validity as Date).toISOString() : undefined,
         signatureDate: values.signatureDate ? (values.signatureDate as Date).toISOString() : undefined,
         implantationDate: values.implantationDate ? (values.implantationDate as Date).toISOString() : undefined,
+        
+        // 3. CORREÇÃO CRÍTICA: Enviando IDs para evitar deleção e recriação no backend
         subsecretarias: subsecretarias.map(sub => ({
+          id: sub.id, // Envia o ID se existir (edição)
           name: sub.name,
-          regionais: (sub.regionais || []).map(reg => ({ name: reg.name }))
+          regionais: (sub.regionais || []).map(reg => ({ 
+             id: reg.id, // Envia o ID da regional se existir
+             name: reg.name 
+          }))
         })),
+        
         productIds: values.selectedProducts,
         contentIds: values.selectedContents,
         selectedProducts: undefined,
@@ -200,7 +205,12 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
           await createClient(payload as any)
         }
         alert('Cliente salvo com sucesso!')
-        resetForm()
+        
+        // Se for criação, reseta. Se for edição, mantém para não perder contexto visual.
+        if (!payload.id) {
+             resetForm()
+             setSubsecretarias([]) 
+        }
       } catch (ex) {
         console.error(ex)
         alert('Houve um erro ao salvar o cliente.')
@@ -210,6 +220,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     },
   })
 
+  // Efeito para carregar conteúdos compatíveis
   useEffect(() => {
     const fetchCompatibleContents = async () => {
       const selectedProductIds = formik.values.selectedProducts
@@ -244,7 +255,6 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
           availableContentIds.has(id)
         )
 
-        // Evita update desnecessário se não houve mudança real
         if (filteredSelectedContents.length !== formik.values.selectedContents.length) {
              formik.setFieldValue('selectedContents', filteredSelectedContents)
         }
@@ -260,6 +270,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formik.values.selectedProducts]) 
 
+  // Handlers para Subsecretarias e Regionais
   const handleCreateSubsecretaria = (subsecretariaName: string) => {
     setSubsecretarias(prev => [
       ...prev,
@@ -290,12 +301,11 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     ))
   }
 
-  // --- CORREÇÃO TYPESCRIPT: Alterado de `string | null` para `string | undefined` ---
-  // Também pode usar `placeholder?: string`
+  // Helpers de Renderização (Corrigidos tipos)
   const renderBasicFieldset = (
     fieldName: string,
     label: string,
-    placeholder?: string, // <--- Aqui estava o erro de tipo
+    placeholder?: string,
     required: boolean = true,
     type: 'text' | 'number' = 'text'
   ) => (
@@ -309,11 +319,10 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     />
   )
 
-  // --- CORREÇÃO TYPESCRIPT: Alterado de `string | null` para `string | undefined` ---
   const renderSelectFieldset = (
     fieldName: string,
     label: string,
-    placeholder?: string, // <--- Aqui estava o erro de tipo
+    placeholder?: string,
     options: SelectOptions[] = [],
     multiselect: boolean = false,
     required: boolean = true
@@ -339,12 +348,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
 
     return (
       <div className='mb-7'>
-        <label
-          className={clsx(
-            'fw-bold fs-6 mb-2',
-            { 'required': required }
-          )}
-        >{label}</label>
+        <label className={clsx('fw-bold fs-6 mb-2', { 'required': required })}>{label}</label>
         <Flatpickr
           className='form-control form-control-solid'
           placeholder={placeholder || ''}
@@ -360,7 +364,6 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
             dateFormat: "d/m/Y",
           }}
         />
-
         {formik.getFieldMeta(fieldName).touched && formik.getFieldMeta(fieldName).error && (
           <div className='fv-plugins-message-container'>
             <div className='fv-help-block'>
@@ -372,12 +375,8 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     )
   }
 
-  // Renderização e resto do código mantém-se igual, exceto chamadas corrigidas abaixo
-  // ... (função renderSubsecretariasRegionais e renderContentFieldset iguais ao original) ...
   const renderSubsecretariasRegionais = () => {
-        // ... (seu código original de renderização aqui)
-        // Apenas para brevidade, mantive a lógica idêntica à enviada
-        return (
+      return (
        <div className='mb-7'>
          <div className='d-flex justify-content-between align-items-center mb-4'>
            <label className='fw-bold fs-4 mb-0'>Subsecretarias</label>
@@ -423,7 +422,6 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
   }
 
   const renderContentFieldset = () => {
-    // ... (seu código original aqui)
     return (
         <>
         <div className='separator my-5'></div>
@@ -489,7 +487,6 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
       <form id='kt_modal_add_client_form' className='form' onSubmit={formik.handleSubmit} noValidate>
         <div className='d-flex flex-column me-n7 pe-7'>
           {renderBasicFieldset('name', 'Client name', 'Full name')}
-          {/* Note que agora passamos undefined se for falso, mas 'Description' é string, então ok. O erro era quando passava null explícito */}
           {renderBasicFieldset('description', 'Description', 'Description', false)}
           
           {renderSelectFieldset('partner', 'Parceiro ', isLoadingPartners ? 'Carregando...' : 'Selecione um parceiro...', partnerOptions)}
@@ -512,6 +509,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
             type='submit'
             className='btn btn-primary'
             data-kt-users-modal-action='submit'
+            disabled={formik.isSubmitting || isUserLoading}
           >
             <span className='indicator-label'>Submit</span>
             {(formik.isSubmitting || isUserLoading) && (
