@@ -12,5 +12,8 @@ export interface Class {
   content: string[];
   teacherIds?: string[];
   studentIds?: string[];
-
+  products?: Array<{ id: string; name: string }>;
+  contents?: Array<{ id: string; name: string }>;
+  productIds?: string[];
+  contentIds?: string[];
 }

@@ -50,12 +50,22 @@ export const createQuestStep = (data: any): Promise<any> => {
 
 /**
  * Busca todas as Quests criadas.
+ * @param usageTemplate Buscar quests template (true) ou quests do usuário (false)
+ * @param gradeId Filtrar por ano escolar (opcional)
  * @returns Promessa com a lista de Quests.
  */
-export const getQuests = (): Promise<{ data: PaginatedResponse<Quest> }> => {
-  return axios.get(QUESTS_URL, {
-    params: { PageNumber: 1, PageSize: 1000 }
-  });
+export const getQuests = (usageTemplate: boolean = false, gradeId?: string): Promise<{ data: PaginatedResponse<Quest> }> => {
+  const params: any = { 
+    PageNumber: 1, 
+    PageSize: 1000,
+    UsageTemplate: usageTemplate 
+  };
+  
+  if (gradeId) {
+    params.GradeId = gradeId;
+  }
+  
+  return axios.get(QUESTS_URL, { params });
 };
 
 /**

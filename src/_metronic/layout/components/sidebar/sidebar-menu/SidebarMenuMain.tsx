@@ -95,13 +95,19 @@ const SidebarMenuMain = () => {
             title='Nova Aula'
             hasBullet
           />
+          <SidebarMenuItem
+            to='/apps/lesson-management/add-to-class'
+            icon='plus'
+            title='Adicionar Aula na Turma'
+            hasBullet
+          />
           <RoleBasedMenuItem rolesAllowed={['Admin', 'TeacherEducar', 'Teacher']}>
             <SidebarMenuItem
               to='/apps/lesson-management/templates'
-              icon='abstract-28' // ícone de "layers" ou "templates"
+              icon='abstract-28'
               title='Aulas Template'
               hasBullet
-           />
+            />
           </RoleBasedMenuItem>
         </SidebarMenuItemWithSub>
         
@@ -258,8 +264,14 @@ const SidebarMenuMain = () => {
             hasBullet
           />
           <SidebarMenuItem
+            to='/apps/lesson-management/add-to-class'
+            icon='plus'
+            title='Adicionar Aula na Turma'
+            hasBullet
+          />
+          <SidebarMenuItem
             to='/apps/lesson-management/templates'
-            icon='abstract-28' // ícone de "layers" ou "templates"
+            icon='abstract-28'
             title='Aulas Template'
             hasBullet
          />
