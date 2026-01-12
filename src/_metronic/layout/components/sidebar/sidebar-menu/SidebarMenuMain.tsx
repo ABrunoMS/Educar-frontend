@@ -101,7 +101,7 @@ const SidebarMenuMain = () => {
             title='Adicionar Aula na Turma'
             hasBullet
           />
-          <RoleBasedMenuItem rolesAllowed={['Admin', 'TeacherEducar']}>
+          <RoleBasedMenuItem rolesAllowed={['Admin', 'TeacherEducar', 'Teacher']}>
             <SidebarMenuItem
               to='/apps/lesson-management/templates'
               icon='abstract-28'
