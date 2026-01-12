@@ -1,26 +1,25 @@
-import React, { FC, useState, useEffect } from 'react'
-import * as Yup from 'yup'
-import {useFormik} from 'formik'
-import clsx from 'clsx'
-import { useIntl } from 'react-intl'
-import Select from 'react-select'
-import { School, SchoolType, Regional } from '@interfaces/School'
-import { SelectOptions } from '@interfaces/Forms'
-import BasicField from '@components/form/BasicField'
-import SelectField from '@components/form/SelectField'
-import { getClients } from '@services/Clients'
-import { getAddresses } from '@services/Addresses'
-import { getRegionais } from '@services/Regionais'
-import { createSchool, updateSchool } from '@services/Schools'
-import { isNotEmpty } from '@metronic/helpers'
-import { AddressModal } from './AddressModal'
+import React, { FC, useState, useEffect } from 'react';
+import * as Yup from 'yup';
+import { useFormik } from 'formik';
+import { School, SchoolType } from '@interfaces/School';
+import { SelectOptions } from '@interfaces/Forms';
+import AsyncSelectField from '@components/form/AsyncSelectField';
+import { getClients } from '@services/Clients';
+import { getAccountsByClient } from '@services/Accounts';
+import { createSchool, updateSchool } from '@services/Schools';
+import { isNotEmpty, KTIcon } from '@metronic/helpers';
+import { useMutation, useQuery, useQueryClient } from 'react-query';
+import { toast } from 'react-toastify';
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 type Props = {
-  isUserLoading?: boolean
-  school?: School
-  schoolItem?: SchoolType
-  onFormSubmit?: () => void
-}
+  isUserLoading?: boolean;
+  school?: School;
+  schoolItem?: SchoolType;
+  onFormSubmit?: () => void;
+};
 
 const initialSchool: School = {
   id: '',
@@ -29,15 +28,28 @@ const initialSchool: School = {
   address: '',
   client: '',
   regionalId: ''
-}
+};
+
+// Função para filtrar e limitar opções
+const filterOptions = (options: SelectOptions[], inputValue: string) => {
+  return options
+    .filter((opt) =>
+      opt.label.toLowerCase().includes(inputValue.toLowerCase())
+    )
+    .slice(0, 10);
+};
+
+const editSchema = Yup.object().shape({
+  name: Yup.string().required('O nome da escola é obrigatório'),
+  client: Yup.string().required('O cliente é obrigatório'),
+});
 
 const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onFormSubmit }) => {
   const [clientOptions, setClientOptions] = useState<SelectOptions[]>([]);
-  const [addressOptions, setAddressOptions] = useState<SelectOptions[]>([]);
-  const [regionalOptions, setRegionalOptions] = useState<SelectOptions[]>([]);
-  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [teacherSearchTerm, setTeacherSearchTerm] = useState('');
+  const [studentSearchTerm, setStudentSearchTerm] = useState('');
+  const queryClient = useQueryClient();
   
-  // Utiliza schoolItem se disponível (modo edição), senão usa school (modo criação)
   const currentSchool = schoolItem || school;
   
   const [dialogueForEdit] = useState<School>({
@@ -51,70 +63,7 @@ const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onForm
             (typeof currentSchool?.client === 'string' ? currentSchool.client : '') ||
             '',
     regionalId: (currentSchool as SchoolType)?.regionalId || ''
-  })
-
-  const intl = useIntl()
-
-  useEffect(() => {
-    // Buscar clientes da API
-    getClients().then((response) => {
-      const clientOptions = response.data.data.map((client: any) => ({
-        value: client.id,
-        label: client.name,
-      }));
-      setClientOptions(clientOptions);
-    }).catch((error) => {
-      console.error('Erro ao buscar clientes:', error);
-    });
-
-    // Buscar endereços da API
-    getAddresses().then((response) => {
-      const addressOptions = response.data.data.map((address: any) => ({
-        value: address.id,
-        label: `${address.street}, ${address.city} - ${address.state}`,
-      }));
-      setAddressOptions(addressOptions);
-    }).catch((error) => {
-      console.error('Erro ao buscar endereços:', error);
-    });
-
-    // Buscar regionais da API
-    getRegionais().then((response) => {
-      const data = Array.isArray(response.data) ? response.data : response.data || [];
-      const options = data.map((regional: any) => ({
-        value: regional.id,
-        label: regional.name,
-      }));
-      setRegionalOptions(options);
-    }).catch((error) => {
-      console.error('Erro ao buscar regionais:', error);
-    });
-  }, []);
-
-  const editSchema = Yup.object().shape({
-    name: Yup.string()
-      .required('Nome é obrigatório'),
-    description: Yup.string()
-      .required('Descrição é obrigatória'),
-    address: Yup.string()
-      .optional(),
-    client: Yup.string()
-      .required('Cliente é obrigatório'),
-    regionalId: Yup.string()
-      .required('Regional é obrigatório'),
-  })
-
-  const handleAddressCreated = (addressId: string, addressLabel: string) => {
-    // Adicionar o novo endereço às opções
-    const newAddressOption = {
-      value: addressId,
-      label: addressLabel,
-    };
-    setAddressOptions(prev => [...prev, newAddressOption]);
-    
-    // Selecionar automaticamente o novo endereço
-    formik.setFieldValue('address', addressId);
-  }
+  });
 
   const formik = useFormik({
     initialValues: dialogueForEdit,
@@ -122,34 +71,23 @@ const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onForm
     validateOnChange: true,
     enableReinitialize: true,
     onSubmit: async (values, { setSubmitting }) => {
-      console.log('Valores do formulário antes de enviar:', values);
       setSubmitting(true);
       try {
-        // Montar payload apenas com campos necessários
         const schoolData: any = {
           name: values.name,
           clientId: values.client,
-          regionalId: values.regionalId,
         };
         
-        // Adicionar campos opcionais somente se tiverem valor
         if (values.description) {
           schoolData.description = values.description;
         }
-        if (values.address) {
-          schoolData.addressId = values.address;
-        }
-        
-        console.log('Dados da escola para enviar:', schoolData);
         
         if (isNotEmpty(values.id)) {
-          // Modo edição
           await updateSchool(values.id!, schoolData);
-          alert('Escola atualizada com sucesso!');
+          toast.success('Escola atualizada com sucesso!');
         } else {
-          // Modo criação
           await createSchool(schoolData);
-          alert('Escola criada com sucesso!');
+          toast.success('Escola criada com sucesso!');
           formik.resetForm();
         }
         
@@ -157,165 +95,448 @@ const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onForm
           onFormSubmit();
         }
       } catch (ex) {
-        console.error('Erro ao salvar escola:', ex);
-        alert('Houve um erro ao salvar a escola. Por favor, tente novamente.');
+        toast.error('Houve um erro ao salvar a escola. Por favor, tente novamente.');
       } finally {
         setSubmitting(false);
       }
     },
-  })
+  });
 
-  const renderBasicFieldset = (
-    fieldName: string,
-    label: string,
-    placeholder: string | null,
-    required: boolean = true
-  ) =>
-  <BasicField
-    fieldName={fieldName}
-    label={label}
-    placeholder={placeholder}
-    required={required}
-    formik={formik}
-  />
+  // Carregar clientes
+  useEffect(() => {
+    getClients().then((response) => {
+      const options = response.data.data.map((client: any) => ({
+        value: client.id,
+        label: client.name,
+      }));
+      setClientOptions(options);
+    }).catch((error) => {
+      console.error('Erro ao buscar clientes:', error);
+    });
+  }, []);
 
-  const renderSelectFieldset = (
-    fieldName: string,
-    label: string,
-    placeholder: string | null,
-    options: SelectOptions[],
-    multiselect: boolean = false,
-    required: boolean = true
-  ) => (
-    <SelectField
-      fieldName={fieldName}
-      label={label}
-      placeholder={placeholder}
-      required={required}
-      multiselect={multiselect}
-      options={options}
-      formik={formik}
-    />
-  )
+  // Buscar professores e alunos do cliente selecionado
+  const { data: teachersData, refetch: refetchTeachers } = useQuery(
+    ['school-teachers', formik.values.client, formik.values.id],
+    async () => {
+      if (!formik.values.client) return { data: { data: [] } };
+      
+      if (formik.values.id) {
+        // Modo edição: buscar professores já vinculados à escola
+        const response = await axios.get(`${API_URL}/api/Schools/${formik.values.id}/accounts`, {
+          params: { PageNumber: 1, PageSize: 1000 }
+        });
+        return { data: { data: response.data.data.filter((acc: any) => acc.role === 'Teacher') } };
+      }
+      return { data: { data: [] } };
+    },
+    {
+      enabled: !!formik.values.client,
+      refetchOnMount: 'always',
+    }
+  );
+
+  const { data: studentsData, refetch: refetchStudents } = useQuery(
+    ['school-students', formik.values.client, formik.values.id],
+    async () => {
+      if (!formik.values.client) return { data: { data: [] } };
+      
+      if (formik.values.id) {
+        // Modo edição: buscar alunos já vinculados à escola
+        const response = await axios.get(`${API_URL}/api/Schools/${formik.values.id}/accounts`, {
+          params: { PageNumber: 1, PageSize: 1000 }
+        });
+        return { data: { data: response.data.data.filter((acc: any) => acc.role === 'Student') } };
+      }
+      return { data: { data: [] } };
+    },
+    {
+      enabled: !!formik.values.client,
+      refetchOnMount: 'always',
+    }
+  );
+
+  // Buscar usuários disponíveis do cliente
+  const { data: availableAccountsData } = useQuery(
+    ['available-accounts', formik.values.client],
+    () => getAccountsByClient(formik.values.client, 1, 1000),
+    {
+      enabled: !!formik.values.client && !!formik.values.id,
+    }
+  );
+
+  // Mutation para adicionar usuários
+  const addUserMutation = useMutation(
+    async ({ userId, role }: { userId: string; role: string }) => {
+      return axios.post(`${API_URL}/api/Schools/${formik.values.id}/accounts/${userId}`);
+    },
+    {
+      onSuccess: (_, variables) => {
+        toast.success(`${variables.role === 'Teacher' ? 'Professor' : 'Aluno'} adicionado com sucesso!`);
+        if (variables.role === 'Teacher') {
+          refetchTeachers();
+        } else {
+          refetchStudents();
+        }
+        queryClient.invalidateQueries(['available-accounts', formik.values.client]);
+      },
+      onError: (error: any) => {
+        toast.error(`Erro ao adicionar usuário: ${error.response?.data?.message || error.message}`);
+      },
+    }
+  );
+
+  // Mutation para remover usuários
+  const removeUserMutation = useMutation(
+    async ({ userId, role }: { userId: string; role: string }) => {
+      return axios.delete(`${API_URL}/api/Schools/${formik.values.id}/accounts/${userId}`);
+    },
+    {
+      onSuccess: (_, variables) => {
+        toast.success(`${variables.role === 'Teacher' ? 'Professor' : 'Aluno'} removido com sucesso!`);
+        if (variables.role === 'Teacher') {
+          refetchTeachers();
+        } else {
+          refetchStudents();
+        }
+        queryClient.invalidateQueries(['available-accounts', formik.values.client]);
+      },
+      onError: (error: any) => {
+        toast.error(`Erro ao remover usuário: ${error.response?.data?.message || error.message}`);
+      },
+    }
+  );
+
+  const teachers = teachersData?.data?.data || [];
+  const students = studentsData?.data?.data || [];
+
+  // Filtrar usuários disponíveis (que não estão vinculados)
+  const allAccounts = Array.isArray(availableAccountsData?.data?.data) 
+    ? availableAccountsData.data.data 
+    : [];
+  
+  const linkedUserIds = [...teachers, ...students].map((u: any) => u.id);
+  const availableTeachers = allAccounts.filter((acc: any) => 
+    acc.role === 'Teacher' && !linkedUserIds.includes(acc.id)
+  );
+  const availableStudents = allAccounts.filter((acc: any) => 
+    acc.role === 'Student' && !linkedUserIds.includes(acc.id)
+  );
+
+  // Converter para options do AsyncSelect
+  const teacherOptions = availableTeachers.map((t: any) => ({
+    value: t.id,
+    label: `${t.name} ${t.lastName}`
+  }));
+  
+  const studentOptions = availableStudents.map((s: any) => ({
+    value: s.id,
+    label: `${s.name} ${s.lastName}`
+  }));
+
+  // Filtrar professores e alunos pela busca
+  const filteredTeachers = teachers.filter((teacher: any) => {
+    if (!teacherSearchTerm) return true;
+    const searchLower = teacherSearchTerm.toLowerCase();
+    return (
+      teacher.name?.toLowerCase().includes(searchLower) ||
+      teacher.lastName?.toLowerCase().includes(searchLower) ||
+      teacher.email?.toLowerCase().includes(searchLower)
+    );
+  });
+
+  const filteredStudents = students.filter((student: any) => {
+    if (!studentSearchTerm) return true;
+    const searchLower = studentSearchTerm.toLowerCase();
+    return (
+      student.name?.toLowerCase().includes(searchLower) ||
+      student.lastName?.toLowerCase().includes(searchLower) ||
+      student.email?.toLowerCase().includes(searchLower)
+    );
+  });
 
   return (
-    <>
-      <form id='kt_modal_add_game_form' className='form' onSubmit={formik.handleSubmit} noValidate>
-        <div className='d-flex flex-column me-n7 pe-7'>
-          {/* Name */}
-          {renderBasicFieldset('name', 'Nome', 'Enter name...')}
-
-          {/* Description */}
-          {renderBasicFieldset('description', 'Description', 'Enter description')}
-
-          {/* Address */}
-          <div className='fv-row mb-7'>
-            <label className='fw-semibold fs-6 mb-2'>Endereço</label>
-            <div className='d-flex gap-2'>
-              <div className='flex-grow-1'>
-                <Select
-                  className={clsx(
-                    'react-select-styled react-select-solid mb-3 mb-lg-0',
-                    {'is-invalid': formik.getFieldMeta('address').error}
-                  )}
-                  classNamePrefix='react-select'
-                  options={addressOptions}
-                  placeholder='Selecione um endereço'
-                  value={addressOptions.find(option => option.value === formik.values.address)}
-                  name='address'
-                  onChange={newValue => formik.setFieldValue('address', newValue?.value)}
-                  isDisabled={formik.isSubmitting}
-                  styles={{
-                    container: base => ({ ...base, width: '100%' }),
-                    control: base => ({
-                      ...base,
-                      minHeight: '38px',
-                      backgroundColor: 'var(--bs-input-bg, #f5f8fa)',
-                      borderColor: formik.getFieldMeta('address').error ? 'var(--bs-danger, #f1416c)' : 'var(--bs-input-border, #e4e6ef)',
-                      boxShadow: 'none',
-                      '&:hover': { borderColor: formik.getFieldMeta('address').error ? 'var(--bs-danger, #f1416c)' : 'var(--bs-primary, #009ef7)' },
-                    }),
-                    singleValue: base => ({ ...base, color: 'var(--bs-input-color, #181c32)' }),
-                    menu: base => ({ ...base, zIndex: 9999, backgroundColor: 'var(--bs-input-bg, #fff)' }),
-                    option: (base, state) => ({
-                      ...base,
-                      backgroundColor: state.isSelected
-                        ? 'var(--bs-primary, #009ef7)'
-                        : state.isFocused
-                        ? 'var(--bs-primary-light, #e7f1ff)'
-                        : 'var(--bs-input-bg, #fff)',
-                      color: state.isSelected ? 'var(--bs-white, #fff)' : 'var(--bs-input-color, #181c32)',
-                      fontWeight: state.isSelected ? 600 : 400,
-                    }),
-                    placeholder: base => ({ ...base, color: 'var(--bs-input-placeholder-color, #b5b5c3)' }),
-                    dropdownIndicator: base => ({ ...base, color: 'var(--bs-primary, #009ef7)' }),
-                    indicatorSeparator: base => ({ ...base, backgroundColor: 'var(--bs-input-border, #e4e6ef)' }),
-                  }}
-                  theme={theme => ({
-                    ...theme,
-                    borderRadius: 6,
-                    colors: {
-                      ...theme.colors,
-                      primary25: 'var(--bs-primary-light, #e7f1ff)',
-                      primary: 'var(--bs-primary, #009ef7)',
-                      neutral0: 'var(--bs-input-bg, #fff)',
-                      neutral20: 'var(--bs-input-border, #e4e6ef)',
-                      neutral30: 'var(--bs-primary, #009ef7)',
-                      neutral80: 'var(--bs-input-color, #181c32)',
-                    },
-                  })}
+    <form onSubmit={formik.handleSubmit} noValidate>
+      <div className="card-body">
+        <div className="row">
+          <div className="col-md-12">
+            {/* Nome da escola e Cliente */}
+            <div className="row mb-7">
+              <div className="col-md-6">
+                <label className="form-label required">Nome da escola</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Insira o nome da escola"
+                  {...formik.getFieldProps('name')}
                 />
-                {formik.getFieldMeta('address').touched && formik.getFieldMeta('address').error && (
+                {formik.touched.name && formik.errors.name && (
                   <div className='fv-plugins-message-container'>
                     <div className='fv-help-block'>
-                      <span role='alert'>{formik.getFieldMeta('address').error}</span>
+                      <span role='alert'>{formik.errors.name}</span>
                     </div>
                   </div>
                 )}
               </div>
-              <button
-                type='button'
-                className='btn btn-sm btn-light-primary'
-                onClick={() => setIsAddressModalOpen(true)}
-              >
-                <i className='fas fa-plus'></i>
-                Novo
-              </button>
+              <div className="col-md-6">
+                <AsyncSelectField
+                  label="Cliente"
+                  placeholder="Selecione..."
+                  fieldName="client"
+                  formik={formik}
+                  defaultOptions={clientOptions}
+                  loadOptions={(inputValue, callback) => {
+                    callback(filterOptions(clientOptions, inputValue));
+                  }}
+                />
+              </div>
             </div>
+
+            {/* Descrição */}
+            <div className="row mb-7">
+              <div className="col-md-12">
+                <label className="form-label">Descrição</label>
+                <textarea
+                  className="form-control"
+                  rows={3}
+                  placeholder="Insira a descrição da escola"
+                  {...formik.getFieldProps('description')}
+                />
+              </div>
+            </div>
+
+            {/* Professores e Alunos - Apenas em modo edição */}
+            {formik.values.id && (
+              <>
+                <div className="separator my-10"></div>
+                
+                <div className="row mb-7">
+                  <div className="col-md-6">
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <label className="form-label fw-bold fs-4">Professores</label>
+                      <span className="badge badge-primary fs-6">{teachers.length}</span>
+                    </div>
+                    
+                    {/* AsyncSelect para adicionar professores */}
+                    <AsyncSelectField
+                      label=""
+                      fieldName="addTeacher"
+                      placeholder="Selecione professores para adicionar..."
+                      formik={{
+                        values: { addTeacher: '' },
+                        setFieldValue: (field: string, value: any) => {
+                          if (value) {
+                            addUserMutation.mutate({ userId: value, role: 'Teacher' });
+                          }
+                        },
+                        errors: {},
+                        touched: {},
+                        getFieldMeta: () => ({ error: undefined, touched: false, value: '' }),
+                        getFieldProps: () => ({ name: 'addTeacher', value: '' }),
+                      } as any}
+                      defaultOptions={teacherOptions}
+                      loadOptions={(inputValue, callback) => {
+                        const filtered = teacherOptions
+                          .filter((t) =>
+                            t.label.toLowerCase().includes(inputValue.toLowerCase())
+                          )
+                          .slice(0, 10);
+                        callback(filtered);
+                      }}
+                    />
+
+                    {/* Campo de busca para professores */}
+                    {teachers.length > 5 && (
+                      <div className="mt-3 mb-2">
+                        <div className="position-relative">
+                          <KTIcon iconName='magnifier' className='fs-3 position-absolute ms-3 mt-3' />
+                          <input
+                            type="text"
+                            className="form-control form-control-sm ps-10"
+                            placeholder="Buscar professor..."
+                            value={teacherSearchTerm}
+                            onChange={(e) => setTeacherSearchTerm(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Lista de professores */}
+                    <div className="mt-3" style={{ maxHeight: '450px', overflowY: 'auto' }}>
+                      {filteredTeachers.length === 0 ? (
+                        <div className="text-center py-5 text-muted">
+                          <KTIcon iconName='user' className='fs-2x mb-2' />
+                          <p className="mb-0">
+                            {teacherSearchTerm ? 'Nenhum professor encontrado' : 'Nenhum professor vinculado'}
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <small className="text-muted d-block mb-2">
+                            Exibindo {filteredTeachers.length} de {teachers.length} professor(es)
+                          </small>
+                          {filteredTeachers.map((teacher: any) => (
+                            <div
+                              key={teacher.id}
+                              className="d-flex align-items-center justify-content-between bg-light-primary p-2 rounded mb-2 hover-scale"
+                              style={{ transition: 'all 0.2s' }}
+                            >
+                              <div className="d-flex align-items-center flex-grow-1 min-w-0">
+                                <div className="symbol symbol-circle symbol-30px overflow-hidden me-2 flex-shrink-0">
+                                  <div className="symbol-label fs-6 bg-primary text-white">
+                                    {teacher.name?.charAt(0)?.toUpperCase()}
+                                  </div>
+                                </div>
+                                <div className="min-w-0 flex-grow-1">
+                                  <span className="fw-bold text-gray-800 d-block text-truncate">
+                                    {teacher.name} {teacher.lastName}
+                                  </span>
+                                  <span className="text-muted fs-8 text-truncate d-block">{teacher.email}</span>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-icon btn-light-danger ms-2 flex-shrink-0"
+                                onClick={() => removeUserMutation.mutate({ userId: teacher.id, role: 'Teacher' })}
+                                disabled={removeUserMutation.isLoading}
+                                title="Remover professor"
+                              >
+                                <KTIcon iconName='trash' className='fs-7' />
+                              </button>
+                            </div>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="col-md-6">
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <label className="form-label fw-bold fs-4">Alunos</label>
+                      <span className="badge badge-success fs-6">{students.length}</span>
+                    </div>
+
+                    {/* AsyncSelect para adicionar alunos */}
+                    <AsyncSelectField
+                      label=""
+                      fieldName="addStudent"
+                      placeholder="Selecione alunos para adicionar..."
+                      formik={{
+                        values: { addStudent: '' },
+                        setFieldValue: (field: string, value: any) => {
+                          if (value) {
+                            addUserMutation.mutate({ userId: value, role: 'Student' });
+                          }
+                        },
+                        errors: {},
+                        touched: {},
+                        getFieldMeta: () => ({ error: undefined, touched: false, value: '' }),
+                        getFieldProps: () => ({ name: 'addStudent', value: '' }),
+                      } as any}
+                      defaultOptions={studentOptions}
+                      loadOptions={(inputValue, callback) => {
+                        const filtered = studentOptions
+                          .filter((s) =>
+                            s.label.toLowerCase().includes(inputValue.toLowerCase())
+                          )
+                          .slice(0, 10);
+                        callback(filtered);
+                      }}
+                    />
+
+                    {/* Campo de busca para alunos */}
+                    {students.length > 5 && (
+                      <div className="mt-3 mb-2">
+                        <div className="position-relative">
+                          <KTIcon iconName='magnifier' className='fs-3 position-absolute ms-3 mt-3' />
+                          <input
+                            type="text"
+                            className="form-control form-control-sm ps-10"
+                            placeholder="Buscar aluno..."
+                            value={studentSearchTerm}
+                            onChange={(e) => setStudentSearchTerm(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Lista de alunos */}
+                    <div className="mt-3" style={{ maxHeight: '450px', overflowY: 'auto' }}>
+                      {filteredStudents.length === 0 ? (
+                        <div className="text-center py-5 text-muted">
+                          <KTIcon iconName='user' className='fs-2x mb-2' />
+                          <p className="mb-0">
+                            {studentSearchTerm ? 'Nenhum aluno encontrado' : 'Nenhum aluno vinculado'}
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <small className="text-muted d-block mb-2">
+                            Exibindo {filteredStudents.length} de {students.length} aluno(s)
+                          </small>
+                          {filteredStudents.map((student: any) => (
+                            <div
+                              key={student.id}
+                              className="d-flex align-items-center justify-content-between bg-light-success p-2 rounded mb-2 hover-scale"
+                              style={{ transition: 'all 0.2s' }}
+                            >
+                              <div className="d-flex align-items-center flex-grow-1 min-w-0">
+                                <div className="symbol symbol-circle symbol-30px overflow-hidden me-2 flex-shrink-0">
+                                  <div className="symbol-label fs-6 bg-success text-white">
+                                    {student.name?.charAt(0)?.toUpperCase()}
+                                  </div>
+                                </div>
+                                <div className="min-w-0 flex-grow-1">
+                                  <span className="fw-bold text-gray-800 d-block text-truncate">
+                                    {student.name} {student.lastName}
+                                  </span>
+                                  <span className="text-muted fs-8 text-truncate d-block">{student.email}</span>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-icon btn-light-danger ms-2 flex-shrink-0"
+                                onClick={() => removeUserMutation.mutate({ userId: student.id, role: 'Student' })}
+                                disabled={removeUserMutation.isLoading}
+                                title="Remover aluno"
+                              >
+                                <KTIcon iconName='trash' className='fs-7' />
+                              </button>
+                            </div>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
-
-          {/* Client */}
-          {renderSelectFieldset('client', 'Client', 'Select a client', clientOptions, false, true)}
-
-          {/* Regional */}
-          {renderSelectFieldset('regionalId', 'Regional', 'Selecione uma regional', regionalOptions, false, true)}
         </div>
 
-        <div className='text-center pt-15'>
+        {/* Botões */}
+        <div className="card-footer d-flex justify-content-end py-6 px-9">
+          <button type="button" className="btn btn-light me-2" onClick={onFormSubmit}>
+            Cancelar
+          </button>
           <button
-            type='submit'
-            className='btn btn-primary'
-            data-kt-users-modal-action='submit'
+            type="submit"
+            className="btn btn-primary"
+            disabled={isUserLoading || formik.isSubmitting || !formik.isValid}
           >
-            <span className='indicator-label'>Submit</span>
-            {(formik.isSubmitting || isUserLoading) && (
-              <span className='indicator-progress'>
-                Please wait...{' '}
-                <span className='spinner-border spinner-border-sm align-middle ms-2'></span>
-              </span>
+            {formik.isSubmitting ? (
+              <>
+                Aguarde...{' '}
+                <span className="spinner-border spinner-border-sm align-middle ms-2"></span>
+              </>
+            ) : (
+              'Salvar'
             )}
           </button>
         </div>
-      </form>
+      </div>
+    </form>
+  );
+};
 
-      {/* Address Modal */}
-      <AddressModal
-        isOpen={isAddressModalOpen}
-        onClose={() => setIsAddressModalOpen(false)}
-        onAddressCreated={handleAddressCreated}
-      />
-    </>
-  )
-}
-
-export { SchoolCreateForm }
+export { SchoolCreateForm };

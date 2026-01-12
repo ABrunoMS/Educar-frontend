@@ -16,12 +16,9 @@ const SchoolEdit = () => {
 
   useEffect(() => {
     if (id) {
-      console.log('Carregando escola com ID:', id);
       getSchoolById(id)
         .then((response) => {
-          console.log('Dados recebidos do backend:', response.data);
           const schoolData = response.data;
-          // Mapeia os dados do backend para o formato esperado pelo frontend
           const mappedSchool = {
             ...schoolData,
             id: schoolData.id?.toString() || '',
@@ -29,11 +26,9 @@ const SchoolEdit = () => {
             addressId: schoolData.addressId?.toString() || '',
             regionalId: schoolData.regionalId?.toString() || ''
           };
-          console.log('Dados mapeados para o frontend:', mappedSchool);
           setSchoolItem(mappedSchool);
         })
         .catch((error) => {
-          console.error('Erro ao carregar escola:', error);
           toast.error(`Erro ao recuperar dados no servidor: ${error}`);
         });
     }
@@ -45,17 +40,19 @@ const SchoolEdit = () => {
 
   return (
     <>
-      <KTCard className='p-5 h-100'>
-        {schoolItem ? (
-          <SchoolCreateForm schoolItem={schoolItem} onFormSubmit={handleFormSubmit} />
-        ) : (
-          <div>
-            <span className='indicator-progress'>
-              Carregando...{' '}
-              <span className='spinner-border spinner-border-sm align-middle ms-2'></span>
-            </span>
-          </div>
-        )}
+      <KTCard className='h-100'>
+        <div className='p-9'>
+          {schoolItem ? (
+            <SchoolCreateForm schoolItem={schoolItem} onFormSubmit={handleFormSubmit} />
+          ) : (
+            <div className='text-center'>
+              <span className='indicator-progress'>
+                Carregando...{' '}
+                <span className='spinner-border spinner-border-sm align-middle ms-2'></span>
+              </span>
+            </div>
+          )}
+        </div>
       </KTCard>
     </>
   );
