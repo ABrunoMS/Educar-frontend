@@ -17,10 +17,9 @@ const SchoolEdit = () => {
     if (id) {
       getSchoolById(id)
         .then((response) => {
-          const schoolData: any = response.data; // Use any para facilitar acesso a props dinâmicas
+          const schoolData: any = response.data; // Use any aqui para facilitar acesso a props dinâmicas
           
-          // --- LÓGICA CRÍTICA DA MAIN (Mantida) ---
-          // Mapeamento Robusto: Garante que pegamos o ID mesmo se vier aninhado em objetos
+          // MAPEAMENTO ROBUSTO: Tenta pegar o ID direto ou de dentro do objeto
           const mappedSchool: SchoolType = {
             ...schoolData,
             id: schoolData.id?.toString() || '',
@@ -53,7 +52,7 @@ const SchoolEdit = () => {
       {schoolItem ? (
         <SchoolCreateForm schoolItem={schoolItem} onFormSubmit={handleFormSubmit} />
       ) : (
-        <div className='text-center'>
+        <div>
            <span className='indicator-progress'>
              Carregando... <span className='spinner-border spinner-border-sm align-middle ms-2'></span>
            </span>
