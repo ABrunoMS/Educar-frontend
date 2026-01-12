@@ -18,6 +18,7 @@ export interface ClientType {
   name?: string;
   description?: string;
   partner?: string;
+  partnerName?: string;
   contacts?: string;
   contract?: string;
   validity?: string;
