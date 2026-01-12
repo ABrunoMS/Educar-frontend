@@ -11,30 +11,34 @@ import { SchoolType } from '@interfaces/School';
 const SchoolEdit = () => {
   const [schoolItem, setSchoolItem] = useState<SchoolType>();
   const navigate = useNavigate();
-
   const { id } = useParams();
 
   useEffect(() => {
     if (id) {
-      console.log('Carregando escola com ID:', id);
       getSchoolById(id)
         .then((response) => {
-          console.log('Dados recebidos do backend:', response.data);
-          const schoolData = response.data;
-          // Mapeia os dados do backend para o formato esperado pelo frontend
-          const mappedSchool = {
+          const schoolData: any = response.data; // Use any aqui para facilitar acesso a props dinâmicas
+          
+          // MAPEAMENTO ROBUSTO: Tenta pegar o ID direto ou de dentro do objeto
+          const mappedSchool: SchoolType = {
             ...schoolData,
             id: schoolData.id?.toString() || '',
-            clientId: schoolData.clientId?.toString() || '',
-            addressId: schoolData.addressId?.toString() || '',
-            regionalId: schoolData.regionalId?.toString() || ''
+            
+            // Corrige problema do Cliente não vir
+            clientId: schoolData.clientId?.toString() || schoolData.client?.id?.toString() || '',
+            
+            // Corrige problema do Endereço não vir
+            addressId: schoolData.addressId?.toString() || schoolData.address?.id?.toString() || '',
+            
+            // Corrige problema da Regional não vir
+            regionalId: schoolData.regionalId?.toString() || schoolData.regional?.id?.toString() || ''
           };
-          console.log('Dados mapeados para o frontend:', mappedSchool);
+          
           setSchoolItem(mappedSchool);
         })
         .catch((error) => {
           console.error('Erro ao carregar escola:', error);
-          toast.error(`Erro ao recuperar dados no servidor: ${error}`);
+          toast.error('Erro ao carregar dados da escola');
         });
     }
   }, [id]);
@@ -44,20 +48,17 @@ const SchoolEdit = () => {
   };
 
   return (
-    <>
-      <KTCard className='p-5 h-100'>
-        {schoolItem ? (
-          <SchoolCreateForm schoolItem={schoolItem} onFormSubmit={handleFormSubmit} />
-        ) : (
-          <div>
-            <span className='indicator-progress'>
-              Carregando...{' '}
-              <span className='spinner-border spinner-border-sm align-middle ms-2'></span>
-            </span>
-          </div>
-        )}
-      </KTCard>
-    </>
+    <KTCard className='p-5 h-100'>
+      {schoolItem ? (
+        <SchoolCreateForm schoolItem={schoolItem} onFormSubmit={handleFormSubmit} />
+      ) : (
+        <div>
+           <span className='indicator-progress'>
+             Carregando... <span className='spinner-border spinner-border-sm align-middle ms-2'></span>
+           </span>
+        </div>
+      )}
+    </KTCard>
   );
 };
 
