@@ -4,6 +4,7 @@ import { PageTitle } from '@metronic/layout/core'
 import { LessonCreateWrapper, LessonStepsWrapper } from './lesson-create/LessonCreate' 
 import { LessonListWrapper } from './lesson-list/LessonList' 
 import { LessonEdit } from './lesson-edit/LessonEdit' 
+import { AddQuestToClassWrapper } from './add-to-class/AddQuestToClass'
 
 const LessonsPage = () => {
  return (
@@ -41,6 +42,18 @@ const LessonsPage = () => {
       </>
      }
     />
+    
+    {/* Rota para Adicionar Aula na Turma */}
+    <Route
+     path='add-to-class'
+     element={
+      <>
+       <PageTitle>Adicionar Aula na Turma</PageTitle>
+       <AddQuestToClassWrapper />
+      </>
+     }
+    />
+    
         {/* NOVA ROTA DINÂMICA PARA GERENCIAMENTO DE ETAPAS */}
     <Route
      path='steps/:lessonId' 

@@ -5,12 +5,10 @@ import { Class } from '@interfaces/Class';
 import { SelectOptions } from '@interfaces/Forms';
 import AsyncSelectField from '@components/form/AsyncSelectField';
 import { useAuth } from '../../../../auth';
-import { getSchools, getSchoolById } from '@services/Schools';
+import { getSchools } from '@services/Schools';
 import { getAccountsBySchool } from '@services/Accounts';
 import { createClass, updateClass } from '@services/Classes';
 import { isNotEmpty } from '@metronic/helpers';
-import { getClientById } from '@services/Clients';
-import { getAllProducts, getCompatibleContents } from '../../../client-management/clients-list/core/_requests';
 
 type Props = {
   isUserLoading?: boolean;
@@ -30,7 +28,7 @@ const initialClass: Class = {
   schoolShift: '',
   content: [],
   teacherIds: [],
-  studentIds: [],
+  studentIds: []
 };
 
 const schoolYearOptions: SelectOptions[] = [
@@ -51,9 +49,6 @@ const schoolShiftOptions: SelectOptions[] = [
   { value: 'night', label: 'Noturno' },
 ];
 
-// Conteúdos dinâmicos conforme produtos do cliente
-type ContentOption = { value: string; label: string };
-
 // Função para filtrar e limitar opções
 const filterOptions = (options: SelectOptions[], inputValue: string) => {
   return options
@@ -70,7 +65,6 @@ const editClassSchema = Yup.object().shape({
   schoolYear: Yup.string().required('O ano escolar é obrigatório'),
   schoolShift: Yup.string().required('O turno escolar é obrigatório'),
   description: Yup.string().optional(),
-  content: Yup.array().of(Yup.string()).optional(),
   teacherIds: Yup.array().of(Yup.string()).optional(),
   studentIds: Yup.array().of(Yup.string()).optional(),
 });
@@ -81,17 +75,13 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
   const [schoolOptions, setSchoolOptions] = useState<SelectOptions[]>([]);
   const [teacherOptions, setTeacherOptions] = useState<SelectOptions[]>([]);
   const [studentOptions, setStudentOptions] = useState<SelectOptions[]>([]);
-  const [contentOptions, setContentOptions] = useState<ContentOption[]>([]);
-
-  // useEffect movido para abaixo da declaração do formik
 
   const formik = useFormik({
     initialValues: {
       ...initialClass,
       ...classItem,
       teacherIds: classItem?.teacherIds || [],
-      studentIds: classItem?.studentIds || [],
-      content: classItem?.content || []
+      studentIds: classItem?.studentIds || []
     },
     validationSchema: editClassSchema,
     enableReinitialize: true,
@@ -101,7 +91,6 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
         accountIds: [...(values.teacherIds || []), ...(values.studentIds || [])],
         teacherIds: values.teacherIds || [],
         studentIds: values.studentIds || [],
-        content: values.content || [],
         isActive: values.isActive ?? true
       };
       setSubmitting(true);
@@ -121,94 +110,6 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
       }
     },
   });
-
-  // Buscar conteúdos baseados na escola selecionada (cliente da escola);
-  // Sem escola: fallback para Admin (todos) e não-admin (cliente do usuário)
-  useEffect(() => {
-    const fetchByClientId = async (clientId: string) => {
-      try {
-        const { data: client } = await getClientById(clientId);
-        let contents: any[] = [];
-        if (Array.isArray(client.products)) {
-          contents = client.products.flatMap((p: any) => Array.isArray(p.contents) ? p.contents : []);
-        }
-        if ((!contents || contents.length === 0) && Array.isArray(client.contents)) {
-          contents = client.contents;
-        }
-        const uniqueContents = Array.from(new Map(contents.map((c: any) => [c.id, c])).values());
-        const opts = uniqueContents.map((c: any) => ({ value: c.id, label: c.name }));
-        setContentOptions(opts);
-        // Sanitiza valores selecionados
-        const allowed = new Set(opts.map(o => o.value));
-        const selected = Array.isArray(formik.values.content) ? formik.values.content : [];
-        const filtered = selected.filter((id: string) => allowed.has(id));
-        if (filtered.length !== selected.length) {
-          formik.setFieldValue('content', filtered);
-        }
-      } catch (err) {
-        setContentOptions([]);
-        formik.setFieldValue('content', []);
-      }
-    };
-
-    const fetchAllContents = async () => {
-      try {
-        const productsResp = await getAllProducts();
-        const allProducts = productsResp.data || [];
-        const allContentsArr = await Promise.all(
-          allProducts.map((p: any) => getCompatibleContents(p.id))
-        );
-        const allContents = allContentsArr.flat();
-        const uniqueContents = Array.from(new Map(allContents.map((c: any) => [c.id, c])).values());
-        const opts = uniqueContents.map((c: any) => ({ value: c.id, label: c.name }));
-        setContentOptions(opts);
-        const allowed = new Set(opts.map(o => o.value));
-        const selected = Array.isArray(formik.values.content) ? formik.values.content : [];
-        const filtered = selected.filter((id: string) => allowed.has(id));
-        if (filtered.length !== selected.length) {
-          formik.setFieldValue('content', filtered);
-        }
-      } catch {
-        setContentOptions([]);
-        formik.setFieldValue('content', []);
-      }
-    };
-
-    const loadContents = async () => {
-      const schoolId = formik.values.schoolId;
-      if (schoolId) {
-        // Busca cliente a partir da escola selecionada
-        try {
-          const { data: school } = await getSchoolById(schoolId);
-          const clientId = school?.client?.id || school?.clientId;
-          if (clientId) {
-            await fetchByClientId(clientId);
-            return;
-          }
-          // Se escola não tiver cliente, limpa opções
-          setContentOptions([]);
-          formik.setFieldValue('content', []);
-          return;
-        } catch {
-          setContentOptions([]);
-          formik.setFieldValue('content', []);
-          return;
-        }
-      }
-
-      // Sem escola selecionada: fallback
-      if (currentUser?.client?.id) {
-        await fetchByClientId(currentUser.client.id);
-      } else if (currentUser?.roles?.includes('Admin')) {
-        await fetchAllContents();
-      } else {
-        setContentOptions([]);
-        formik.setFieldValue('content', []);
-      }
-    };
-
-    loadContents();
-  }, [formik.values.schoolId, currentUser?.client?.id, currentUser?.roles]);
 
   // Carregar escolas
   useEffect(() => {
@@ -264,7 +165,7 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
     <form onSubmit={formik.handleSubmit} noValidate>
       <div className="card-body">
         <div className="row">
-          <div className="col-md-8">
+          <div className="col-md-12">
             {/* Nome e Ativo */}
             <div className="row mb-7">
               <div className="col-md-10">
@@ -436,28 +337,6 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
                   </div>
                 )}
               </div>
-            </div>
-          </div>
-          {/* Conteúdo */}
-          <div className="col-md-4">
-            <div className="mb-7">
-              <label className="form-label">Conteúdo</label>
-              {contentOptions.length === 0 && (
-                <div className="text-muted">Nenhum conteúdo disponível para o cliente.</div>
-              )}
-              {contentOptions.map((content) => (
-                <div className="form-check mb-3" key={content.value}>
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    name="content"
-                    value={content.value}
-                    checked={Array.isArray(formik.values.content) && formik.values.content.includes(content.value)}
-                    onChange={formik.handleChange}
-                  />
-                  <label className="form-check-label">{content.label}</label>
-                </div>
-              ))}
             </div>
           </div>
         </div>

@@ -17,7 +17,7 @@ export const getClassById = (id: string) => {
 };
 
 export const getClasses = (page = 1, pageSize = 10) => {
-  return axios.get<{ items: Class[]; totalCount: number }>(`${ CLASSES_URL}`, {
+  return axios.get<{ data: Class[]; payload: { pagination: { totalCount: number } } }>(`${CLASSES_URL}`, {
     params: { PageNumber: page, PageSize: pageSize },
   });
 }
