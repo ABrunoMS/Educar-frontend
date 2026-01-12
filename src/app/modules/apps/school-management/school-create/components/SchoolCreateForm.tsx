@@ -80,7 +80,7 @@ const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onForm
 
     // Buscar regionais da API
     getRegionais().then((response) => {
-      const data = Array.isArray(response.data) ? response.data : response.data.data || [];
+      const data = Array.isArray(response.data) ? response.data : response.data || [];
       const options = data.map((regional: any) => ({
         value: regional.id,
         label: regional.name,
