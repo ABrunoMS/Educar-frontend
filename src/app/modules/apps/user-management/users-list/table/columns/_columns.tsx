@@ -27,6 +27,13 @@ const usersColumns: ReadonlyArray<Column<User>> = [
     Header: (props) => <UserCustomHeader tableProps={props} title='Email' className='min-w-125px' />,
     accessor: 'email',
   },
+  {
+    Header: (props) => <UserCustomHeader tableProps={props} title='Cliente' className='min-w-125px' />,
+    id: 'clientName',
+    Cell: ({...props}) => (
+      <span>{props.data[props.row.index].clientName || '-'}</span>
+    ),
+  },
    {
      Header: (props) => (
        <UserCustomHeader tableProps={props} title='Last login' className='min-w-125px' />

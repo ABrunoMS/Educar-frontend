@@ -96,7 +96,8 @@ const ClientListWrapper = () => {
   },
     { Header: 'Total de contas', accessor: 'totalAccounts' },
     { Header: 'Contas restantes', accessor: 'remainingAccounts' },
-    { Header: 'Parceiro', accessor: 'partner' },
+    { Header: 'Parceiro', accessor: 'partnerName' },
+    { Header: 'Contato', accessor: 'contacts' },
     {
       Header: '',
       id: 'actions',

@@ -15,11 +15,12 @@ export type User = {
     state: string
   }
 
-    client?: { 
+  client?: { 
     id: string
     name: string
   }
   clientId?: string
+  clientName?: string
   classIds?: string[]
   schoolIds?: string[]
   schools?: Array<{id: string, name: string}> 

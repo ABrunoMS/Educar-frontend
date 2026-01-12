@@ -118,6 +118,11 @@ const UsersList = () => {
       accessor: 'role',
     },
     {
+      Header: 'Cliente',
+      id: 'clientName',
+      Cell: ({ row }) => <span>{row.original.clientName || '-'}</span>,
+    },
+    {
       Header: '',
       id: 'actions',
       Cell:({ row }) => <UserActionsCell id={row.original.id} />,

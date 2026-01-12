@@ -9,6 +9,7 @@ export interface Account {
   eventAverageScore?: number;
   stars?: number;
   clientId: string;
+  clientName?: string;
   role: 'Admin' | 'Teacher' | 'Student';
   schoolIds: string[];
   classIds: string[];
