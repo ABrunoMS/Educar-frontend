@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { SchoolType } from '@interfaces/School';
 import { PaginatedResponse } from '@contexts/PaginationContext';
-import { Account } from '@interfaces/Account';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 const SCHOOLS_URL = `${API_URL}/api/Schools`;
@@ -14,22 +13,6 @@ export const getSchools = (): Promise<{ data: PaginatedResponse<SchoolType> }> =
 
 export const getSchoolById = (id: string): Promise<{ data: SchoolType }> => {
   return axios.get(`${SCHOOLS_URL}/${id}`);
-};
-
-// Busca usuários (accounts) associados a uma escola específica
-export const getAccountsBySchool = (
-  schoolId: string,
-  page: number = 1,
-  pageSize: number = 10,
-  searchTerm: string = ''
-): Promise<{ data: PaginatedResponse<Account> }> => {
-  return axios.get(`${SCHOOLS_URL}/${schoolId}/accounts`, {
-    params: {
-      PageNumber: page,
-      PageSize: pageSize,
-      SearchTerm: searchTerm,
-    },
-  });
 };
 
 // ===============================================
