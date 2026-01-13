@@ -5,6 +5,8 @@ export interface School {
   address: string;
   client: string;
   regionalId?: string;
+  teacherIds?: string[];
+  studentIds?: string[];
 }
 
 export interface SchoolType {
@@ -14,6 +16,8 @@ export interface SchoolType {
   addressId?: string | null;
   clientId?: string;
   regionalId?: string;
+  teacherIds?: string[];
+  studentIds?: string[];
   address?: {
     id: string;
     street?: string;
