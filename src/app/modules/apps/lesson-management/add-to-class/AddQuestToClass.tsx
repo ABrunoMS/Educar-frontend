@@ -12,9 +12,11 @@ import clsx from 'clsx';
 const addQuestSchema = Yup.object().shape({
   classId: Yup.string().required('Selecione uma turma'),
   questId: Yup.string().required('Selecione uma aula'),
+  startDate: Yup.date()
+    .required('Data de início é obrigatória'),
   expirationDate: Yup.date()
     .required('Data de expiração é obrigatória')
-    .min(new Date(), 'Data deve ser futura'),
+    .min(Yup.ref('startDate'), 'Data de expiração deve ser posterior à data de início'),
 });
 
 const AddQuestToClass: FC = () => {
@@ -34,17 +36,22 @@ const AddQuestToClass: FC = () => {
     initialValues: {
       classId: '',
       questId: '',
-      expirationDate: '',
+      startDate: new Date().toISOString().split('T')[0],
+      expirationDate: new Date().toISOString().split('T')[0],
     },
     validationSchema: addQuestSchema,
     onSubmit: async (values, { setSubmitting, resetForm }) => {
       try {
+        const startDate = new Date(values.startDate);
+        startDate.setHours(0, 0, 0, 0);
+        
         const expirationDate = new Date(values.expirationDate);
         expirationDate.setHours(23, 59, 59, 999);
         
         await createClassQuest({
           classId: values.classId,
           questId: values.questId,
+          startDate: startDate.toISOString(),
           expirationDate: expirationDate.toISOString(),
         });
         
@@ -396,6 +403,28 @@ const AddQuestToClass: FC = () => {
             )}
           </div>
 
+          {/* Data de Início */}
+          <div className='mb-10 fv-row'>
+            <label className='form-label required'>Data de Início</label>
+            <input
+              type='date'
+              className={clsx('form-control form-control-solid form-control-lg', {
+                'is-invalid': formik.touched.startDate && formik.errors.startDate,
+              })}
+              {...formik.getFieldProps('startDate')}
+            />
+            {formik.touched.startDate && formik.errors.startDate && (
+              <div className='fv-plugins-message-container'>
+                <div className='fv-help-block'>
+                  <span role='alert'>{formik.errors.startDate}</span>
+                </div>
+              </div>
+            )}
+            <div className='form-text'>
+              Data em que a aula ficará disponível para os alunos
+            </div>
+          </div>
+
           {/* Data de Expiração */}
           <div className='mb-10 fv-row'>
             <label className='form-label required'>Data de Expiração</label>
@@ -405,7 +434,6 @@ const AddQuestToClass: FC = () => {
                 'is-invalid': formik.touched.expirationDate && formik.errors.expirationDate,
               })}
               {...formik.getFieldProps('expirationDate')}
-              min={new Date().toISOString().split('T')[0]}
             />
             {formik.touched.expirationDate && formik.errors.expirationDate && (
               <div className='fv-plugins-message-container'>

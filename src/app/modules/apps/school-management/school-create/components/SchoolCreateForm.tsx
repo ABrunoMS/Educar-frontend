@@ -32,7 +32,8 @@ const initialSchool: School = {
   client: '',
   regionalId: '',
   teacherIds: [],
-  studentIds: []
+  studentIds: [],
+  contractStartDate: ''
 }
 
 const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onFormSubmit }) => {
@@ -62,7 +63,8 @@ const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onForm
         client: clientIdValue,
         regionalId: regionalIdValue,
         teacherIds: item?.teacherIds || [],
-        studentIds: item?.studentIds || []
+        studentIds: item?.studentIds || [],
+        contractStartDate: item?.contractStartDate || ''
     }
   }, [currentSchool]);
 
@@ -76,6 +78,7 @@ const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onForm
     regionalId: Yup.string().required('Regional é obrigatório'),
     teacherIds: Yup.array().of(Yup.string()).optional(),
     studentIds: Yup.array().of(Yup.string()).optional(),
+    contractStartDate: Yup.date().optional().nullable(),
   })
 
   // --- FORMIK (Sua lógica de submit mantida para garantir os IDs corretos) ---
@@ -95,6 +98,7 @@ const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onForm
         
         if (values.description) schoolData.description = values.description;
         if (values.address) schoolData.addressId = values.address;
+        if (values.contractStartDate) schoolData.contractStartDate = values.contractStartDate;
         
         // Adicionar accountIds combinando professores e alunos
         const accountIds = [...(values.teacherIds || []), ...(values.studentIds || [])];
@@ -280,6 +284,27 @@ const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onForm
             false, 
             true
           )}
+
+          {/* Data de Início do Contrato */}
+          <div className='fv-row mb-7'>
+            <label className='fw-semibold fs-6 mb-2'>Data de Início do Contrato</label>
+            <input
+              type='date'
+              className={clsx(
+                'form-control form-control-solid mb-3 mb-lg-0',
+                {'is-invalid': formik.touched.contractStartDate && formik.errors.contractStartDate}
+              )}
+              placeholder='Selecione a data'
+              {...formik.getFieldProps('contractStartDate')}
+            />
+            {formik.touched.contractStartDate && formik.errors.contractStartDate && (
+              <div className='fv-plugins-message-container'>
+                <div className='fv-help-block'>
+                  <span role='alert'>{formik.errors.contractStartDate as string}</span>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* --- SEÇÃO: Professores e Alunos --- */}
           <div className="separator my-10"></div>

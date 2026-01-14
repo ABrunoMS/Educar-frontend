@@ -6,6 +6,7 @@ export interface ClassQuest {
   id: string;
   classId: string;
   questId: string;
+  startDate: string;
   expirationDate: string;
   isExpired: boolean;
 }
@@ -13,6 +14,7 @@ export interface ClassQuest {
 export interface CreateClassQuestRequest {
   classId: string;
   questId: string;
+  startDate: string;
   expirationDate: string;
 }
 

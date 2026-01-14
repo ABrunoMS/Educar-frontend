@@ -7,6 +7,7 @@ export interface School {
   regionalId?: string;
   teacherIds?: string[];
   studentIds?: string[];
+  contractStartDate?: string;
 }
 
 export interface SchoolType {
@@ -18,6 +19,7 @@ export interface SchoolType {
   regionalId?: string;
   teacherIds?: string[];
   studentIds?: string[];
+  contractStartDate?: string;
   address?: {
     id: string;
     street?: string;

@@ -20,9 +20,21 @@ type Props = {
   classId: string;
 };
 
-const formatDateToBR = (dateString: string) => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('pt-BR');
+const formatDateToBR = (dateString: string | undefined | null) => {
+  if (!dateString) return 'Data não definida';
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Data inválida';
+    
+    // Usar UTC para evitar problemas de timezone
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const year = date.getUTCFullYear();
+    
+    return `${day}/${month}/${year}`;
+  } catch {
+    return 'Data inválida';
+  }
 };
 
 type ClassQuestWithName = ClassQuest & {
@@ -34,6 +46,22 @@ const ClassQuestsTable: FC<{
   onDelete: (id: ID) => void;
   onEdit: (classQuest: ClassQuest) => void;
 }> = ({ classQuests, onDelete, onEdit }) => {
+  const getQuestStatus = (startDate: string, expirationDate: string, isExpired: boolean) => {
+    const now = new Date();
+    const start = new Date(startDate);
+    const expiration = new Date(expirationDate);
+    
+    if (isExpired || now > expiration) {
+      return { color: 'danger', text: 'Expirada', status: 'expired' };
+    }
+    
+    if (now < start) {
+      return { color: 'warning', text: 'Aguardando', status: 'pending' };
+    }
+    
+    return { color: 'success', text: 'Ativa', status: 'active' };
+  };
+
   const getStatusColor = (isExpired: boolean) => {
     return isExpired ? 'danger' : 'success';
   };
@@ -64,6 +92,7 @@ const ClassQuestsTable: FC<{
   return (
     <div className='row g-6 g-xl-9'>
       {classQuests.map((cq) => {
+        const questStatus = getQuestStatus(cq.startDate, cq.expirationDate, cq.isExpired);
         const statusColor = getStatusColor(cq.isExpired);
         const expirationMsg = getExpirationMessage(cq.expirationDate, cq.isExpired);
         const daysLeft = getDaysUntilExpiration(cq.expirationDate);
@@ -87,10 +116,11 @@ const ClassQuestsTable: FC<{
                   </div>
                   <div className='flex-grow-1'>
                     <span className={clsx('badge fs-8', {
-                      'badge-light-danger': cq.isExpired,
-                      'badge-light': !cq.isExpired
+                      'badge-light-danger': questStatus.status === 'expired',
+                      'badge-light-warning': questStatus.status === 'pending',
+                      'badge-light-success': questStatus.status === 'active'
                     })}>
-                      {getStatusText(cq.isExpired)}
+                      {questStatus.text}
                     </span>
                   </div>
                 </div>
@@ -110,24 +140,54 @@ const ClassQuestsTable: FC<{
                   </h3>
                 </div>
 
-                {/* Data de Expiração */}
-                <div className='bg-light rounded p-4 mb-5'>
-                  <div className='d-flex align-items-center'>
-                    <i className='ki-duotone ki-calendar fs-1 me-3 text-gray-600'>
-                      <span className='path1'></span>
-                      <span className='path2'></span>
-                    </i>
-                    <div className='flex-grow-1'>
-                      <div className='fs-7 text-muted mb-1'>Expira em</div>
-                      <div className='fs-5 fw-bold text-gray-800'>
-                        {formatDateToBR(cq.expirationDate)}
+                {/* Datas */}
+                <div className='mb-5'>
+                  {/* Data de Início */}
+                  <div className={clsx('rounded p-3 mb-3', {
+                    'bg-light-success': questStatus.status === 'active',
+                    'bg-light-warning': questStatus.status === 'pending',
+                    'bg-light': questStatus.status === 'expired'
+                  })}>
+                    <div className='d-flex align-items-center'>
+                      <i className={clsx('ki-duotone ki-calendar-tick fs-2 me-3', {
+                        'text-success': questStatus.status === 'active',
+                        'text-warning': questStatus.status === 'pending',
+                        'text-muted': questStatus.status === 'expired'
+                      })}>
+                        <span className='path1'></span>
+                        <span className='path2'></span>
+                      </i>
+                      <div className='flex-grow-1'>
+                        <div className='fs-8 text-muted mb-1'>Inicia em</div>
+                        <div className='fs-6 fw-bold text-gray-800'>
+                          {formatDateToBR(cq.startDate)}
+                        </div>
+                        {questStatus.status === 'pending' && (
+                          <span className='badge badge-sm badge-warning mt-1'>Ainda não iniciada</span>
+                        )}
                       </div>
-                      {cq.isExpired && (
-                        <span className='badge badge-sm badge-danger mt-1'>Expirada</span>
-                      )}
-                      {isUrgent && (
-                        <span className='badge badge-sm badge-warning mt-1'>Vence em breve</span>
-                      )}
+                    </div>
+                  </div>
+
+                  {/* Data de Expiração */}
+                  <div className='bg-light rounded p-3'>
+                    <div className='d-flex align-items-center'>
+                      <i className='ki-duotone ki-calendar fs-2 me-3 text-gray-600'>
+                        <span className='path1'></span>
+                        <span className='path2'></span>
+                      </i>
+                      <div className='flex-grow-1'>
+                        <div className='fs-8 text-muted mb-1'>Expira em</div>
+                        <div className='fs-6 fw-bold text-gray-800'>
+                          {formatDateToBR(cq.expirationDate)}
+                        </div>
+                        {questStatus.status === 'expired' && (
+                          <span className='badge badge-sm badge-danger mt-1'>Expirada</span>
+                        )}
+                        {isUrgent && (
+                          <span className='badge badge-sm badge-warning mt-1'>Vence em breve</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -174,9 +234,11 @@ const ClassQuestsTable: FC<{
 
 const createQuestSchema = Yup.object().shape({
   questId: Yup.string().required('Selecione uma aula'),
+  startDate: Yup.date()
+    .required('Data de início é obrigatória'),
   expirationDate: Yup.date()
     .required('Data de expiração é obrigatória')
-    .min(new Date(), 'Data deve ser futura'),
+    .min(Yup.ref('startDate'), 'Data de expiração deve ser posterior à data de início'),
 });
 
 const updateQuestSchema = Yup.object().shape({
@@ -235,18 +297,24 @@ const ClassQuestsList: FC<Props> = ({ classId }) => {
   const createFormik = useFormik({
     initialValues: {
       questId: '',
-      expirationDate: '',
+      startDate: new Date().toISOString().split('T')[0],
+      expirationDate: new Date().toISOString().split('T')[0],
     },
     validationSchema: createQuestSchema,
     onSubmit: async (values, { setSubmitting }) => {
       try {
-        // Converter data para formato ISO com hora 23:59:59
-        const expirationDate = new Date(values.expirationDate);
-        expirationDate.setHours(23, 59, 59, 999);
+        // Converter data de início para formato ISO com hora 00:00:00 UTC
+        const [yearStart, monthStart, dayStart] = values.startDate.split('-').map(Number);
+        const startDate = new Date(Date.UTC(yearStart, monthStart - 1, dayStart, 0, 0, 0, 0));
+        
+        // Converter data de expiração para formato ISO com hora 23:59:59 UTC
+        const [yearExp, monthExp, dayExp] = values.expirationDate.split('-').map(Number);
+        const expirationDate = new Date(Date.UTC(yearExp, monthExp - 1, dayExp, 23, 59, 59, 999));
         
         await createClassQuest({
           classId,
           questId: values.questId,
+          startDate: startDate.toISOString(),
           expirationDate: expirationDate.toISOString(),
         });
         toast.success('Aula vinculada à turma com sucesso!');
@@ -490,6 +558,34 @@ const ClassQuestsList: FC<Props> = ({ classId }) => {
             </div>
 
             <div className='mb-7'>
+              <label className='form-label required fs-6 fw-bold mb-3'>Data de Início</label>
+              <div className='position-relative'>
+                <i className='ki-duotone ki-calendar fs-2 position-absolute top-50 translate-middle-y ms-4 text-gray-500'>
+                  <span className='path1'></span>
+                  <span className='path2'></span>
+                </i>
+                <input
+                  type='date'
+                  className={clsx('form-control form-control-lg ps-12', {
+                    'is-invalid': createFormik.touched.startDate && createFormik.errors.startDate,
+                  })}
+                  {...createFormik.getFieldProps('startDate')}
+                />
+              </div>
+              {createFormik.touched.startDate && createFormik.errors.startDate && (
+                <div className='invalid-feedback d-block mt-2'>{createFormik.errors.startDate as string}</div>
+              )}
+              <div className='form-text mt-2'>
+                <i className='ki-duotone ki-information-5 fs-6 me-1'>
+                  <span className='path1'></span>
+                  <span className='path2'></span>
+                  <span className='path3'></span>
+                </i>
+                Data a partir da qual a aula ficará disponível para os alunos
+              </div>
+            </div>
+
+            <div className='mb-7'>
               <label className='form-label required fs-6 fw-bold mb-3'>Data de Expiração</label>
               <div className='position-relative'>
                 <i className='ki-duotone ki-calendar fs-2 position-absolute top-50 translate-middle-y ms-4 text-gray-500'>
@@ -502,7 +598,6 @@ const ClassQuestsList: FC<Props> = ({ classId }) => {
                     'is-invalid': createFormik.touched.expirationDate && createFormik.errors.expirationDate,
                   })}
                   {...createFormik.getFieldProps('expirationDate')}
-                  min={new Date().toISOString().split('T')[0]}
                 />
               </div>
               {createFormik.touched.expirationDate && createFormik.errors.expirationDate && (
