@@ -8,29 +8,33 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { toast } from 'react-toastify';
 import clsx from 'clsx';
+// Import do Auth
+import { useAuth } from '../../../../../../src/app/modules/auth';
 
 const addQuestSchema = Yup.object().shape({
   classId: Yup.string().required('Selecione uma turma'),
   questId: Yup.string().required('Selecione uma aula'),
-  startDate: Yup.date()
-    .required('Data de início é obrigatória'),
+  startDate: Yup.date().required('Data de início é obrigatória'),
   expirationDate: Yup.date()
     .required('Data de expiração é obrigatória')
     .min(Yup.ref('startDate'), 'Data de expiração deve ser posterior à data de início'),
 });
 
 const AddQuestToClass: FC = () => {
+  const { currentUser } = useAuth(); // Hook para pegar o ID do professor
+  const queryClient = useQueryClient();
+
   const [selectedClass, setSelectedClass] = useState<{
     value: string;
     label: string;
     schoolYear?: string;
-    products?: Array<{id: string}>;
-    contents?: Array<{id: string}>;
   } | null>(null);
-  const [selectedQuest, setSelectedQuest] = useState<{value: string, label: string} | null>(null);
+  
+  const [selectedQuest, setSelectedQuest] = useState<{ value: string; label: string } | null>(null);
+  
+  // Filtros manuais
   const [filterYear, setFilterYear] = useState<string>('');
   const [filterSubject, setFilterSubject] = useState<string>('');
-  const queryClient = useQueryClient();
 
   const formik = useFormik({
     initialValues: {
@@ -44,30 +48,31 @@ const AddQuestToClass: FC = () => {
       try {
         const startDate = new Date(values.startDate);
         startDate.setHours(0, 0, 0, 0);
-        
+
         const expirationDate = new Date(values.expirationDate);
         expirationDate.setHours(23, 59, 59, 999);
-        
+
         await createClassQuest({
           classId: values.classId,
           questId: values.questId,
           startDate: startDate.toISOString(),
           expirationDate: expirationDate.toISOString(),
         });
-        
+
         toast.success('Aula adicionada à turma com sucesso!');
-        
-        // Limpar formulário
+
         resetForm();
         setSelectedClass(null);
         setSelectedQuest(null);
         setFilterYear('');
         setFilterSubject('');
-        
-        // Invalidar cache do react-query se necessário
+
         queryClient.invalidateQueries(['class-quests']);
       } catch (error: any) {
-        const errorMessage = error.response?.data?.title || error.response?.data?.message || 'Erro ao adicionar aula à turma.';
+        const errorMessage =
+          error.response?.data?.title ||
+          error.response?.data?.message ||
+          'Erro ao adicionar aula à turma.';
         toast.error(errorMessage);
         console.error('Erro ao adicionar aula:', error);
       } finally {
@@ -76,49 +81,42 @@ const AddQuestToClass: FC = () => {
     },
   });
 
+  // --- 1. CARREGAR TURMAS (Filtrar se o professor está nela) ---
   const loadClassOptions = async (inputValue: string) => {
     try {
       const response = await getClasses(1, 1000);
       let classes: any[] = [];
-      
+
       if (response.data && 'data' in response.data && Array.isArray(response.data.data)) {
         classes = response.data.data;
       } else if (response.data && Array.isArray(response.data)) {
         classes = response.data;
       }
-      
-      console.log('Classes recebidas:', classes.length);
-      if (classes.length > 0) {
-        console.log('Exemplo de turma:', classes[0]);
-        console.log('Products da primeira turma:', classes[0].products);
-        console.log('Contents da primeira turma:', classes[0].contents);
+
+      // REGRA DE NEGÓCIO: Se não for Admin, filtrar apenas turmas onde o professor está vinculado
+      if (currentUser && !currentUser.roles?.includes('Admin')) {
+          classes = classes.filter((c: any) => {
+              // Verifica nas listas de IDs da turma (teacherIds ou accountIds)
+              const teachers = c.teacherIds || [];
+              const accounts = c.accountIds || [];
+              const allMembers = [...teachers, ...accounts];
+              
+              return allMembers.includes(currentUser.id);
+          });
       }
-      
-      const filtered = inputValue 
-        ? classes.filter((classItem: any) => 
+
+      // Filtro de texto (Input do usuário)
+      const filtered = inputValue
+        ? classes.filter((classItem: any) =>
             classItem.name && classItem.name.toLowerCase().includes(inputValue.toLowerCase())
           )
         : classes;
-      
-      return filtered.map((classItem: any) => {
-        const products = classItem.products || [];
-        const contents = classItem.contents || [];
-        
-        console.log(`Turma "${classItem.name}":`, {
-          products: products.length,
-          contents: contents.length,
-          productIds: products.map((p: any) => p.id),
-          contentIds: contents.map((c: any) => c.id)
-        });
-        
-        return {
-          value: classItem.id,
-          label: `${classItem.name} - ${classItem.schoolYear || ''}`,
-          schoolYear: classItem.schoolYear,
-          products,
-          contents,
-        };
-      });
+
+      return filtered.map((classItem: any) => ({
+        value: classItem.id,
+        label: `${classItem.name} - ${classItem.schoolYear || ''}`,
+        schoolYear: classItem.schoolYear
+      }));
     } catch (error: any) {
       console.error('Erro ao carregar turmas:', error.message);
       toast.error('Erro ao carregar turmas');
@@ -126,68 +124,30 @@ const AddQuestToClass: FC = () => {
     }
   };
 
+  // --- 2. CARREGAR AULAS (Filtrar se o professor criou) ---
   const loadQuestOptions = async (inputValue: string) => {
     try {
-      // Buscar TEMPLATES e AULAS NORMAIS
       const [templatesResponse, normalQuestsResponse] = await Promise.all([
-        getQuests(true),  // Templates - backend já filtra por produto/conteúdo do cliente
-        getQuests(false)  // Aulas normais - backend já filtra por produto/conteúdo do cliente
+        getQuests(true), 
+        getQuests(false),
       ]);
-      
+
       let quests: any[] = [];
-      
-      // Extrair templates
+
       if (templatesResponse.data && 'data' in templatesResponse.data && Array.isArray(templatesResponse.data.data)) {
         quests = [...templatesResponse.data.data];
       }
-      
-      // Extrair aulas normais e adicionar
+
       if (normalQuestsResponse.data && 'data' in normalQuestsResponse.data && Array.isArray(normalQuestsResponse.data.data)) {
         quests = [...quests, ...normalQuestsResponse.data.data];
       }
-      
-      console.log(`Total de aulas carregadas: ${quests.length}`);
-      if (quests.length > 0) {
-        console.log('Exemplo de aula:', quests[0]);
+
+      // REGRA DE NEGÓCIO: Filtrar aulas criadas pelo professor (se não for Admin)
+      if (currentUser && !currentUser.roles?.includes('Admin')) {
+         quests = quests.filter((quest: any) => quest.createdBy === currentUser.id);
       }
-      
-      // FILTRAR POR COMPATIBILIDADE COM A TURMA SELECIONADA
-      if (selectedClass) {
-        console.log('Turma selecionada:', selectedClass);
-        console.log('Products da turma:', selectedClass.products);
-        console.log('Contents da turma:', selectedClass.contents);
-        
-        if (selectedClass.products?.length || selectedClass.contents?.length) {
-          const classProductIds = selectedClass.products?.map((p: any) => p.id) || [];
-          const classContentIds = selectedClass.contents?.map((c: any) => c.id) || [];
-          
-          console.log('IDs de produtos:', classProductIds);
-          console.log('IDs de conteúdos:', classContentIds);
-          
-          const beforeFilter = quests.length;
-          quests = quests.filter((quest: any) => {
-            // Se a turma tem produtos, a aula deve ter produto compatível
-            const productMatch = classProductIds.length === 0 || 
-              (quest.product && classProductIds.includes(quest.product.id));
-            
-            // Se a turma tem conteúdos, a aula deve ter conteúdo compatível
-            const contentMatch = classContentIds.length === 0 || 
-              (quest.content && classContentIds.includes(quest.content.id));
-            
-            const match = productMatch && contentMatch;
-            if (!match) {
-              console.log(`Aula "${quest.name}" filtrada - Product: ${quest.product?.id}, Content: ${quest.content?.id}`);
-            }
-            
-            return match;
-          });
-          console.log(`Após filtro de compatibilidade: ${beforeFilter} → ${quests.length} aulas`);
-        } else {
-          console.warn('⚠️ Turma sem produtos/conteúdos - mostrando todas as aulas do cliente');
-        }
-      }
-      
-      // Filtrar por ano selecionado no filtro manual
+
+      // Filtros manuais (Ano e Matéria)
       if (filterYear) {
         quests = quests.filter((quest: any) => {
           if (!quest.grade) return false;
@@ -195,8 +155,7 @@ const AddQuestToClass: FC = () => {
           return gradeName && gradeName.includes(filterYear);
         });
       }
-      
-      // Filtrar por matéria
+
       if (filterSubject) {
         quests = quests.filter((quest: any) => {
           if (!quest.subject) return false;
@@ -204,14 +163,14 @@ const AddQuestToClass: FC = () => {
           return subjectName && subjectName.toLowerCase().includes(filterSubject.toLowerCase());
         });
       }
-      
-      // Filtrar por texto digitado
-      const filtered = inputValue 
-        ? quests.filter((quest: any) => 
+
+      // Filtro de texto
+      const filtered = inputValue
+        ? quests.filter((quest: any) =>
             quest.name && quest.name.toLowerCase().includes(inputValue.toLowerCase())
           )
         : quests;
-      
+
       return filtered.map((quest: any) => ({
         value: quest.id,
         label: quest.name || 'Sem nome',
@@ -228,7 +187,9 @@ const AddQuestToClass: FC = () => {
       <div className='card-header border-0 pt-5'>
         <h3 className='card-title align-items-start flex-column'>
           <span className='card-label fw-bold fs-3 mb-1'>Adicionar Aula à Turma</span>
-          <span className='text-muted fw-semibold fs-7'>Vincule uma aula a uma turma com data de expiração</span>
+          <span className='text-muted fw-semibold fs-7'>
+            Vincule uma aula a uma turma com data de expiração
+          </span>
         </h3>
       </div>
 
@@ -287,45 +248,27 @@ const AddQuestToClass: FC = () => {
               onChange={(option: any) => {
                 formik.setFieldValue('classId', option?.value || '');
                 setSelectedClass(option);
-                setSelectedQuest(null);
-                formik.setFieldValue('questId', '');
               }}
               value={selectedClass}
               noOptionsMessage={() => 'Nenhuma turma encontrada'}
               loadingMessage={() => 'Carregando turmas...'}
+              // Estilos mantidos...
               styles={{
                 control: (provided: any, state: any) => ({
                   ...provided,
                   backgroundColor: '#fff',
                   borderColor: state.isFocused ? '#009ef7' : '#e4e6ef',
                   boxShadow: state.isFocused ? '0 0 0 0.25rem rgba(0, 158, 247, 0.25)' : 'none',
-                  '&:hover': {
-                    borderColor: '#009ef7',
-                  },
                   minHeight: '44px',
                 }),
-                menu: (provided: any) => ({
-                  ...provided,
-                  backgroundColor: '#1e1e2d',
-                  zIndex: 9999,
-                }),
+                menu: (provided: any) => ({ ...provided, backgroundColor: '#1e1e2d', zIndex: 9999 }),
                 option: (provided: any, state: any) => ({
                   ...provided,
                   backgroundColor: state.isFocused ? '#2c2c3e' : '#1e1e2d',
                   color: '#fff',
                   cursor: 'pointer',
-                  '&:hover': {
-                    backgroundColor: '#2c2c3e',
-                  },
                 }),
-                placeholder: (provided: any) => ({
-                  ...provided,
-                  color: '#a1a5b7',
-                }),
-                singleValue: (provided: any) => ({
-                  ...provided,
-                  color: '#181c32',
-                }),
+                singleValue: (provided: any) => ({ ...provided, color: '#181c32' }),
               }}
             />
             {formik.touched.classId && formik.errors.classId && (
@@ -341,12 +284,12 @@ const AddQuestToClass: FC = () => {
           <div className='mb-10 fv-row'>
             <label className='form-label required'>Aula</label>
             <AsyncSelect
-              key={`${selectedClass?.value}-${filterYear}-${filterSubject}`}
+              // Força recarregamento se os filtros mudarem
+              key={`${filterYear}-${filterSubject}`} 
               cacheOptions
               defaultOptions={true}
-              placeholder={selectedClass ? 'Digite para buscar uma aula...' : 'Selecione uma turma primeiro'}
+              placeholder='Digite para buscar uma aula...'
               loadOptions={loadQuestOptions}
-              isDisabled={!selectedClass}
               onChange={(option: any) => {
                 formik.setFieldValue('questId', option?.value || '');
                 setSelectedQuest(option);
@@ -357,36 +300,19 @@ const AddQuestToClass: FC = () => {
               styles={{
                 control: (provided: any, state: any) => ({
                   ...provided,
-                  backgroundColor: state.isDisabled ? '#f5f8fa' : '#fff',
+                  backgroundColor: '#fff',
                   borderColor: state.isFocused ? '#009ef7' : '#e4e6ef',
                   boxShadow: state.isFocused ? '0 0 0 0.25rem rgba(0, 158, 247, 0.25)' : 'none',
-                  '&:hover': {
-                    borderColor: state.isDisabled ? '#e4e6ef' : '#009ef7',
-                  },
                   minHeight: '44px',
                 }),
-                menu: (provided: any) => ({
-                  ...provided,
-                  backgroundColor: '#1e1e2d',
-                  zIndex: 9999,
-                }),
+                menu: (provided: any) => ({ ...provided, backgroundColor: '#1e1e2d', zIndex: 9999 }),
                 option: (provided: any, state: any) => ({
                   ...provided,
                   backgroundColor: state.isFocused ? '#2c2c3e' : '#1e1e2d',
                   color: '#fff',
                   cursor: 'pointer',
-                  '&:hover': {
-                    backgroundColor: '#2c2c3e',
-                  },
                 }),
-                placeholder: (provided: any) => ({
-                  ...provided,
-                  color: '#a1a5b7',
-                }),
-                singleValue: (provided: any) => ({
-                  ...provided,
-                  color: '#181c32',
-                }),
+                singleValue: (provided: any) => ({ ...provided, color: '#181c32' }),
               }}
             />
             {formik.touched.questId && formik.errors.questId && (
@@ -396,14 +322,9 @@ const AddQuestToClass: FC = () => {
                 </div>
               </div>
             )}
-            {selectedClass && (
-              <div className='form-text'>
-                Mostrando aulas compatíveis com o ano escolar: {selectedClass.schoolYear}
-              </div>
-            )}
           </div>
 
-          {/* Data de Início */}
+          {/* Data de Início e Expiração */}
           <div className='mb-10 fv-row'>
             <label className='form-label required'>Data de Início</label>
             <input
@@ -420,12 +341,8 @@ const AddQuestToClass: FC = () => {
                 </div>
               </div>
             )}
-            <div className='form-text'>
-              Data em que a aula ficará disponível para os alunos
-            </div>
           </div>
 
-          {/* Data de Expiração */}
           <div className='mb-10 fv-row'>
             <label className='form-label required'>Data de Expiração</label>
             <input
@@ -442,9 +359,6 @@ const AddQuestToClass: FC = () => {
                 </div>
               </div>
             )}
-            <div className='form-text'>
-              Data em que a aula não estará mais disponível para os alunos
-            </div>
           </div>
 
           {/* Botões */}
@@ -483,11 +397,7 @@ const AddQuestToClass: FC = () => {
 };
 
 const AddQuestToClassWrapper: FC = () => {
-  return (
-    <>
-      <AddQuestToClass />
-    </>
-  );
+  return <AddQuestToClass />;
 };
 
 export { AddQuestToClassWrapper };
