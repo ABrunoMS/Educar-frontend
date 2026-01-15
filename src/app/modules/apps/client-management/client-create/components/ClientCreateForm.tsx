@@ -157,7 +157,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     name: Yup.string().min(3).max(50).required('Nome é obrigatório'),
     partner: Yup.string().required('Parceiro é obrigatório'),
     contacts: Yup.string().required('Contatos são obrigatórios'),
-    contract: Yup.string().required('Contrato é obrigatório'),
+    contract: Yup.string().optional(),
     validity: Yup.date().nullable().required('Validade é obrigatória'),
     signatureDate: Yup.date().nullable().required('Data de assinatura é obrigatória'),
     implantationDate: Yup.date().nullable().optional(),
@@ -492,7 +492,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
           {renderSelectFieldset('partner', 'Parceiro ', isLoadingPartners ? 'Carregando...' : 'Selecione um parceiro...', partnerOptions)}
           {renderSelectFieldset('contacts', 'Contato ', isLoadingContacts ? 'Carregando...' : 'Selecione um contato...', contactOptions)}
           
-          {renderSelectFieldset('contract', 'Contract', 'Select a contract...', [{ value: '1', label: 'Contrato 1' }])}
+          {/*{renderSelectFieldset('contract', 'Contract', 'Select a contract...', [{ value: '1', label: 'Contrato 1' }])}*/}
           
           {renderCalendarField('validity', 'Validade', 'Selecione a data de validade', true)}
           {renderCalendarField('signatureDate', 'Signature date', 'Select date', true)}

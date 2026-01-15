@@ -115,7 +115,7 @@ const SidebarMenuMain = () => {
 
       <RoleBasedMenuItem rolesAllowed={['Admin']}>
         
-        <SidebarMenuItemWithSub
+       {/* <SidebarMenuItemWithSub
           to='/apps/grade-management/'
           title='Notas'
           fontIcon='bi-archive'
@@ -134,6 +134,7 @@ const SidebarMenuMain = () => {
             hasBullet
           />
         </SidebarMenuItemWithSub>
+        */}
 
         <SidebarMenuItemWithSub
           to='/apps/client-management/'
@@ -193,7 +194,7 @@ const SidebarMenuMain = () => {
           />
         </SidebarMenuItemWithSub>
 
-
+        {/*
         <SidebarMenuItemWithSub
           to='/apps/subject-management/'
           title='Disciplinas'
@@ -244,7 +245,7 @@ const SidebarMenuMain = () => {
             hasBullet
           />
         </SidebarMenuItemWithSub>
-
+        */}
         <SidebarMenuItemWithSub
           to='/apps/lesson-management/'
           title='Aulas'
@@ -296,6 +297,8 @@ const SidebarMenuMain = () => {
             hasBullet
           />
         </SidebarMenuItemWithSub>
+
+        {/*
         <SidebarMenuItemWithSub
           to='/apps/contract-management/'
           title='Contracts'
@@ -314,7 +317,12 @@ const SidebarMenuMain = () => {
             title='Criar contrato'
             hasBullet
           />
+
+          
         </SidebarMenuItemWithSub>
+
+        */}
+        {/*
         <SidebarMenuItemWithSub
           to='/apps/game-management/'
           title='Games'
@@ -334,7 +342,9 @@ const SidebarMenuMain = () => {
             hasBullet
           />
         </SidebarMenuItemWithSub>
+        */}
 
+        {/*
         <SidebarMenuItemWithSub
           to='/apps/dialogue-management/'
           title='Dialogue'
@@ -354,6 +364,9 @@ const SidebarMenuMain = () => {
             hasBullet
           />
         </SidebarMenuItemWithSub>
+        */}
+
+        {/*
         <SidebarMenuItemWithSub
           to='/apps/item-management/'
           title='Item'
@@ -373,6 +386,9 @@ const SidebarMenuMain = () => {
             hasBullet
           />
         </SidebarMenuItemWithSub>
+        */}
+
+        {/*
         <SidebarMenuItemWithSub
           to='/apps/npc-management/'
           title='Npc'
@@ -392,16 +408,19 @@ const SidebarMenuMain = () => {
             hasBullet
           />
         </SidebarMenuItemWithSub>
+        */}
 
       </RoleBasedMenuItem>
-
-      <SidebarMenuItem
+         
+      {/*<SidebarMenuItem
         to='/select-organization'
         icon='abstract-28'
         title='Selecionar organização'
         fontIcon='bi-layers'
-      />
+      />*/}
+      
     </>
+    
   )
 }
 

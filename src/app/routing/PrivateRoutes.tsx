@@ -40,8 +40,6 @@ const PrivateRoutes = () => {
   const SchoolPage = lazy(() => import('../modules/apps/school-management/SchoolPage'))
   const SubjectPage = lazy(() => import('../modules/apps/subject-management/SubjectPage'))
   const AccountPage = lazy(() => import('../modules/apps/account-management/AccountPage'))
-
-  // O seu import para a página de aulas
   const LessonPage = lazy(() => import('../modules/apps/lesson-management/LessonPage'))
 
   return (
@@ -64,7 +62,7 @@ const PrivateRoutes = () => {
           }
         />
 
-        {/* Client (no sidebar aparecerá como Secretarias) */}
+       
         <Route
           path='apps/client-management/*'
           element={
@@ -120,7 +118,7 @@ const PrivateRoutes = () => {
           }
         />
 
-        {/* rota de secretary-management removida */}
+        
 
         <Route
           path='apps/grade-management/*'
