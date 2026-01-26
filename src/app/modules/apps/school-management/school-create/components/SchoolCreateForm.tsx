@@ -100,9 +100,9 @@ const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onForm
         if (values.address) schoolData.addressId = values.address;
         if (values.contractStartDate) schoolData.contractStartDate = values.contractStartDate;
         
-        // Adicionar accountIds combinando professores e alunos
-        const accountIds = [...(values.teacherIds || []), ...(values.studentIds || [])];
-        if (accountIds.length > 0) schoolData.accountIds = accountIds;
+        // Enviar teacherIds e studentIds separadamente
+        if (values.teacherIds && values.teacherIds.length > 0) schoolData.teacherIds = values.teacherIds;
+        if (values.studentIds && values.studentIds.length > 0) schoolData.studentIds = values.studentIds;
         
         if (isNotEmpty(values.id)) {
           await updateSchool(values.id!, schoolData);

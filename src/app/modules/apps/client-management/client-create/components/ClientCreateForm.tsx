@@ -425,59 +425,85 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     return (
         <>
         <div className='separator my-5'></div>
-      <div className='row'>
-        <div className='col-md-6'>
-          <label className='form-label fw-bold required'>Produtos</label>
-         {isLoadingProducts && (
+      <div className='mb-7'>
+        <div className='row'>
+          <div className='col-12'>
+            <label className='form-label fw-bold required mb-4'>Produtos</label>
+            {isLoadingProducts && (
               <div className='d-flex align-items-center text-muted fs-7'>
                 <span className='spinner-border spinner-border-sm me-2'></span>
                 Carregando produtos...
               </div>
             )}
-            {!isLoadingProducts && allProducts.map(product => (
-              <div className='form-check form-check-solid mb-3' key={product.id}>
-                <input
-                  className='form-check-input'
-                  type='checkbox'
-                  name='selectedProducts'
-                  value={product.id} 
-                  checked={formik.values.selectedProducts.includes(product.id)}
-                  onChange={formik.handleChange}
-                />
-                <label className='form-check-label'>{product.name}</label>
-              </div>
-            ))}
+            <div className='row g-3'>
+              {!isLoadingProducts && allProducts.map(product => (
+                <div className='col-12 col-sm-6 col-md-4 col-lg-3' key={product.id}>
+                  <div className='form-check form-check-custom form-check-solid h-100'>
+                    <input
+                      className='form-check-input'
+                      type='checkbox'
+                      name='selectedProducts'
+                      value={product.id}
+                      id={`product-${product.id}`}
+                      checked={formik.values.selectedProducts.includes(product.id)}
+                      onChange={formik.handleChange}
+                    />
+                    <label className='form-check-label fw-semibold text-gray-700' htmlFor={`product-${product.id}`}>
+                      {product.name}
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
+        </div>
+      </div>
 
-        <div className='col-md-6'>
-            <label className='form-label fw-bold required'>Conteúdos</label>
+      <div className='mb-7'>
+        <div className='row'>
+          <div className='col-12'>
+            <label className='form-label fw-bold required mb-4'>Conteúdos</label>
             {isLoadingContents && (
               <div className='d-flex align-items-center text-muted fs-7'>
                 <span className='spinner-border spinner-border-sm me-2'></span>
                 Buscando conteúdos...
               </div>
             )}
-            {!isLoadingContents && availableContents.map(content => (
-              <div className='form-check form-check-solid mb-3' key={content.id}>
-                <input
-                  className='form-check-input'
-                  type='checkbox'
-                  name='selectedContents'
-                  value={content.id}
-                  checked={formik.values.selectedContents.includes(content.id)}
-                  onChange={formik.handleChange}
-                />
-                <label className='form-check-label'>{content.name}</label>
-              </div>
-            ))}
             {!isLoadingContents && formik.values.selectedProducts.length === 0 && (
-              <div className='text-muted fs-7'>Selecione um produto para ver os conteúdos disponíveis.</div>
+              <div className='alert alert-info d-flex align-items-center'>
+                <i className='fas fa-info-circle me-2'></i>
+                <span>Selecione um produto para ver os conteúdos disponíveis.</span>
+              </div>
             )}
             {!isLoadingContents && availableContents.length === 0 && formik.values.selectedProducts.length > 0 && (
-                <div className='text-muted fs-7'>Nenhum conteúdo compatível encontrado.</div>
+              <div className='alert alert-warning d-flex align-items-center'>
+                <i className='fas fa-exclamation-triangle me-2'></i>
+                <span>Nenhum conteúdo compatível encontrado.</span>
+              </div>
             )}
+            <div className='row g-3'>
+              {!isLoadingContents && availableContents.map(content => (
+                <div className='col-12 col-sm-6 col-md-4 col-lg-3' key={content.id}>
+                  <div className='form-check form-check-custom form-check-solid h-100'>
+                    <input
+                      className='form-check-input'
+                      type='checkbox'
+                      name='selectedContents'
+                      value={content.id}
+                      id={`content-${content.id}`}
+                      checked={formik.values.selectedContents.includes(content.id)}
+                      onChange={formik.handleChange}
+                    />
+                    <label className='form-check-label fw-semibold text-gray-700' htmlFor={`content-${content.id}`}>
+                      {content.name}
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
+      </div>
       </>
     )
   }

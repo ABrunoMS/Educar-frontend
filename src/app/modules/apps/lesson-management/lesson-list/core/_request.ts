@@ -36,11 +36,11 @@ export const getList = async (
   try {
     const params: any = { PageNumber, PageSize, sortBy, sortOrder, filter, search, UsageTemplate: isTemplate };
     
-    // Adicionar filtros opcionais (usando nomes que o backend espera)
-    if (subjectId) params.SubjectId = subjectId;
-    if (gradeId) params.GradeId = gradeId;
-    if (productId) params.ProductId = productId;
-    if (contentId) params.ContentId = contentId;
+    // Adicionar filtros opcionais (usando nomes que o backend espera com underscores)
+    if (subjectId) params.subject_id = subjectId;
+    if (gradeId) params.grade_id = gradeId;
+    if (productId) params.product_id = productId;
+    if (contentId) params.content_id = contentId;
     
     const response = await axios.get(QUESTS_URL, { params });
     

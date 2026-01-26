@@ -16,7 +16,9 @@ const getUsers = async (
   sortBy: string = '',
   sortOrder: 'asc' | 'desc' = 'asc',
   filter: string = '',
-  search: string = ''
+  search: string = '',
+  clientId?: string,
+  role?: string
 ): Promise<UsersQueryResponse> => {
   const response: AxiosResponse<UsersQueryResponse> = await axios.get(USERS_URL, {
     params: { 
@@ -25,7 +27,9 @@ const getUsers = async (
       sortBy,
       sortOrder,
       filter,
-      search
+      search,
+      ...(clientId && { ClientId: clientId }),
+      ...(role && { Role: role })
     }
   });
   return response.data;
