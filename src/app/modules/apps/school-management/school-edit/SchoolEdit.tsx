@@ -7,7 +7,7 @@ import { SchoolCreateForm } from '../school-create/components/SchoolCreateForm';
 import { getSchoolById } from '@services/Schools';
 import { toast } from 'react-toastify';
 import { SchoolType } from '@interfaces/School';
-import { SchoolUsersList } from '../school-list/SchoolUsersList';
+import { SchoolUsersList } from '../school-list/SchoolUsersListImproved';
 import { SchoolClassesList } from '../school-list/SchoolClassesList';
 import clsx from 'clsx';
 
