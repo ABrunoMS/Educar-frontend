@@ -13,25 +13,28 @@ interface ListViewProps<T extends object> extends ListViewType<T> {
   customFilters?: ReactNode;
   onResetFilters?: () => void;
   onApplyFilters?: () => void;
+  showFilters?: boolean;
 }
 
-const ListView = <T extends object>({data, columns, isLoading, totalItems, customFilters, onResetFilters, onApplyFilters}: ListViewProps<T>) => (
-  <QueryRequestProvider>
-    <QueryResponseProvider>
-      <ToolbarWrapper />
-      <Content>
-      <KTCard>
-        <ListViewHeader customFilters={customFilters} onResetFilters={onResetFilters} onApplyFilters={onApplyFilters} />
-        <ListTable
-          data={data}
-          columns={columns}
-          isLoading={isLoading}
-          totalItems={totalItems}
-        />
-      </KTCard>
-      </Content>
-    </QueryResponseProvider>
-  </QueryRequestProvider>
+const ListView = <T extends object>({data, columns, isLoading, totalItems, customFilters, onResetFilters, onApplyFilters, showFilters = true}: ListViewProps<T>) => (
+  <PaginationProvider>
+    <QueryRequestProvider>
+      <QueryResponseProvider>
+        <ToolbarWrapper />
+        <Content>
+        <KTCard>
+          <ListViewHeader customFilters={customFilters} onResetFilters={onResetFilters} onApplyFilters={onApplyFilters} showFilters={showFilters} />
+          <ListTable
+            data={data}
+            columns={columns}
+            isLoading={isLoading}
+            totalItems={totalItems}
+          />
+        </KTCard>
+        </Content>
+      </QueryResponseProvider>
+    </QueryRequestProvider>
+  </PaginationProvider>
 )
 
 export { ListView }

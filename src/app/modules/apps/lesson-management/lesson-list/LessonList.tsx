@@ -1,6 +1,6 @@
 import { ListView } from '@components/list-view/ListView'
 import { LessonType, Quest, ProductDto, ContentDto } from '@interfaces/Lesson' // Importe o tipo Quest
-import { useQuery, UseQueryResult } from 'react-query'
+import { useQuery, useQueryClient, UseQueryResult } from 'react-query'
 import { Column } from 'react-table'
 import { getList, deleteQuest, deleteSelectedQuests } from './core/_request' // Importe as funções de Quest
 import { usePagination } from '@contexts/PaginationContext'
@@ -38,11 +38,12 @@ type Props = {
 // Componente interno que tem acesso ao QueryRequestProvider
 const LessonListContent: React.FC<Props> = ({ isTemplateView }) => {
   // Hook de paginação para obter o estado atual
-  const {page, pageSize, sortBy, sortOrder, filter} = usePagination()
+  const {page, pageSize, sortBy, sortOrder, filter, setPage} = usePagination()
   // Hook para obter o search do campo de busca do ListView
   const { state } = useQueryRequest()
   const searchFromContext = state.search || ''
   const debouncedSearch = useDebounce(searchFromContext, 300)
+  const queryClient = useQueryClient()
   
   const navigate = useNavigate()
   
@@ -95,6 +96,13 @@ const LessonListContent: React.FC<Props> = ({ isTemplateView }) => {
     }).catch(err => console.error('Erro ao carregar conteúdos:', err))
     .finally(() => setIsLoadingContents(false));
   }, [selectedProduct]);
+
+  // Resetar para página 1 e invalidar query quando filtros mudarem
+  useEffect(() => {
+    setPage(1);
+    // Invalidar a query para forçar uma nova busca
+    queryClient.invalidateQueries(['quest-list']);
+  }, [selectedSubject, selectedGrade, selectedProduct, selectedContent, debouncedSearch, setPage, queryClient]);
   
   // Chamada useQuery para buscar os dados das Quests (aulas)
   const {data, isLoading, refetch}: UseQueryResult<any> = useQuery(
@@ -208,6 +216,38 @@ const LessonListContent: React.FC<Props> = ({ isTemplateView }) => {
   // Componente de filtros customizados para o dropdown
   const customFiltersContent = (
     <>
+      {/* Indicador de filtros ativos */}
+      {(selectedSubject || selectedGrade || selectedProduct || selectedContent) && (
+        <div className='alert alert-primary d-flex align-items-center mb-5'>
+          <span className='me-2'>
+            <i className='bi bi-funnel-fill fs-3'></i>
+          </span>
+          <div className='flex-grow-1'>
+            <strong>Filtros aplicados:</strong>
+            {selectedSubject && (
+              <div className='text-muted fs-7'>
+                Matéria: {subjects.find((s: any) => (s.id || s.Id) === selectedSubject)?.name || subjects.find((s: any) => (s.id || s.Id) === selectedSubject)?.Name}
+              </div>
+            )}
+            {selectedGrade && (
+              <div className='text-muted fs-7'>
+                Ano: {grades.find((g: any) => (g.id || g.Id) === selectedGrade)?.name || grades.find((g: any) => (g.id || g.Id) === selectedGrade)?.Name}
+              </div>
+            )}
+            {selectedProduct && (
+              <div className='text-muted fs-7'>
+                Produto: {products.find(p => p.id === selectedProduct)?.name}
+              </div>
+            )}
+            {selectedContent && (
+              <div className='text-muted fs-7'>
+                Conteúdo: {contents.find(c => c.id === selectedContent)?.name}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Filtro por Matéria */}
       <div className='mb-5'>
         <label className='form-label fs-6 fw-bold'>Matéria:</label>
@@ -291,6 +331,9 @@ const LessonListContent: React.FC<Props> = ({ isTemplateView }) => {
     setSelectedGrade('');
     setSelectedProduct('');
     setSelectedContent('');
+    setPage(1);
+    // Invalidar query para garantir que a lista seja recarregada
+    queryClient.invalidateQueries(['quest-list']);
   };
 
   // Renderização

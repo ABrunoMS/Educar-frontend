@@ -43,9 +43,15 @@ export const getList = async (
   filter: string,
   search: string
 ): Promise<ClientsQueryResponse> => {
+  console.log('📡 API Request - Params:', { PageNumber, PageSize, search });
   const response: AxiosResponse<ClientsQueryResponse> = await axios.get(CLIENTS_URL, {
-    params: { PageNumber, PageSize, sortBy, sortOrder, filter, search },
+    params: { 
+      PageNumber, 
+      PageSize, 
+      search 
+    },
   });
+  console.log('📥 API Response - Total items:', response.data?.payload?.pagination?.totalCount);
   return response.data;
 };
 

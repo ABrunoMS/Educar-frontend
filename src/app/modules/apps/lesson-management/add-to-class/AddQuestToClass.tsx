@@ -3,7 +3,7 @@ import { useQueryClient } from 'react-query';
 import { getClasses } from '@services/Classes';
 import { getQuests } from '@services/Lesson';
 import { createClassQuest } from '@services/ClassQuest';
-import AsyncSelect from 'react-select/async';
+import AsyncSelectField from '@components/form/AsyncSelectField';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { toast } from 'react-toastify';
@@ -23,18 +23,22 @@ const addQuestSchema = Yup.object().shape({
 const AddQuestToClass: FC = () => {
   const { currentUser } = useAuth(); // Hook para pegar o ID do professor
   const queryClient = useQueryClient();
-
-  const [selectedClass, setSelectedClass] = useState<{
-    value: string;
-    label: string;
-    schoolYear?: string;
-  } | null>(null);
-  
-  const [selectedQuest, setSelectedQuest] = useState<{ value: string; label: string } | null>(null);
   
   // Filtros manuais
   const [filterYear, setFilterYear] = useState<string>('');
   const [filterSubject, setFilterSubject] = useState<string>('');
+  const [classOptions, setClassOptions] = useState<any[]>([]);
+  const [questOptions, setQuestOptions] = useState<any[]>([]);
+
+  // Carregar turmas ao iniciar
+  React.useEffect(() => {
+    loadClassOptions('').then(setClassOptions);
+  }, [currentUser]);
+
+  // Carregar aulas quando os filtros mudarem
+  React.useEffect(() => {
+    loadQuestOptions('').then(setQuestOptions);
+  }, [filterYear, filterSubject, currentUser]);
 
   const formik = useFormik({
     initialValues: {
@@ -62,8 +66,6 @@ const AddQuestToClass: FC = () => {
         toast.success('Aula adicionada à turma com sucesso!');
 
         resetForm();
-        setSelectedClass(null);
-        setSelectedQuest(null);
         setFilterYear('');
         setFilterSubject('');
 
@@ -239,37 +241,15 @@ const AddQuestToClass: FC = () => {
 
           {/* Seleção de Turma */}
           <div className='mb-10 fv-row'>
-            <label className='form-label required'>Turma</label>
-            <AsyncSelect
-              cacheOptions
-              defaultOptions={true}
+            <AsyncSelectField
+              label='Turma *'
+              fieldName='classId'
               placeholder='Digite para buscar uma turma...'
-              loadOptions={loadClassOptions}
-              onChange={(option: any) => {
-                formik.setFieldValue('classId', option?.value || '');
-                setSelectedClass(option);
+              loadOptions={(inputValue, callback) => {
+                loadClassOptions(inputValue).then(callback);
               }}
-              value={selectedClass}
-              noOptionsMessage={() => 'Nenhuma turma encontrada'}
-              loadingMessage={() => 'Carregando turmas...'}
-              // Estilos mantidos...
-              styles={{
-                control: (provided: any, state: any) => ({
-                  ...provided,
-                  backgroundColor: '#fff',
-                  borderColor: state.isFocused ? '#009ef7' : '#e4e6ef',
-                  boxShadow: state.isFocused ? '0 0 0 0.25rem rgba(0, 158, 247, 0.25)' : 'none',
-                  minHeight: '44px',
-                }),
-                menu: (provided: any) => ({ ...provided, backgroundColor: '#1e1e2d', zIndex: 9999 }),
-                option: (provided: any, state: any) => ({
-                  ...provided,
-                  backgroundColor: state.isFocused ? '#2c2c3e' : '#1e1e2d',
-                  color: '#fff',
-                  cursor: 'pointer',
-                }),
-                singleValue: (provided: any) => ({ ...provided, color: '#181c32' }),
-              }}
+              formik={formik}
+              defaultOptions={classOptions}
             />
             {formik.touched.classId && formik.errors.classId && (
               <div className='fv-plugins-message-container'>
@@ -281,39 +261,16 @@ const AddQuestToClass: FC = () => {
           </div>
 
           {/* Seleção de Aula */}
-          <div className='mb-10 fv-row'>
-            <label className='form-label required'>Aula</label>
-            <AsyncSelect
-              // Força recarregamento se os filtros mudarem
-              key={`${filterYear}-${filterSubject}`} 
-              cacheOptions
-              defaultOptions={true}
+          <div key={`${filterYear}-${filterSubject}`} className='mb-10 fv-row'>
+            <AsyncSelectField
+              label='Aula *'
+              fieldName='questId'
               placeholder='Digite para buscar uma aula...'
-              loadOptions={loadQuestOptions}
-              onChange={(option: any) => {
-                formik.setFieldValue('questId', option?.value || '');
-                setSelectedQuest(option);
+              loadOptions={(inputValue, callback) => {
+                loadQuestOptions(inputValue).then(callback);
               }}
-              value={selectedQuest}
-              noOptionsMessage={() => 'Nenhuma aula encontrada'}
-              loadingMessage={() => 'Carregando aulas...'}
-              styles={{
-                control: (provided: any, state: any) => ({
-                  ...provided,
-                  backgroundColor: '#fff',
-                  borderColor: state.isFocused ? '#009ef7' : '#e4e6ef',
-                  boxShadow: state.isFocused ? '0 0 0 0.25rem rgba(0, 158, 247, 0.25)' : 'none',
-                  minHeight: '44px',
-                }),
-                menu: (provided: any) => ({ ...provided, backgroundColor: '#1e1e2d', zIndex: 9999 }),
-                option: (provided: any, state: any) => ({
-                  ...provided,
-                  backgroundColor: state.isFocused ? '#2c2c3e' : '#1e1e2d',
-                  color: '#fff',
-                  cursor: 'pointer',
-                }),
-                singleValue: (provided: any) => ({ ...provided, color: '#181c32' }),
-              }}
+              formik={formik}
+              defaultOptions={questOptions}
             />
             {formik.touched.questId && formik.errors.questId && (
               <div className='fv-plugins-message-container'>
@@ -368,8 +325,6 @@ const AddQuestToClass: FC = () => {
               className='btn btn-light me-3'
               onClick={() => {
                 formik.resetForm();
-                setSelectedClass(null);
-                setSelectedQuest(null);
               }}
               disabled={formik.isSubmitting}
             >

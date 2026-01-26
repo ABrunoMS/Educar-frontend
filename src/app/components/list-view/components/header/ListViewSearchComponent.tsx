@@ -12,16 +12,24 @@ const ListViewSearchComponent = () => {
   // The goal is to only have the API call fire when user stops typing ...
   // ... so that we aren't hitting our API rapidly.
   const debouncedSearchTerm = useDebounce(searchTerm, 150)
+  
   // Effect for API call
   useEffect(
     () => {
       if (debouncedSearchTerm !== undefined && searchTerm !== undefined) {
+        console.log('🔎 ListViewSearchComponent - Updating search:', debouncedSearchTerm)
         updateState({search: debouncedSearchTerm, ...initialQueryState})
       }
     },
     [debouncedSearchTerm] // Only call effect if debounced search term changes
     // More details about useDebounce: https://usehooks.com/useDebounce/
   )
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    console.log('⌨️ ListViewSearchComponent - User typed:', value)
+    setSearchTerm(value)
+  }
 
   return (
     <div className='card-title'>
@@ -34,7 +42,7 @@ const ListViewSearchComponent = () => {
           className='form-control form-control-solid w-250px ps-14'
           placeholder='Pesquisar'
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={handleSearchChange}
         />
       </div>
       {/* end::Search */}

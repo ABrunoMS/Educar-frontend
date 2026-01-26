@@ -101,6 +101,34 @@ const SchoolUsersList: React.FC<SchoolUsersListProps> = ({ schoolId }) => {
       },
     },
     {
+      Header: 'Turmas',
+      id: 'classes',
+      Cell: ({ row }) => {
+        // O backend retorna Classes como array de objetos, não classIds
+        const userClasses = (row.original as any).Classes || 
+                           (row.original as any).classes || 
+                           [];
+        
+        if (userClasses.length === 0) {
+          return <span className='text-muted fs-7'>Nenhuma turma</span>;
+        }
+
+        return (
+          <div className='d-flex flex-wrap gap-1'>
+            {userClasses.map((cls: any) => (
+              <span 
+                key={cls.id} 
+                className='badge badge-light-info'
+                title={cls.description || cls.name}
+              >
+                {cls.name}
+              </span>
+            ))}
+          </div>
+        );
+      },
+    },
+    {
       Header: 'Ações',
       id: 'actions',
       Cell: ({ row }) => (

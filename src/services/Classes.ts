@@ -27,6 +27,20 @@ export const getClassesBySchools = (schoolIds: string[]): Promise<{ data: Class[
   return axios.post(`${CLASSES_URL}/by-schools`, { schoolIds });
 };
 
+export const getClassesBySchool = (
+  schoolId: string,
+  page: number = 1,
+  pageSize: number = 10
+): Promise<{ data: { data: Class[]; payload: { pagination: { totalCount: number } } } }> => {
+  return axios.get(`${CLASSES_URL}`, {
+    params: {
+      PageNumber: page,
+      PageSize: pageSize,
+      SchoolId: schoolId,
+    },
+  });
+};
+
 export const updateClass = (id: string, classItem: Class) => {
   return axios.put<Class>(`${CLASSES_URL}/${id}`, classItem);
 };

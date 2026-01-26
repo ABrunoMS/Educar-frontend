@@ -1,19 +1,46 @@
-import { ListView } from '@components/list-view/ListView'
 import { SchoolType } from '@interfaces/School'
+import { ClientType } from '@interfaces/Client'
 import { useMutation, useQuery, UseQueryResult } from 'react-query'
 import { Column } from 'react-table'
 import { deleteSchool, getList } from './core/_requests'
 import { PaginatedResponse, usePagination } from '@contexts/PaginationContext'
 import { ActionsCell } from '@components/list-view/table/columns/ActionsCell'
-import { useState } from 'react'
-import { ID } from '@metronic/helpers'
+import { useState, useEffect } from 'react'
+import { ID, KTCard } from '@metronic/helpers'
 import DeleteDialog from '@components/delete-dialog/DeleteDialog'
 import { toast } from 'react-toastify'
+import { useQueryRequest, QueryRequestProvider } from '@components/list-view/core/QueryRequestProvider'
+import { QueryResponseProvider } from '@components/list-view/core/QueryResponseProvider'
+import { useDebounce } from '@metronic/helpers'
+import { ListViewHeader } from '@components/list-view/components/header/ListViewHeader'
+import { ListTable } from '@components/list-view/table/ListTable'
+import { ToolbarWrapper } from '@metronic/layout/components/toolbar'
+import { Content } from '@metronic/layout/components/content'
+import { getClients } from '@services/Clients'
 
-const SchoolListWrapper = () => {
+const SchoolListContent = () => {
+  const {page, pageSize, setPage} = usePagination();
+  const {state} = useQueryRequest();
+  const searchFromContext = state.search || '';
+  const debouncedSearch = useDebounce(searchFromContext, 300);
   const [deleteId, setDeleteId] = useState<ID>();
   const [showLoading, setShowLoading] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [clients, setClients] = useState<ClientType[]>([]);
+  const [selectedClient, setSelectedClient] = useState('');
+
+  // Carregar clientes ao montar
+  useEffect(() => {
+    getClients().then(res => {
+      const items = res.data?.data || res.data || [];
+      setClients(Array.isArray(items) ? items : []);
+    }).catch(err => console.error('Erro ao carregar clientes:', err));
+  }, []);
+
+  // Resetar para página 1 quando filtros mudarem
+  useEffect(() => {
+    setPage(1);
+  }, [selectedClient, debouncedSearch]);
 
   const columns: Column<SchoolType>[] = [
     { Header: 'Nome', accessor: 'name' },
@@ -46,10 +73,9 @@ const SchoolListWrapper = () => {
     },
   ]
 
-  const {page, pageSize, sortBy, sortOrder, filter, search} = usePagination()
   const {data, isLoading, refetch}: UseQueryResult<PaginatedResponse<SchoolType>> = useQuery(
-    ['school-list', page, sortBy, sortOrder, filter, search],
-    () => getList(page, pageSize, sortBy, sortOrder, filter, search),
+    ['school-list', page, pageSize, debouncedSearch, selectedClient],
+    () => getList(page, pageSize, '', 'asc', '', debouncedSearch, selectedClient),
     {
       keepPreviousData: true,
     }
@@ -77,14 +103,48 @@ const SchoolListWrapper = () => {
     }
   };
 
+  const customFiltersContent = (
+    <>
+      {/* Filtro por Cliente */}
+      <div className='mb-5'>
+        <label className='form-label fs-6 fw-bold'>Cliente:</label>
+        <select
+          className='form-select form-select-solid fw-bolder'
+          value={selectedClient}
+          onChange={(e) => setSelectedClient(e.target.value)}
+        >
+          <option value=''>Todos os clientes</option>
+          {clients.map((client) => (
+            <option key={client.id} value={client.id}>
+              {client.name}
+            </option>
+          ))}
+        </select>
+      </div>
+    </>
+  );
+
+  const handleResetFilters = () => {
+    setSelectedClient('');
+  };
+
   return (
     <>
-      <ListView 
-        data={data?.data || []}
-        columns={columns}
-        isLoading={isLoading}
-        totalItems={data?.payload.pagination.totalCount || 0}
-      />
+      <ToolbarWrapper />
+      <Content>
+        <KTCard>
+          <ListViewHeader 
+            customFilters={customFiltersContent}
+            onResetFilters={handleResetFilters}
+          />
+          <ListTable
+            data={Array.isArray(data?.data) ? data.data : []}
+            columns={columns}
+            isLoading={isLoading}
+            totalItems={data?.payload?.pagination?.totalCount || 0}
+          />
+        </KTCard>
+      </Content>
       <DeleteDialog
         open={showDeleteDialog}
         loading={showLoading}
@@ -92,6 +152,16 @@ const SchoolListWrapper = () => {
         actionCallback={deleteCallback}
       />
     </>
+  )
+}
+
+const SchoolListWrapper = () => {
+  return (
+    <QueryRequestProvider>
+      <QueryResponseProvider>
+        <SchoolListContent />
+      </QueryResponseProvider>
+    </QueryRequestProvider>
   )
 }
 
