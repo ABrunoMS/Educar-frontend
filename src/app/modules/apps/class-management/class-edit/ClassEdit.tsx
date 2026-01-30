@@ -5,6 +5,7 @@ import { ToolbarWrapper } from '@metronic/layout/components/toolbar';
 import { Content } from '@metronic/layout/components/content';
 import { ClassCreateForm } from '../class-create/components/ClassCreateForm';
 import { ClassQuestsList } from '../class-list/ClassQuestsList';
+import { ClassStudentReport } from '../class-report/ClassStudentReport';
 import { getClassById } from '@services/Classes';
 import { toast } from 'react-toastify';
 import { Class } from '@interfaces/Class';
@@ -93,6 +94,20 @@ const ClassEdit = () => {
             Aulas da Turma
           </a>
         </li>
+
+        {/* Aba 3: Relatório de Alunos */}
+        <li className='nav-item' role='presentation'>
+          <a
+            className={clsx('nav-link', { disabled: !classItem })}
+            data-bs-toggle={classItem ? 'tab' : ''}
+            href='#kt_tab_pane_class_report'
+            aria-selected='false'
+            role='tab'
+            title={!classItem ? 'Salve a turma para ver o relatório' : 'Relatório de alunos'}
+          >
+            Relatório de Alunos
+          </a>
+        </li>
       </ul>
 
       {/* Conteúdo das Abas */}
@@ -125,6 +140,19 @@ const ClassEdit = () => {
             <div className='p-9 text-center text-muted'>
               <p className='fs-5'>
                 Salve a turma primeiro para poder gerenciar as aulas.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Conteúdo Aba 3: Relatório de Alunos */}
+        <div className='tab-pane fade' id='kt_tab_pane_class_report' role='tabpanel'>
+          {classItem && classItem.id ? (
+            <ClassStudentReport classId={classItem.id} />
+          ) : (
+            <div className='p-9 text-center text-muted'>
+              <p className='fs-5'>
+                Salve a turma primeiro para ver o relatório de alunos.
               </p>
             </div>
           )}

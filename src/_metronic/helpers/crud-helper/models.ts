@@ -3,8 +3,12 @@ import {Dispatch, SetStateAction} from 'react'
 export type ID = undefined | null | number | string
 
 export type PaginationState = {
-  page: number
-  items_per_page: 10 | 30 | 50 | 100
+  // Support both naming conventions used across the repo
+  page?: number
+  pageNumber?: number
+  items_per_page?: 10 | 30 | 50 | 100
+  totalPages?: number
+  totalCount?: number
   links?: Array<{label: string; active: boolean; url: string | null; page: number | null}>
 }
 
@@ -22,7 +26,8 @@ export type SearchState = {
 }
 
 export type Response<T> = {
-  data?: T
+  // Relaxed to `any` to accommodate multiple API shapes across the app
+  data?: any
   payload?: {
     message?: string
     errors?: {

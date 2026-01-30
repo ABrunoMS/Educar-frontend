@@ -12,4 +12,7 @@ export interface User {
   completedQuests?: number;
   failedQuests?: number;
   stars?: number;
+  // Backwards-compatible fields
+  first_name?: string;
+  last_name?: string;
 }

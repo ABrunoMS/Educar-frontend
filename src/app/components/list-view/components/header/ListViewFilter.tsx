@@ -1,4 +1,7 @@
 import {useEffect, useState, ReactNode} from 'react'
+import AsyncSelect from 'react-select/async'
+import { getAccountsByRole } from '@services/Accounts'
+import { ThemeModeComponent } from '../../../../../_metronic/assets/ts/layout/ThemeMode'
 import {MenuComponent} from '@metronic/assets/ts/components'
 import {initialQueryState, KTIcon} from '@metronic/helpers'
 import {useQueryRequest} from '../../core/QueryRequestProvider'
@@ -13,8 +16,38 @@ interface ListViewFilterProps {
 const ListViewFilter = ({ customFilters, onResetFilters, onApplyFilters }: ListViewFilterProps) => {
   const { updateState } = useQueryRequest()
   const { isLoading } = useQueryResponse()
-  const [role, setRole] = useState<string | undefined>()
   const [lastLogin, setLastLogin] = useState<string | undefined>()
+  const [macroRegionId, setMacroRegionId] = useState<string | undefined>()
+  const [partner, setPartner] = useState<string | undefined>()
+  const [contact, setContact] = useState<string | undefined>()
+
+  const [macroRegions, setMacroRegions] = useState<Array<{id:string,name:string}>>([])
+
+  useEffect(() => {
+    import('@services/MacroRegions').then(mod => mod.getMacroRegions()).then(r => setMacroRegions(r.data || [])).catch(() => {})
+  }, [])
+
+  // Theme-aware styles for react-select
+  const themeMode = ThemeModeComponent.getMode()
+  const currentTheme = themeMode === 'system' ? ThemeModeComponent.getSystemMode() : themeMode
+  const isDark = currentTheme === 'dark'
+
+  const selectStyles = {
+    control: (provided: any) => ({
+      ...provided,
+      backgroundColor: isDark ? '#1e1e2f' : '#fff',
+      borderColor: isDark ? '#444' : '#ccc',
+      color: isDark ? '#fff' : '#000'
+    }),
+    menu: (provided: any) => ({
+      ...provided,
+      backgroundColor: isDark ? '#1e1e2f' : '#fff',
+      color: isDark ? '#fff' : '#000'
+    }),
+    singleValue: (provided: any) => ({ ...provided, color: isDark ? '#fff' : '#000' }),
+    input: (provided: any) => ({ ...provided, color: isDark ? '#fff' : '#000' }),
+    placeholder: (provided: any) => ({ ...provided, color: isDark ? '#aaa' : '#666' })
+  }
 
   useEffect(() => {
     MenuComponent.reinitialization()
@@ -25,6 +58,9 @@ const ListViewFilter = ({ customFilters, onResetFilters, onApplyFilters }: ListV
       onResetFilters()
     } else {
       updateState({filter: undefined, ...initialQueryState})
+      setMacroRegionId(undefined)
+      setPartner(undefined)
+      setContact(undefined)
     }
   }
 
@@ -33,7 +69,7 @@ const ListViewFilter = ({ customFilters, onResetFilters, onApplyFilters }: ListV
       onApplyFilters()
     } else {
       updateState({
-        filter: {role, last_login: lastLogin},
+        filter: { last_login: lastLogin, macroRegionId, partner, contact },
         ...initialQueryState,
       })
     }
@@ -74,24 +110,63 @@ const ListViewFilter = ({ customFilters, onResetFilters, onApplyFilters }: ListV
             <>
               {/* begin::Input group */}
               <div className='mb-10'>
-                <label className='form-label fs-6 fw-bold'>Perfil:</label>
-                <select
-                  className='form-select form-select-solid fw-bolder'
-                  data-kt-select2='true'
-                  data-placeholder='Select option'
-                  data-allow-clear='true'
-                  data-kt-user-table-filter='role'
-                  data-hide-search='true'
-                  onChange={(e) => setRole(e.target.value)}
-                  value={role}
-                >
-                  <option value=''></option>
-                  <option value='Administrator'>Admin</option>
-                  <option value='Analyst'>Aluno</option>
-                  <option value='Developer'>Professor</option>
-                </select>
+                <label className='form-label fs-6 fw-bold'>Macro Região:</label>
+                <AsyncSelect
+                  cacheOptions
+                  defaultOptions={macroRegions.map(m => ({ value: m.id, label: m.name }))}
+                  loadOptions={(inputValue, callback) => {
+                    const opts = macroRegions.map(m => ({ value: m.id, label: m.name }))
+                    const filtered = inputValue ? opts.filter((o: any) => o.label.toLowerCase().includes(inputValue.toLowerCase())) : opts
+                    callback(filtered)
+                  }}
+                  onChange={(selected: any) => setMacroRegionId(selected ? selected.value : undefined)}
+                  value={macroRegionId ? { value: macroRegionId, label: macroRegions.find(m => m.id === macroRegionId)?.name || '' } : null}
+                  isClearable
+                  styles={selectStyles}
+                />
               </div>
-              {/* end::Input group */}
+
+              <div className='mb-10'>
+                <label className='form-label fs-6 fw-bold'>Parceiro:</label>
+                <AsyncSelect
+                  cacheOptions
+                  defaultOptions
+                  loadOptions={(inputValue, callback) => {
+                    getAccountsByRole('Distribuidor', 1, 1000)
+                      .then(res => {
+                        const opts = (res.data.data || []).map((a: any) => ({ value: a.id, label: a.name || a.userName || a.email }))
+                        const filtered = inputValue ? opts.filter((o: any) => o.label.toLowerCase().includes(inputValue.toLowerCase())) : opts
+                        callback(filtered)
+                      })
+                      .catch(() => callback([]))
+                  }}
+                  onChange={(selected: any) => setPartner(selected ? selected.value : undefined)}
+                  value={partner ? { value: partner, label: '' } : null}
+                  isClearable
+                  styles={selectStyles}
+                />
+              </div>
+
+              <div className='mb-10'>
+                <label className='form-label fs-6 fw-bold'>Contato:</label>
+                <AsyncSelect
+                  cacheOptions
+                  defaultOptions
+                  loadOptions={(inputValue, callback) => {
+                    getAccountsByRole('AgenteComercial', 1, 1000)
+                      .then(res => {
+                        const opts = (res.data.data || []).map((a: any) => ({ value: a.id, label: a.name || a.userName || a.email }))
+                        const filtered = inputValue ? opts.filter((o: any) => o.label.toLowerCase().includes(inputValue.toLowerCase())) : opts
+                        callback(filtered)
+                      })
+                      .catch(() => callback([]))
+                  }}
+                  onChange={(selected: any) => setContact(selected ? selected.value : undefined)}
+                  value={contact ? { value: contact, label: '' } : null}
+                  isClearable
+                  styles={selectStyles}
+                />
+              </div>
             </>
           )}
 

@@ -1,0 +1,90 @@
+.react-select__control {
+  background: var(--kt-body-bg) !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  min-height: 44px;
+  height: 44px;
+}
+
+.react-select__single-value {
+  color: rgba(255,255,255,0.95);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.react-select__menu {
+  background: var(--kt-body-bg) !important;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(11,13,16,0.6);
+}
+
+/* Make the select fit compact form rows */
+.react-select--compact .react-select__control {
+  min-height: 44px;
+  height: 44px;
+}
+
+/* Small screens: expand full width */
+@media (max-width: 768px) {
+  .react-select__control { width: 100% !important; }
+}
+
+:root{
+  /* fallback values if variables not defined */
+}
+
+.react-select__control{
+  background: var(--kt-body-bg, #0b0d10);
+  border: 1px solid rgba(255,255,255,0.06);
+  min-height: 44px;
+  height: 44px;
+  border-radius: 0.5rem;
+  padding-left: 0.5rem;
+  padding-right: 0.25rem;
+  box-shadow: none;
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+
+/* when container uses Metronic form classes, keep spacing consistent */
+.react-select-container.react-select__control, .react-select-container .react-select__control{
+  border-radius: 0.5rem;
+  min-height: 44px;
+  height: 44px;
+}
+.react-select__control--is-focused{
+  border-color: rgba(255,255,255,0.12);
+  box-shadow: none;
+}
+.react-select__value-container{ color: var(--kt-body-color, #fff); }
+.react-select__single-value{ color: rgba(255,255,255,0.95); }
+.react-select__menu{ background: var(--kt-body-bg, #0b0d10); z-index: 60; border-radius: 8px; box-shadow: 0 6px 18px rgba(11,13,16,0.6); }
+.react-select__option{ color: rgba(255,255,255,0.9); padding: 8px 12px; }
+.react-select__option--is-focused{ background: rgba(255,255,255,0.03); }
+.react-select__option--is-selected{ background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.95); }
+.react-select__placeholder{ color: rgba(255,255,255,0.6); }
+.react-select__dropdown-indicator, .react-select__clear-indicator{ color: rgba(255,255,255,0.6); padding: 8px; }
+
+/* responsive */
+@media (max-width: 768px){
+  .react-select__control{ width: 100% !important; min-width: 0 !important; }
+}
+
+/* keep single-line display for value/placeholder to avoid wrapping in narrow containers */
+.react-select__single-value, .react-select__placeholder {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* ensure container aligns with form controls inside flex rows */
+.react-select-container{
+  display: inline-block;
+  vertical-align: middle;
+  max-width: 420px;
+  width: auto;
+}
+
+.react-select-container .react-select__control{ padding-left: 6px; padding-right: 6px; }

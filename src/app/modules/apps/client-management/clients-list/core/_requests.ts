@@ -41,7 +41,10 @@ export const getList = async (
   sortBy: string,
   sortOrder: 'asc' | 'desc',
   filter: string,
-  search: string
+  search: string,
+  macroRegionId?: string,
+  partner?: string,
+  contact?: string
 ): Promise<ClientsQueryResponse> => {
   console.log('📡 API Request - Params:', { PageNumber, PageSize, search });
   const response: AxiosResponse<ClientsQueryResponse> = await axios.get(CLIENTS_URL, {
@@ -49,6 +52,9 @@ export const getList = async (
       PageNumber, 
       PageSize, 
       search 
+      , macroRegionId: macroRegionId || undefined
+      , partner: partner || undefined
+      , contact: contact || undefined
     },
   });
   console.log('📥 API Response - Total items:', response.data?.payload?.pagination?.totalCount);

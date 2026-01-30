@@ -78,7 +78,6 @@ const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onForm
     regionalId: Yup.string().required('Regional é obrigatório'),
     teacherIds: Yup.array().of(Yup.string()).optional(),
     studentIds: Yup.array().of(Yup.string()).optional(),
-    contractStartDate: Yup.date().optional().nullable(),
   })
 
   // --- FORMIK (Sua lógica de submit mantida para garantir os IDs corretos) ---
@@ -98,7 +97,7 @@ const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onForm
         
         if (values.description) schoolData.description = values.description;
         if (values.address) schoolData.addressId = values.address;
-        if (values.contractStartDate) schoolData.contractStartDate = values.contractStartDate;
+        // contractStartDate removed from create form — do not include in payload
         
         // Enviar teacherIds e studentIds separadamente
         if (values.teacherIds && values.teacherIds.length > 0) schoolData.teacherIds = values.teacherIds;
@@ -285,26 +284,7 @@ const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onForm
             true
           )}
 
-          {/* Data de Início do Contrato */}
-          <div className='fv-row mb-7'>
-            <label className='fw-semibold fs-6 mb-2'>Data de Início do Contrato</label>
-            <input
-              type='date'
-              className={clsx(
-                'form-control form-control-solid mb-3 mb-lg-0',
-                {'is-invalid': formik.touched.contractStartDate && formik.errors.contractStartDate}
-              )}
-              placeholder='Selecione a data'
-              {...formik.getFieldProps('contractStartDate')}
-            />
-            {formik.touched.contractStartDate && formik.errors.contractStartDate && (
-              <div className='fv-plugins-message-container'>
-                <div className='fv-help-block'>
-                  <span role='alert'>{formik.errors.contractStartDate as string}</span>
-                </div>
-              </div>
-            )}
-          </div>
+          {/* contractStartDate removed from the create form */}
 
           {/* --- SEÇÃO: Professores e Alunos --- */}
           <div className="separator my-10"></div>
