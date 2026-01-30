@@ -187,12 +187,51 @@ const LessonStepPage: FC = () => {
                   description: content.description || '',
                   title: content.title || content.description || 'Questão',
                   comments: '', // TODO: Mapear se existir
-                  options: (content.expectedAnswers?.options || []).map((opt, oIndex) => ({
-                    id: Date.now() + oIndex,
-                    image: '',
-                    text: opt.description,
-                    isCorrect: opt.is_correct
-                  })),
+                  options: (() => {
+                    const ea = content.expectedAnswers || {} as any
+                    const qt = ea.questionType || content.questionType
+
+                    switch (qt) {
+                      case 'MultipleChoice':
+                      case 'TrueOrFalse':
+                        return (ea.options || []).map((opt: any, oIndex: number) => ({
+                          id: Date.now() + oIndex,
+                          image: '',
+                          text: opt.description,
+                          isCorrect: opt.is_correct
+                        }))
+                      case 'SingleChoice':
+                        return (ea.option ? [{ id: Date.now(), image: '', text: ea.option, isCorrect: true }] : [])
+                      case 'Ordering':
+                        return (ea.items || []).map((it: string, i: number) => ({ id: `${Date.now()}_${i}`, image: '', text: it, isCorrect: false }))
+                      case 'ColumnFill':
+                        // Represent pairs as options with 'left -> right' text for display
+                        if (ea.matches && typeof ea.matches === 'object') {
+                          return Object.entries(ea.matches).map(([k, v], i) => ({ id: `${Date.now()}_${i}`, image: '', text: `${k} → ${v}`, isCorrect: false }))
+                        }
+                        return []
+                      case 'MatchTwoRows':
+                        // Flatten left items for display
+                        if (Array.isArray(ea.left)) {
+                          return (ea.left || []).map((l: string, i: number) => ({ id: `${Date.now()}_${i}`, image: '', text: l, isCorrect: false }))
+                        }
+                        return []
+                      default:
+                        return (ea.options || []).map((opt: any, oIndex: number) => ({
+                          id: Date.now() + oIndex,
+                          image: '',
+                          text: opt.description,
+                          isCorrect: opt.is_correct
+                        }))
+                    }
+                  })(),
+                  // attach possible custom fields for frontend editing
+                  orderingItems: ((content.expectedAnswers as any)?.items) || undefined,
+                  correctOrder: ((content.expectedAnswers as any)?.correctOrder) || undefined,
+                  columnFillMatches: ((content.expectedAnswers as any)?.matches) ? Object.entries((content.expectedAnswers as any).matches).map(([l, r]) => ({ left: l, right: String(r) })) : undefined,
+                  matchLeft: ((content.expectedAnswers as any)?.left) || undefined,
+                  matchRight: ((content.expectedAnswers as any)?.right) || undefined,
+                  matchPairs: ((content.expectedAnswers as any)?.matches) ? Object.entries((content.expectedAnswers as any).matches).map(([l, r]) => ({ leftIndex: Number(l), rightIndex: Number(r) })) : undefined,
                   shuffleAnswers: false,
                   alwaysCorrect: false,
                 };
@@ -545,6 +584,39 @@ const handleSaveQuestion = (newQuestionData: Partial<Question>) => {
                 text: question.description || question.title || 'Resposta esperada' // Backend valida que text não pode ser vazio
               };
               break;
+            case 'Ordering':
+              expectedAnswers = {
+                questionType: 'Ordering',
+                items: question.orderingItems && question.orderingItems.length > 0 ? question.orderingItems : (question.options || []).map(o => o.text),
+                correctOrder: question.correctOrder || (question.orderingItems ? question.orderingItems.map((_, i) => i) : (question.options || []).map((_, i) => i))
+              };
+              break;
+            case 'ColumnFill':
+              // Convert array of pairs to object { left: right }
+              const matchesObj: Record<string, string> = {};
+              if (question.columnFillMatches && question.columnFillMatches.length > 0) {
+                question.columnFillMatches.forEach(p => { matchesObj[p.left] = p.right; });
+              }
+              expectedAnswers = {
+                questionType: 'ColumnFill',
+                matches: matchesObj
+              };
+              break;
+            case 'MatchTwoRows':
+              // left/right arrays and optional mapping
+              const leftArr = question.matchLeft || (question.options || []).map(o => o.text)
+              const rightArr = question.matchRight || []
+              const mapping: Record<number, number> = {}
+              if (question.matchPairs && question.matchPairs.length > 0) {
+                question.matchPairs.forEach(p => { mapping[p.leftIndex] = p.rightIndex })
+              }
+              expectedAnswers = {
+                questionType: 'MatchTwoRows',
+                left: leftArr,
+                right: rightArr,
+                matches: mapping
+              };
+              break;
             case 'MultipleChoice':
               const mcOptions = (question.options || []).map(opt => ({
                 description: opt.text || 'Opção sem descrição', // Backend valida que description não pode ser vazio
@@ -669,6 +741,8 @@ const handleSaveQuestion = (newQuestionData: Partial<Question>) => {
       'Dissertative': 'Dissertativa',
       'AlwaysCorrect': 'Informativo',
       'ColumnFill': 'Preencher Colunas',
+      'Ordering': 'Ordenação',
+      'MatchTwoRows': 'Corresponder Duas Fileiras',
       'None': 'Informativo'
     };
     

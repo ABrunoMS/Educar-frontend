@@ -23,18 +23,23 @@ interface PaginationProviderProps {
 }
 
 export interface PaginationState {
-  pageNumber: number;
-  totalPages: number;
-  totalCount: number;
-  hasPreviousPage: boolean;
-  hasNextPage: boolean;
+  page?: number;
+  pageNumber?: number;
+  totalPages?: number;
+  totalCount?: number;
+  hasPreviousPage?: boolean;
+  hasNextPage?: boolean;
 }
 
-// Esta é a nova estrutura da resposta da API
+// Flexible paginated shape used across the app
 export interface PaginatedResponse<T> {
-  data: T[];
-  payload: {
-    pagination: PaginationState;
+  data?: T[];
+  items?: T[];
+  totalPages?: number;
+  totalCount?: number;
+  pageNumber?: number;
+  payload?: {
+    pagination?: PaginationState;
   };
 }
 

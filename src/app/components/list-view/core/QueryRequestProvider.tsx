@@ -17,8 +17,11 @@ const QueryRequestProvider: FC<WithChildren> = ({children}) => {
     setState(updatedState)
   }
 
+  // expose helper to get current state
+  const value = { state, updateState }
+
   return (
-    <QueryRequestContext.Provider value={{state, updateState}}>
+    <QueryRequestContext.Provider value={value}>
       {children}
     </QueryRequestContext.Provider>
   )

@@ -9,6 +9,7 @@ import BasicField from '@components/form/BasicField'
 import SelectField from '@components/form/SelectField'
 import { createClient, updateClient, getAllProducts, getCompatibleContents, ProductDto, ContentDto } from '../../clients-list/core/_requests'
 import { CreateOptionModal } from './CreateOptionModal'
+import { getMacroRegions } from '@services/MacroRegions'
 import { isNotEmpty } from '@metronic/helpers'
 import Flatpickr from 'react-flatpickr'
 import "flatpickr/dist/themes/material_green.css";
@@ -40,6 +41,8 @@ export const initialClient: ClientType = {
   subsecretarias: [],
   selectedProducts: [],
   selectedContents: [],
+  macroRegionId: '',
+  macroRegionName: ''
 }
 
 const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
@@ -59,6 +62,8 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
   const [contactOptions, setContactOptions] = useState<SelectOptions[]>([])
   const [isLoadingPartners, setIsLoadingPartners] = useState(false)
   const [isLoadingContacts, setIsLoadingContacts] = useState(false)
+  const [macroRegionOptions, setMacroRegionOptions] = useState<SelectOptions[]>([])
+  const [isLoadingMacroRegions, setIsLoadingMacroRegions] = useState(false)
 
   // 1. Inicialização segura das Subsecretarias
   // Dependência [client?.id] impede que re-renderizações do pai sobrescrevam edições locais
@@ -110,6 +115,23 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     fetchContacts()
   }, [])
 
+  // Buscar Macro Regiões
+  useEffect(() => {
+    const fetchMacroRegions = async () => {
+      setIsLoadingMacroRegions(true)
+      try {
+        const response = await getMacroRegions()
+        const options = (response.data || []).map((m: any) => ({ value: m.id, label: m.name }))
+        setMacroRegionOptions(options)
+      } catch (error) {
+        console.error('Erro ao buscar macro regiões:', error)
+      } finally {
+        setIsLoadingMacroRegions(false)
+      }
+    }
+    fetchMacroRegions()
+  }, [])
+
   // Buscar Produtos
   useEffect(() => {
     const fetchProducts = async () => {
@@ -150,6 +172,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
       selectedContents: client?.contents
         ? client.contents.map(c => c.id)
         : (client?.selectedContents || []),
+      macroRegionId: client?.macroRegionId || ''
     }
   }, [client?.id]) 
 
@@ -194,6 +217,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
         
         productIds: values.selectedProducts,
         contentIds: values.selectedContents,
+        macroRegionId: values.macroRegionId || undefined,
         selectedProducts: undefined,
         selectedContents: undefined
       }
@@ -517,6 +541,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
           
           {renderSelectFieldset('partner', 'Parceiro ', isLoadingPartners ? 'Carregando...' : 'Selecione um parceiro...', partnerOptions)}
           {renderSelectFieldset('contacts', 'Contato ', isLoadingContacts ? 'Carregando...' : 'Selecione um contato...', contactOptions)}
+          {renderSelectFieldset('macroRegionId', 'Macro Região', isLoadingMacroRegions ? 'Carregando...' : 'Selecione uma macro região...', macroRegionOptions, false, false)}
           
           {/*{renderSelectFieldset('contract', 'Contract', 'Select a contract...', [{ value: '1', label: 'Contrato 1' }])}*/}
           

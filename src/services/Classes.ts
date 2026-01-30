@@ -44,3 +44,8 @@ export const getClassesBySchool = (
 export const updateClass = (id: string, classItem: Class) => {
   return axios.put<Class>(`${CLASSES_URL}/${id}`, classItem);
 };
+
+export const getClassStudentsReport = (classId: string) => {
+  // Endpoint a ser implementado no backend. Mantemos a chamada preparada.
+  return axios.get(`${CLASSES_URL}/${classId}/students-report`);
+};

@@ -27,6 +27,8 @@ export interface ClientType {
   totalAccounts?: number;
   remainingAccounts?: number;
   secretaryId?: string;
+  macroRegionId?: string;
+  macroRegionName?: string;
   // Estrutura nova - lista de subsecretarias com regionais aninhadas
   subsecretarias?: SubsecretariaDto[];
   products?: ProductDto[];

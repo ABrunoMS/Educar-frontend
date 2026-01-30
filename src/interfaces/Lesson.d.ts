@@ -53,7 +53,16 @@ export interface QuestStepContentOption {
 
 export interface QuestStepContentExpectedAnswers {
   questionType: string;
-  options: QuestStepContentOption[];
+  options?: QuestStepContentOption[];
+  // SingleChoice
+  option?: string;
+  // Ordering
+  items?: string[];
+  correctOrder?: number[];
+  // Column fill / Match
+  matches?: Record<string, string> | Record<number, number>;
+  left?: string[];
+  right?: string[];
 }
 
 export interface QuestStepContent {
@@ -64,7 +73,7 @@ export interface QuestStepContent {
   description: string;
   weight: number;
   isActive?: boolean;
-  sequence: number;
+  sequence?: number;
   expectedAnswers: QuestStepContentExpectedAnswers;
 }
 
@@ -102,6 +111,13 @@ export interface Question {
   options: AnswerOption[];
   shuffleAnswers: boolean;
   alwaysCorrect: boolean;
+  // campos opcionais para novos tipos
+  orderingItems?: string[];
+  correctOrder?: number[];
+  columnFillMatches?: { left: string; right: string }[];
+  matchLeft?: string[];
+  matchRight?: string[];
+  matchPairs?: { leftIndex: number; rightIndex: number }[];
 }
 
 export interface Step {

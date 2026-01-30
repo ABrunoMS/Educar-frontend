@@ -60,14 +60,34 @@ const ClientListContent = () => {
 
   // A chamada useQuery agora espera o tipo MetronicResponse
   const {data, isLoading, refetch}: UseQueryResult<MetronicResponse<ClientType>> = useQuery(
-    ['client-list', page, pageSize, debouncedSearch],
+    [
+      'client-list',
+      page,
+      pageSize,
+      debouncedSearch,
+      state.filter?.macroRegionId,
+      state.filter?.partner,
+      state.filter?.contact,
+    ],
     () => {
-      return getList(page, pageSize, '', 'asc', '', debouncedSearch)
+      return getList(
+        page,
+        pageSize,
+        '',
+        'asc',
+        '',
+        debouncedSearch,
+        state.filter?.macroRegionId,
+        state.filter?.partner,
+        state.filter?.contact,
+      )
     },
     {
       keepPreviousData: true,
     }
   )
+
+
   
   const deleteCallback = async () => {
     setShowLoading(true);
@@ -106,6 +126,7 @@ const ClientListContent = () => {
   },
     { Header: 'Total de contas', accessor: 'totalAccounts' },
     { Header: 'Contas restantes', accessor: 'remainingAccounts' },
+    { Header: 'Macro Região', accessor: 'macroRegionName' },
     { Header: 'Parceiro', accessor: 'partnerName' },
     { Header: 'Contato', accessor: 'contacts' },
     {

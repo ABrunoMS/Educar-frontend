@@ -6,7 +6,8 @@ import { useQueryRequest } from '../../core/QueryRequestProvider'
 
 const ListViewSearchComponent = () => {
   const {updateState} = useQueryRequest()
-  const [searchTerm, setSearchTerm] = useState<string>('')
+   const [searchTerm, setSearchTerm] = useState<string>('')
+   const [macroRegionId, setMacroRegionId] = useState<string | undefined>('')
   // Debounce search term so that it only gives us latest value ...
   // ... if searchTerm has not been updated within last 500ms.
   // The goal is to only have the API call fire when user stops typing ...
@@ -18,7 +19,7 @@ const ListViewSearchComponent = () => {
     () => {
       if (debouncedSearchTerm !== undefined && searchTerm !== undefined) {
         console.log('🔎 ListViewSearchComponent - Updating search:', debouncedSearchTerm)
-        updateState({search: debouncedSearchTerm, ...initialQueryState})
+         updateState({search: debouncedSearchTerm, ...initialQueryState})
       }
     },
     [debouncedSearchTerm] // Only call effect if debounced search term changes

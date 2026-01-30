@@ -14,7 +14,7 @@ interface SelectFieldProps {
   isMulti?: boolean;
   multiselect?: boolean;
   
-  placeholder?: string;
+  placeholder?: string | null;
   
   // Compatibilidade: aceita tanto isDisabled (novo) quanto disabled (antigo)
   isDisabled?: boolean;
