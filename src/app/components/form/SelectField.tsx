@@ -53,31 +53,31 @@ const SelectField: FC<SelectFieldProps> = ({
   const customStyles = {
     control: (provided: any) => ({
       ...provided,
-      backgroundColor: theme === 'dark' ? '#1e1e2f' : '#fff',
-      borderColor: theme === 'dark' ? '#555' : '#ccc',
+      backgroundColor: theme === 'dark' ? 'var(--bs-gray-100)' : '#aaa',
+      borderColor: theme === 'dark' ? 'transparent' : 'transparent',
       color: theme === 'dark' ? '#fff' : '#000',
     }),
     menu: (provided: any) => ({
       ...provided,
-      backgroundColor: theme === 'dark' ? '#1e1e2f' : '#fff',
+      backgroundColor: theme === 'dark' ? 'var(--bs-gray-100)' : '#fff',
       color: theme === 'dark' ? '#fff' : '#000',
       zIndex: 9999,
     }),
     singleValue: (provided: any) => ({
       ...provided,
-      color: theme === 'dark' ? '#fff' : '#000',
+      color: theme === 'dark' ? 'var(--bs-gray-100)' : '#000',
     }),
     multiValue: (provided: any) => ({
       ...provided,
-      backgroundColor: theme === 'dark' ? '#333' : '#eee',
+      backgroundColor: theme === 'dark' ? 'var(--bs-gray-100)' : '#eee',
     }),
     multiValueLabel: (provided: any) => ({
       ...provided,
-      color: theme === 'dark' ? '#fff' : '#000',
+      color: theme === 'dark' ? '#aaa' : '#000',
     }),
     input: (provided: any) => ({
       ...provided,
-      color: theme === 'dark' ? '#fff' : '#000',
+      color: theme === 'dark' ? '#aaa' : '#000',
     }),
     placeholder: (provided: any) => ({
       ...provided,
@@ -133,7 +133,7 @@ const SelectField: FC<SelectFieldProps> = ({
           ...baseTheme,
           colors: {
             ...baseTheme.colors,
-            primary25: theme === 'dark' ? '#444' : '#ddd',
+            primary25: theme === 'dark' ? 'var(--bs-gray-100)' : '#ddd',
             primary: theme === 'dark' ? '#6666ff' : '#2684FF',
           },
         })}

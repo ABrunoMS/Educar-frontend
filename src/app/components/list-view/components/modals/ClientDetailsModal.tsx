@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { getClientById } from '../../../../modules/apps/client-management/clients-list/core/_requests'
+import { getAccountById } from '@services/Accounts'
 import { ClientType } from '@interfaces/Client'
 
 type Props = {
@@ -11,6 +12,8 @@ const ClientDetailsModal: React.FC<Props> = ({ clientId, onClose }) => {
   const [client, setClient] = useState<ClientType | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [partnerDisplay, setPartnerDisplay] = useState<string | null>(null)
+  const [contactDisplay, setContactDisplay] = useState<string | null>(null)
 
   useEffect(() => {
     if (!clientId) return
@@ -28,12 +31,58 @@ const ClientDetailsModal: React.FC<Props> = ({ clientId, onClose }) => {
       })
   }, [clientId])
 
+  // When we have a client, try to resolve partner and contacts (they may be IDs)
+  useEffect(() => {
+    if (!client) {
+      setPartnerDisplay(null)
+      setContactDisplay(null)
+      return
+    }
+
+    const resolvePartner = async () => {
+      if (client.partner) {
+        try {
+          const acc = await getAccountById(client.partner)
+          setPartnerDisplay(acc?.name || acc?.userName || acc?.email || client.partner)
+        } catch {
+          setPartnerDisplay(client.partner)
+        }
+      } else if (client.partnerName) {
+        setPartnerDisplay(client.partnerName)
+      } else {
+        setPartnerDisplay(null)
+      }
+    }
+
+    const resolveContact = async () => {
+      if (client.contacts) {
+        try {
+          const acc = await getAccountById(client.contacts)
+          setContactDisplay(acc?.name || acc?.userName || acc?.email || client.contacts)
+        } catch {
+          setContactDisplay(client.contacts)
+        }
+      } else {
+        setContactDisplay(null)
+      }
+    }
+
+    resolvePartner()
+    resolveContact()
+  }, [client])
+
   const CrossIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
       <rect opacity="0.5" x="6" y="17.3137" width="16" height="2" rx="1" transform="rotate(-45 6 17.3137)" fill="currentColor" />
       <rect x="7.41422" y="6" width="16" height="2" rx="1" transform="rotate(45 7.41422 6)" fill="currentColor" />
     </svg>
   )
+
+  const formatDate = (value?: string) => {
+    if (!value) return 'N/A'
+    const d = new Date(value)
+    return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString()
+  }
 
   return (
     <div className="modal fade show d-block" tabIndex={-1}>
@@ -63,7 +112,19 @@ const ClientDetailsModal: React.FC<Props> = ({ clientId, onClose }) => {
                 </div>
                 <div className="row mb-4">
                   <div className="col-md-4 fw-bold text-muted">Parceiro:</div>
-                  <div className="col-md-8">{client.partner || 'N/A'}</div>
+                  <div className="col-md-8">{partnerDisplay || 'N/A'}</div>
+                </div>
+                <div className="row mb-4">
+                  <div className="col-md-4 fw-bold text-muted">Contatos:</div>
+                  <div className="col-md-8">{contactDisplay || 'N/A'}</div>
+                </div>
+                <div className="row mb-4">
+                  <div className="col-md-4 fw-bold text-muted">Data de Assinatura:</div>
+                  <div className="col-md-8">{formatDate(client.signatureDate)}</div>
+                </div>
+                <div className="row mb-4">
+                  <div className="col-md-4 fw-bold text-muted">Macro Região:</div>
+                  <div className="col-md-8">{client.macroRegionName || 'N/A'}</div>
                 </div>
                 <div className="row mb-4">
                   <div className="col-md-4 fw-bold text-muted">Subsecretarias:</div>
@@ -83,14 +144,6 @@ const ClientDetailsModal: React.FC<Props> = ({ clientId, onClose }) => {
                           .join(', ') || 'N/A'
                       : 'N/A'}
                   </div>
-                </div>
-                <div className="row mb-4">
-                  <div className="col-md-4 fw-bold text-muted">Total de Contas:</div>
-                  <div className="col-md-8">{client.totalAccounts}</div>
-                </div>
-                <div className="row mb-4">
-                  <div className="col-md-4 fw-bold text-muted">Contas Restantes:</div>
-                  <div className="col-md-8">{client.remainingAccounts}</div>
                 </div>
                 <div className="row mb-4">
                   <div className="col-md-4 fw-bold text-muted">Produto:</div>
