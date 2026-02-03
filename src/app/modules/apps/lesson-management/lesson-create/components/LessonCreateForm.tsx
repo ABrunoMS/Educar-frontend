@@ -13,8 +13,9 @@ import { useRole } from '@contexts/RoleContext';
 // Serviços
 import { createQuest, updateQuest, getQuestById, getBnccContents, getAllProducts, getCompatibleContents } from '@services/Lesson';
 import { getSubjects } from '@services/Subjects'; 
-import { getClientById } from '@services/Clients'; // <--- IMPORTANTE
+import { getClientById } from '@services/Clients'; 
 import { useAuth } from '../../../../auth/core/Auth';
+import { getGrades } from '@services/Grades';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -73,7 +74,7 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
         const subjectsList = subjectsResponse.data.data || subjectsResponse.data || [];
         setDisciplines(Array.isArray(subjectsList) ? subjectsList.map((s: any) => ({ value: s.id, label: s.name })) : []);
 
-        const gradesResponse = await axios.get(`${API_URL}/api/Grades`, { params: { PageNumber: 1, PageSize: 999 }});
+        const gradesResponse = await getGrades();
         const gradesList = gradesResponse.data.data || gradesResponse.data || [];
         setSchoolYears(Array.isArray(gradesList) ? gradesList.map((g: any) => ({ value: g.id, label: g.name })) : []);
 
@@ -91,7 +92,7 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
                 if (schoolId) {
                     try {
                         // Busca a escola para descobrir quem é o dono (Cliente)
-                        // Você precisa importar getSchoolById lá em cima: import { getSchoolById } from '@services/Schools';
+                        
                         const schoolRes = await axios.get(`${API_URL}/api/Schools/${schoolId}`); 
                         targetClientId = schoolRes.data.clientId || schoolRes.data.client?.id;
                         console.log("DEBUG - ClientId descoberto via Escola:", targetClientId);
@@ -266,7 +267,7 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
 
         // 2. FILTRO: Cruza com o que o cliente possui
         if (clientData) {
-            console.log("DEBUG - Dados do Cliente:", clientData); // <--- ABRA O CONSOLE (F12) E VEJA ISSO
+            console.log("DEBUG - Dados do Cliente:", clientData); 
 
             let purchasedContentIds: string[] = [];
 
@@ -276,7 +277,7 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
                 purchasedContentIds = clientData.contents.map((c: any) => c.id || c.Id);
             } 
             else if (Array.isArray(clientData.clientContents)) {
-                // Caso 2: Tabela de junção (Comum no Entity Framework)
+                // Caso 2: Tabela de junção 
                 purchasedContentIds = clientData.clientContents.map((cc: any) => cc.contentId || cc.content?.id || cc.ContentId);
             }
             else if (Array.isArray(clientData.ClientContents)) {
@@ -292,7 +293,7 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
             setAvailableContents(filtered);
         } else {
             // Se não tem dados de cliente (ex: admin criando template GLOBAL), mostra todos os compatíveis
-            // Se você quer bloquear admin também se não tiver cliente, mude para setAvailableContents([])
+           
             setAvailableContents(compatibleContents);
         }
 
