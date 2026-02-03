@@ -118,7 +118,7 @@ const ClientListContent = () => {
             handleOpenModal(row.original.id);
           }
         }}
-        className='text-primary fw-bold'
+        className='fw-bold text-body text-decoration-none'
       >
         {row.original.name}
       </a>
