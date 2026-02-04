@@ -187,7 +187,7 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
 
   const formik = useFormik({
     initialValues: {
-      name: activeData?.name ? (sourceTemplateId ? `${activeData.name} (Cópia)` : activeData.name) : '',
+      name: activeData?.name ? (sourceTemplateId ? `${activeData.name} (Modelo)` : activeData.name) : '',
       description: activeData?.description || '',
       discipline: initialDisciplineId,
       schoolYear: initialSchoolYearId,

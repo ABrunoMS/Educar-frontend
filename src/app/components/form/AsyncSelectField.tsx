@@ -33,13 +33,13 @@ const AsyncSelectField: FC<AsyncSelectFieldProps> = ({
   const customStyles = {
     control: (provided: any) => ({
       ...provided,
-      backgroundColor: theme === 'dark' ? '#1e1e2f' : '#fff',
+      backgroundColor: theme === 'dark' ? '#1e1e2f' : '#aaa',
       borderColor: theme === 'dark' ? '#555' : '#ccc',
       color: theme === 'dark' ? '#fff' : '#000',
     }),
     menu: (provided: any) => ({
       ...provided,
-      backgroundColor: theme === 'dark' ? '#1e1e2f' : '#fff',
+      backgroundColor: theme === 'dark' ? '#1e1e2f' : '#aaa',
       color: theme === 'dark' ? '#fff' : '#000',
     }),
     singleValue: (provided: any) => ({
@@ -48,7 +48,7 @@ const AsyncSelectField: FC<AsyncSelectFieldProps> = ({
     }),
     multiValue: (provided: any) => ({
       ...provided,
-      backgroundColor: theme === 'dark' ? '#333' : '#eee',
+      backgroundColor: theme === 'dark' ? '#333' : '#aaa',
     }),
     multiValueLabel: (provided: any) => ({
       ...provided,
