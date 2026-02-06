@@ -13,7 +13,10 @@ interface RoleBasedMenuItemProps {
 }
 
 const RoleBasedMenuItem: React.FC<RoleBasedMenuItemProps> = ({rolesAllowed, children}) => {
-  const { hasAnyRole } = useRole()
+  const { hasAnyRole, roles } = useRole()
+
+  // Debug: ver quais roles o usuário tem
+  console.log('[RoleBasedMenuItem] User roles:', roles, 'Allowed:', rolesAllowed, 'hasAnyRole:', hasAnyRole(rolesAllowed))
 
   if (!hasAnyRole(rolesAllowed)) {
     return null // Don't render if role is not allowed
@@ -410,6 +413,53 @@ const SidebarMenuMain = () => {
           />
         </SidebarMenuItemWithSub>
         */}
+
+      </RoleBasedMenuItem>
+
+      {/* Menu para Secretario, Subsecretario e SecretarioRegional - todos são read-only */}
+      <RoleBasedMenuItem rolesAllowed={['Secretario', 'Subsecretario', 'SecretarioRegional']}>
+        
+        <SidebarMenuItemWithSub
+          to='/apps/school-management/'
+          title='Escolas'
+          fontIcon='bi-archive'
+          icon='delete-folder'
+        >
+          <SidebarMenuItem
+            to='/apps/school-management/schools'
+            icon='abstract-28'
+            title='Listagem de escolas'
+            hasBullet
+          />
+        </SidebarMenuItemWithSub>
+
+        <SidebarMenuItemWithSub
+          to='/apps/class-management/'
+          title='Turmas'
+          fontIcon='bi-archive'
+          icon='delete-folder'
+        >
+          <SidebarMenuItem
+            to='/apps/class-management/classes'
+            icon='abstract-28'
+            title='Listagem de Turmas'
+            hasBullet
+          />
+        </SidebarMenuItemWithSub>
+
+        <SidebarMenuItemWithSub
+          to='/apps/account-management/'
+          title='Contas'
+          fontIcon='bi-archive'
+          icon='profile-user'
+        >
+          <SidebarMenuItem
+            to='/apps/account-management/accounts'
+            icon='abstract-28'
+            title='Listagem de usuários'
+            hasBullet
+          />
+        </SidebarMenuItemWithSub>
 
       </RoleBasedMenuItem>
          

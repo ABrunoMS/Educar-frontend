@@ -97,7 +97,7 @@ const PrivateRoutes = () => {
         <Route
           path='apps/class-management/*'
           element={
-            <PrivateRoute rolesAllowed={['Admin', 'Teacher']}>
+            <PrivateRoute rolesAllowed={['Admin', 'Teacher', 'Secretario', 'Subsecretario', 'SecretarioRegional']}>
               <SuspensedView>
                 <ClassPage />
               </SuspensedView>
@@ -173,7 +173,7 @@ const PrivateRoutes = () => {
         <Route
           path='apps/school-management/*'
           element={
-            <PrivateRoute rolesAllowed={['Admin']}>
+            <PrivateRoute rolesAllowed={['Admin', 'Secretario', 'Subsecretario', 'SecretarioRegional']}>
               <SuspensedView>
                 <SchoolPage />
               </SuspensedView>
@@ -193,7 +193,7 @@ const PrivateRoutes = () => {
         <Route
           path='apps/account-management/*'
           element={
-            <PrivateRoute rolesAllowed={['Admin']}>
+            <PrivateRoute rolesAllowed={['Admin', 'Secretario', 'Subsecretario', 'SecretarioRegional']}>
               <SuspensedView>
                 <AccountPage />
               </SuspensedView>

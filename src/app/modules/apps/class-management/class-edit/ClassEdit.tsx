@@ -10,11 +10,13 @@ import { getClassById } from '@services/Classes';
 import { toast } from 'react-toastify';
 import { Class } from '@interfaces/Class';
 import clsx from 'clsx';
+import { useRole } from '@contexts/RoleContext';
 
 const ClassEdit = () => {
   const [classItem, setClassItem] = useState<Class>();
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { isReadOnly } = useRole();
 
   const { id } = useParams();
 
@@ -120,7 +122,7 @@ const ClassEdit = () => {
         >
           <div className='p-9'>
             {classItem ? (
-              <ClassCreateForm classItem={classItem} onFormSubmit={handleFormSubmit} />
+              <ClassCreateForm classItem={classItem} onFormSubmit={handleFormSubmit} readOnly={isReadOnly()} />
             ) : (
               <div className='text-center'>
                 <span className='indicator-progress'>

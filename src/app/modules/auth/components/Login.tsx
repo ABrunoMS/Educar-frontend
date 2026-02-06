@@ -55,7 +55,8 @@ export function Login() {
         saveAuth(auth)
         setupAxios(axios)
         const user = await getUserByToken()
-        console.log(user)
+        console.log('[Login] User from API:', user)
+        console.log('[Login] User roles from API:', user?.roles)
         if (user) {
         setCurrentUser(user)
         // A lógica de Role agora funciona com o objeto 'user' real
@@ -63,8 +64,10 @@ export function Login() {
         const mappedRoles = (user.roles || [])
           .map((r: string) => mapRoleString(r))
           .filter(Boolean) as any
+        console.log('[Login] Mapped roles:', mappedRoles)
         if (mappedRoles.length) {
           setRoles(mappedRoles)
+          console.log('[Login] setRoles called with:', mappedRoles)
         }
 
         toast.success(`Bem vindo, ${user.name}`) // Use user.name que vem da API

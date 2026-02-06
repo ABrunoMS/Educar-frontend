@@ -19,10 +19,12 @@ import { ToolbarWrapper } from '@metronic/layout/components/toolbar';
 import { Content } from '@metronic/layout/components/content';
 import { getClients } from '@services/Clients';
 import { getSchoolsByClient } from '@services/Schools';
+import { useRole } from '@contexts/RoleContext';
 
 const ClassListContent = () => {
   const {page, pageSize, setPage} = usePagination();
   const {state} = useQueryRequest();
+  const { isReadOnly } = useRole();
   const searchFromContext = state.search || '';
   const debouncedSearch = useDebounce(searchFromContext, 300);
   const queryClient = useQueryClient();
@@ -90,6 +92,7 @@ const ClassListContent = () => {
           editPath='/apps/class-management/class'
           id={props.data[props.row.index].id}
           callbackFunction={deleteActionCallback}
+          readOnly={isReadOnly()}
         />
       ),
     },
