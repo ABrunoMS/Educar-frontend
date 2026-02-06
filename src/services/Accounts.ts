@@ -8,9 +8,25 @@ const ACCOUNTS_URL = `${API_URL}/api/Accounts`; // Boa prática ter uma URL base
 /**
  * Busca uma lista paginada de todas as contas.
  */
-export function getAccounts(page = 1, pageSize = 10) {
+export function getAccounts(params?: {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  clientId?: string;
+  role?: string;
+  regionalId?: string;
+  subsecretariaId?: string;
+}) {
   return axios.get<PaginatedResponse<Account>>(ACCOUNTS_URL, {
-    params: { PageNumber: page, PageSize: pageSize },
+    params: { 
+      PageNumber: params?.page || 1, 
+      PageSize: params?.pageSize || 10,
+      search: params?.search,
+      ClientId: params?.clientId,
+      Role: params?.role,
+      RegionalId: params?.regionalId,
+      SubsecretariaId: params?.subsecretariaId,
+    },
   });
 }
 

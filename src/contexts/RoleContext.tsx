@@ -18,6 +18,7 @@ interface RoleContextType {
   // full setter for array of roles
   setRoles: (roles: Role[]) => void
   hasAnyRole: (allowed: Role[]) => boolean
+  hasRole: (role: Role) => boolean
   // Helpers de permissão
   canEdit: () => boolean
   isReadOnly: () => boolean
@@ -46,6 +47,9 @@ export const RoleProvider: React.FC<{children: ReactNode}> = ({children}) => {
     return result
   }
 
+  // Verifica se o usuário tem uma role específica
+  const hasRole = (role: Role) => hasAnyRole([role])
+
   // Verifica se o usuário pode editar
   const canEdit = () => hasAnyRole(EDITOR_ROLES)
 
@@ -63,6 +67,7 @@ export const RoleProvider: React.FC<{children: ReactNode}> = ({children}) => {
       setRole, 
       setRoles, 
       hasAnyRole,
+      hasRole,
       canEdit,
       isReadOnly,
       isSecretarioRegional,

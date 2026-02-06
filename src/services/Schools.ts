@@ -21,9 +21,23 @@ export const getAccountsBySchool = (
   });
 };
 
-export const getSchools = (): Promise<{ data: PaginatedResponse<SchoolType> }> => {
+export const getSchools = (params?: {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  clientId?: string;
+  regionalId?: string;
+  subsecretariaId?: string;
+}): Promise<{ data: PaginatedResponse<SchoolType> }> => {
   return axios.get(SCHOOLS_URL, {
-    params: { PageNumber: 1, PageSize: 1000 }, // Buscar todas as escolas
+    params: { 
+      PageNumber: params?.page || 1, 
+      PageSize: params?.pageSize || 1000,
+      search: params?.search,
+      ClientId: params?.clientId,
+      RegionalId: params?.regionalId,
+      SubsecretariaId: params?.subsecretariaId,
+    },
   });
 };
 

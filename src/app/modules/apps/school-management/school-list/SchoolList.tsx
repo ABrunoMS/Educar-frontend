@@ -18,11 +18,14 @@ import { ToolbarWrapper } from '@metronic/layout/components/toolbar'
 import { Content } from '@metronic/layout/components/content'
 import { getClients } from '@services/Clients'
 import { useRole } from '@contexts/RoleContext'
+import { getSubsecretarias } from '@services/Subsecretarias'
+import { getRegionais } from '@services/Regionais'
+import { Subsecretaria, Regional } from '@interfaces/School'
 
 const SchoolListContent = () => {
   const {page, pageSize, setPage} = usePagination();
   const {state} = useQueryRequest();
-  const { canEdit, isReadOnly } = useRole();
+  const { canEdit, isReadOnly, hasRole } = useRole();
   const searchFromContext = state.search || '';
   const debouncedSearch = useDebounce(searchFromContext, 300);
   const [deleteId, setDeleteId] = useState<ID>();
@@ -30,6 +33,16 @@ const SchoolListContent = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [clients, setClients] = useState<ClientType[]>([]);
   const [selectedClient, setSelectedClient] = useState('');
+  
+  // Estados para filtros de Subsecretaria e Regional
+  const [subsecretarias, setSubsecretarias] = useState<Subsecretaria[]>([]);
+  const [regionais, setRegionais] = useState<Regional[]>([]);
+  const [selectedSubsecretaria, setSelectedSubsecretaria] = useState('');
+  const [selectedRegional, setSelectedRegional] = useState('');
+  
+  const isSubsecretario = hasRole('Subsecretario');
+  const isSecretarioRegional = hasRole('SecretarioRegional');
+  const showOrgFilters = isSubsecretario || isSecretarioRegional;
 
   // Carregar clientes ao montar
   useEffect(() => {
@@ -39,10 +52,35 @@ const SchoolListContent = () => {
     }).catch(err => console.error('Erro ao carregar clientes:', err));
   }, []);
 
+  // Carregar subsecretarias (para Subsecretario)
+  useEffect(() => {
+    if (isSubsecretario) {
+      getSubsecretarias().then(res => {
+        const items = res.data || [];
+        setSubsecretarias(Array.isArray(items) ? items : []);
+      }).catch(err => console.error('Erro ao carregar subsecretarias:', err));
+    }
+  }, [isSubsecretario]);
+
+  // Carregar regionais (para Subsecretario e SecretarioRegional)
+  useEffect(() => {
+    if (showOrgFilters) {
+      getRegionais().then(res => {
+        const items = res.data || [];
+        setRegionais(Array.isArray(items) ? items : []);
+      }).catch(err => console.error('Erro ao carregar regionais:', err));
+    }
+  }, [showOrgFilters]);
+
+  // Filtrar regionais pela subsecretaria selecionada
+  const filteredRegionais = selectedSubsecretaria 
+    ? regionais.filter(r => r.subsecretariaId === selectedSubsecretaria)
+    : regionais;
+
   // Resetar para página 1 quando filtros mudarem
   useEffect(() => {
     setPage(1);
-  }, [selectedClient, debouncedSearch]);
+  }, [selectedClient, debouncedSearch, selectedSubsecretaria, selectedRegional]);
 
   const columns: Column<SchoolType>[] = [
     { Header: 'Nome', accessor: 'name' },
@@ -77,8 +115,8 @@ const SchoolListContent = () => {
   ]
 
   const {data, isLoading, refetch}: UseQueryResult<PaginatedResponse<SchoolType>> = useQuery(
-    ['school-list', page, pageSize, debouncedSearch, selectedClient],
-    () => getList(page, pageSize, '', 'asc', '', debouncedSearch, selectedClient),
+    ['school-list', page, pageSize, debouncedSearch, selectedClient, selectedRegional, selectedSubsecretaria],
+    () => getList(page, pageSize, '', 'asc', '', debouncedSearch, selectedClient, selectedRegional, selectedSubsecretaria),
     {
       keepPreviousData: true,
     }
@@ -108,27 +146,72 @@ const SchoolListContent = () => {
 
   const customFiltersContent = (
     <>
-      {/* Filtro por Cliente */}
-      <div className='mb-5'>
-        <label className='form-label fs-6 fw-bold'>Cliente:</label>
-        <select
-          className='form-select form-select-solid fw-bolder'
-          value={selectedClient}
-          onChange={(e) => setSelectedClient(e.target.value)}
-        >
-          <option value=''>Todos os clientes</option>
-          {clients.map((client) => (
-            <option key={client.id} value={client.id}>
-              {client.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Filtro por Cliente (apenas para Admin) */}
+      {!showOrgFilters && (
+        <div className='mb-5'>
+          <label className='form-label fs-6 fw-bold'>Cliente:</label>
+          <select
+            className='form-select form-select-solid fw-bolder'
+            value={selectedClient}
+            onChange={(e) => setSelectedClient(e.target.value)}
+          >
+            <option value=''>Todos os clientes</option>
+            {clients.map((client) => (
+              <option key={client.id} value={client.id}>
+                {client.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      
+      {/* Filtro por Subsecretaria (para Subsecretario) */}
+      {isSubsecretario && subsecretarias.length > 1 && (
+        <div className='mb-5'>
+          <label className='form-label fs-6 fw-bold'>Subsecretaria:</label>
+          <select
+            className='form-select form-select-solid fw-bolder'
+            value={selectedSubsecretaria}
+            onChange={(e) => {
+              setSelectedSubsecretaria(e.target.value);
+              setSelectedRegional(''); // Reset regional ao mudar subsecretaria
+            }}
+          >
+            <option value=''>Todas as subsecretarias</option>
+            {subsecretarias.map((sub) => (
+              <option key={sub.id} value={sub.id}>
+                {sub.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      
+      {/* Filtro por Regional (para Subsecretario e SecretarioRegional) */}
+      {showOrgFilters && filteredRegionais.length > 1 && (
+        <div className='mb-5'>
+          <label className='form-label fs-6 fw-bold'>Regional:</label>
+          <select
+            className='form-select form-select-solid fw-bolder'
+            value={selectedRegional}
+            onChange={(e) => setSelectedRegional(e.target.value)}
+          >
+            <option value=''>Todas as regionais</option>
+            {filteredRegionais.map((reg) => (
+              <option key={reg.id} value={reg.id}>
+                {reg.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
     </>
   );
 
   const handleResetFilters = () => {
     setSelectedClient('');
+    setSelectedSubsecretaria('');
+    setSelectedRegional('');
   };
 
   return (
