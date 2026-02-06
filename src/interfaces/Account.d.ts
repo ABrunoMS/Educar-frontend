@@ -1,3 +1,5 @@
+import { Role } from '../contexts/roles.generated'
+
 export interface Account {
   id?: string;
   avatar?: string;
@@ -10,7 +12,7 @@ export interface Account {
   stars?: number;
   clientId: string;
   clientName?: string;
-  role: 'Admin' | 'Teacher' | 'Student';
+  role: Role;
   schoolIds: string[];
   classIds: string[];
   password?: string;

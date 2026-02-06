@@ -311,7 +311,9 @@ const AccountCreateForm: FC<Props> = ({
                 : role === 'AgenteComercial' ? 'Agente Comercial'
                 : role === 'Diretor' ? 'Diretor'
                 : role === 'Distribuidor' ? 'Distribuidor'
-                : role === 'Secretario' ? 'Secretário'
+                : role === 'Secretario' ? 'Secretário (Geral)'
+                : role === 'Subsecretario' ? 'Subsecretário'
+                : role === 'SecretarioRegional' ? 'Secretário Regional'
                 : role
               return (
                 <div className='form-check form-check-custom form-check-solid p-0' key={idx} style={{minWidth: 140}}>

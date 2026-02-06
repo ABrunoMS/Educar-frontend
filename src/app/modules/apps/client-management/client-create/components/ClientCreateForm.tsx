@@ -8,7 +8,8 @@ import { SelectOptions } from '@interfaces/Forms'
 import BasicField from '@components/form/BasicField'
 import SelectField from '@components/form/SelectField'
 import { createClient, updateClient, getAllProducts, getCompatibleContents, ProductDto, ContentDto } from '../../clients-list/core/_requests'
-import { CreateOptionModal } from './CreateOptionModal'
+import { CreateOptionModal, SelectOption, EditData } from './CreateOptionModal'
+import { StepIndicator, Step } from './StepIndicator'
 import { getMacroRegions } from '@services/MacroRegions'
 import { isNotEmpty } from '@metronic/helpers'
 import Flatpickr from 'react-flatpickr'
@@ -42,14 +43,29 @@ export const initialClient: ClientType = {
   selectedProducts: [],
   selectedContents: [],
   macroRegionId: '',
-  macroRegionName: ''
+  macroRegionName: '',
+  secretarioId: '',
+  secretarioName: ''
 }
 
+// Definição das etapas do formulário
+const FORM_STEPS: Step[] = [
+  { number: 1, title: 'Informações Básicas', description: 'Dados do cliente' },
+  { number: 2, title: 'Estrutura Organizacional', description: 'Subsecretarias e Regionais' },
+]
+
 const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
+  // Estado para controle das etapas
+  const [currentStep, setCurrentStep] = useState(1)
+  
   const [subsecretarias, setSubsecretarias] = useState<SubsecretariaDto[]>([])
   const [showSubsecretariaModal, setShowSubsecretariaModal] = useState(false)
   const [showRegionalModal, setShowRegionalModal] = useState(false)
   const [regionalModalSubsecretariaName, setRegionalModalSubsecretariaName] = useState<string>('')
+  
+  // Estados para edição
+  const [editingSubsecretaria, setEditingSubsecretaria] = useState<SubsecretariaDto | null>(null)
+  const [editingRegional, setEditingRegional] = useState<{regional: RegionalDto, subsecretariaName: string} | null>(null)
 
   const intl = useIntl()
 
@@ -65,8 +81,15 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
   const [macroRegionOptions, setMacroRegionOptions] = useState<SelectOptions[]>([])
   const [isLoadingMacroRegions, setIsLoadingMacroRegions] = useState(false)
 
+  // Estados para os secretários
+  const [secretarioOptions, setSecretarioOptions] = useState<SelectOption[]>([])
+  const [subsecretarioOptions, setSubsecretarioOptions] = useState<SelectOption[]>([])
+  const [secretarioRegionalOptions, setSecretarioRegionalOptions] = useState<SelectOption[]>([])
+  const [isLoadingSecretarios, setIsLoadingSecretarios] = useState(false)
+  const [isLoadingSubsecretarios, setIsLoadingSubsecretarios] = useState(false)
+  const [isLoadingSecretariosRegionais, setIsLoadingSecretariosRegionais] = useState(false)
+
   // 1. Inicialização segura das Subsecretarias
-  // Dependência [client?.id] impede que re-renderizações do pai sobrescrevam edições locais
   useEffect(() => {
     if (client && client.subsecretarias && client.subsecretarias.length > 0) {
       setSubsecretarias(client.subsecretarias);
@@ -148,8 +171,67 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     fetchProducts()
   }, [])
 
+  // Buscar Secretários (Geral)
+  useEffect(() => {
+    const fetchSecretarios = async () => {
+      setIsLoadingSecretarios(true)
+      try {
+        const response = await getAccountsByRole('Secretario')
+        const options = (response.data.data || []).map((account: any) => ({
+          value: account.id,
+          label: account.name || account.userName || account.email,
+        }))
+        setSecretarioOptions(options)
+      } catch (error) {
+        console.error('Erro ao buscar secretários:', error)
+      } finally {
+        setIsLoadingSecretarios(false)
+      }
+    }
+    fetchSecretarios()
+  }, [])
+
+  // Buscar Subsecretários
+  useEffect(() => {
+    const fetchSubsecretarios = async () => {
+      setIsLoadingSubsecretarios(true)
+      try {
+        const response = await getAccountsByRole('Subsecretario')
+        const options = (response.data.data || []).map((account: any) => ({
+          value: account.id,
+          label: account.name || account.userName || account.email,
+        }))
+        setSubsecretarioOptions(options)
+      } catch (error) {
+        console.error('Erro ao buscar subsecretários:', error)
+      } finally {
+        setIsLoadingSubsecretarios(false)
+      }
+    }
+    fetchSubsecretarios()
+  }, [])
+
+  // Buscar Secretários Regionais
+  useEffect(() => {
+    const fetchSecretariosRegionais = async () => {
+      setIsLoadingSecretariosRegionais(true)
+      try {
+        const response = await getAccountsByRole('SecretarioRegional')
+        const options = (response.data.data || []).map((account: any) => ({
+          value: account.id,
+          label: account.name || account.userName || account.email,
+        }))
+        setSecretarioRegionalOptions(options)
+      } catch (error) {
+        console.error('Erro ao buscar secretários regionais:', error)
+      } finally {
+        setIsLoadingSecretariosRegionais(false)
+      }
+    }
+    fetchSecretariosRegionais()
+  }, [])
+
   // 2. Valores Iniciais com useMemo seguro
-  // Dependência [client?.id] evita o reset indesejado do formulário
   const dialogueForEdit = useMemo((): ClientFormValues => {
     return {
       ...initialClient,
@@ -172,7 +254,9 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
       selectedContents: client?.contents
         ? client.contents.map(c => c.id)
         : (client?.selectedContents || []),
-      macroRegionId: client?.macroRegionId || ''
+      macroRegionId: client?.macroRegionId || '',
+      secretarioId: client?.secretarioId || '',
+      secretarioName: client?.secretarioName || ''
     }
   }, [client?.id]) 
 
@@ -205,22 +289,31 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
         signatureDate: values.signatureDate ? (values.signatureDate as Date).toISOString() : undefined,
         implantationDate: values.implantationDate ? (values.implantationDate as Date).toISOString() : undefined,
         
-        // 3. CORREÇÃO CRÍTICA: Enviando IDs para evitar deleção e recriação no backend
+        // Enviando dados completos com secretários
         subsecretarias: subsecretarias.map(sub => ({
-          id: sub.id, // Envia o ID se existir (edição)
+          id: sub.id || undefined,
           name: sub.name,
+          subsecretarioId: sub.subsecretarioId || undefined,
           regionais: (sub.regionais || []).map(reg => ({ 
-             id: reg.id, // Envia o ID da regional se existir
-             name: reg.name 
+             id: reg.id || undefined,
+             name: reg.name,
+             secretarioRegionalId: reg.secretarioRegionalId || undefined
           }))
         })),
         
+        secretarioId: values.secretarioId || undefined,
+        // Para criação usa selectedProducts/selectedContents (JsonPropertyName no backend)
+        // Para update usa productIds/contentIds
+        selectedProducts: values.selectedProducts,
+        selectedContents: values.selectedContents,
         productIds: values.selectedProducts,
         contentIds: values.selectedContents,
-        macroRegionId: values.macroRegionId || undefined,
-        selectedProducts: undefined,
-        selectedContents: undefined
+        macroRegionId: values.macroRegionId || undefined
       }
+
+      // Limpar campos duplicados do spread
+      delete (payload as any).products
+      delete (payload as any).contents
 
       try {
         if (isNotEmpty(payload.id)) {
@@ -230,10 +323,10 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
         }
         alert('Cliente salvo com sucesso!')
         
-        // Se for criação, reseta. Se for edição, mantém para não perder contexto visual.
         if (!payload.id) {
              resetForm()
-             setSubsecretarias([]) 
+             setSubsecretarias([])
+             setCurrentStep(1)
         }
       } catch (ex) {
         console.error(ex)
@@ -295,22 +388,95 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
   }, [formik.values.selectedProducts]) 
 
   // Handlers para Subsecretarias e Regionais
-  const handleCreateSubsecretaria = (subsecretariaName: string) => {
-    setSubsecretarias(prev => [
-      ...prev,
-      { name: subsecretariaName, regionais: [] }
-    ])
+  const handleCreateSubsecretaria = (subsecretariaName: string, subsecretarioId?: string) => {
+    const subsecretarioName = subsecretarioId 
+      ? subsecretarioOptions.find(o => o.value === subsecretarioId)?.label 
+      : undefined
+    
+    // Se está editando, atualiza a subsecretaria existente
+    if (editingSubsecretaria) {
+      setSubsecretarias(prev => prev.map(sub => 
+        (sub.id === editingSubsecretaria.id || sub.name === editingSubsecretaria.name)
+          ? { 
+              ...sub, 
+              name: subsecretariaName, 
+              subsecretarioId, 
+              subsecretarioName 
+            }
+          : sub
+      ))
+      setEditingSubsecretaria(null)
+    } else {
+      // Cria nova subsecretaria
+      setSubsecretarias(prev => [
+        ...prev,
+        { 
+          name: subsecretariaName, 
+          regionais: [],
+          subsecretarioId,
+          subsecretarioName
+        }
+      ])
+    }
     setShowSubsecretariaModal(false)
   }
 
-  const handleCreateRegional = (regionalName: string, subsecretariaName: string) => {
-    setSubsecretarias(prev => prev.map(sub =>
-      sub.name === subsecretariaName
-        ? { ...sub, regionais: [...(sub.regionais || []), { name: regionalName }] }
-        : sub
-    ))
+  const handleEditSubsecretaria = (sub: SubsecretariaDto) => {
+    setEditingSubsecretaria(sub)
+    setShowSubsecretariaModal(true)
+  }
+
+  const handleCreateRegional = (regionalName: string, subsecretariaName: string, secretarioRegionalId?: string) => {
+    const secretarioRegionalName = secretarioRegionalId
+      ? secretarioRegionalOptions.find(o => o.value === secretarioRegionalId)?.label
+      : undefined
+
+    // Se está editando, atualiza a regional existente
+    if (editingRegional) {
+      setSubsecretarias(prev => prev.map(sub =>
+        sub.name === editingRegional.subsecretariaName
+          ? { 
+              ...sub, 
+              regionais: (sub.regionais || []).map(reg =>
+                (reg.id === editingRegional.regional.id || reg.name === editingRegional.regional.name)
+                  ? { 
+                      ...reg, 
+                      name: regionalName,
+                      secretarioRegionalId,
+                      secretarioRegionalName
+                    }
+                  : reg
+              )
+            }
+          : sub
+      ))
+      setEditingRegional(null)
+    } else {
+      // Cria nova regional
+      setSubsecretarias(prev => prev.map(sub =>
+        sub.name === subsecretariaName
+          ? { 
+              ...sub, 
+              regionais: [
+                ...(sub.regionais || []), 
+                { 
+                  name: regionalName,
+                  secretarioRegionalId,
+                  secretarioRegionalName
+                }
+              ] 
+            }
+          : sub
+      ))
+    }
     setShowRegionalModal(false)
     setRegionalModalSubsecretariaName('')
+  }
+
+  const handleEditRegional = (reg: RegionalDto, subsecretariaName: string) => {
+    setEditingRegional({ regional: reg, subsecretariaName })
+    setRegionalModalSubsecretariaName(subsecretariaName)
+    setShowRegionalModal(true)
   }
 
   const handleRemoveSubsecretaria = (subName: string) => {
@@ -325,7 +491,7 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     ))
   }
 
-  // Helpers de Renderização (Corrigidos tipos)
+  // Helpers de Renderização
   const renderBasicFieldset = (
     fieldName: string,
     label: string,
@@ -399,201 +565,595 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     )
   }
 
+  // Renderização da Etapa 1 - Informações Básicas
+  const renderStep1 = () => (
+    <div className='d-flex flex-column'>
+      <div className='row'>
+        <div className='col-md-6'>
+          {renderBasicFieldset('name', 'Nome do Cliente', 'Nome completo')}
+        </div>
+        <div className='col-md-6'>
+          {renderBasicFieldset('description', 'Descrição', 'Descrição', false)}
+        </div>
+      </div>
+      
+      <div className='row'>
+        <div className='col-md-6'>
+          {renderSelectFieldset('partner', 'Parceiro', isLoadingPartners ? 'Carregando...' : 'Selecione um parceiro...', partnerOptions)}
+        </div>
+        <div className='col-md-6'>
+          {renderSelectFieldset('contacts', 'Contato', isLoadingContacts ? 'Carregando...' : 'Selecione um contato...', contactOptions)}
+        </div>
+      </div>
+
+      <div className='row'>
+        <div className='col-md-6'>
+          {renderSelectFieldset('macroRegionId', 'Macro Região', isLoadingMacroRegions ? 'Carregando...' : 'Selecione uma macro região...', macroRegionOptions, false, false)}
+        </div>
+        <div className='col-md-6'>
+          {renderSelectFieldset('secretarioId', 'Secretário (Geral)', isLoadingSecretarios ? 'Carregando...' : 'Selecione o secretário responsável...', secretarioOptions as any, false, false)}
+        </div>
+      </div>
+      
+      <div className='row'>
+        <div className='col-md-4'>
+          {renderCalendarField('validity', 'Validade', 'Selecione a data de validade', true)}
+        </div>
+        <div className='col-md-4'>
+          {renderCalendarField('signatureDate', 'Data de Assinatura', 'Selecione a data', true)}
+        </div>
+        <div className='col-md-4'>
+          {renderCalendarField('implantationDate', 'Data de Implantação', 'Selecione a data', false)}
+        </div>
+      </div>
+      
+      <div className='row'>
+        <div className='col-md-6'>
+          {renderBasicFieldset('totalAccounts', 'Número de Contas', 'Quantidade...', false, 'number')}
+        </div>
+      </div>
+
+      {renderContentFieldset()}
+    </div>
+  )
+
+  // Renderização da Etapa 2 - Subsecretarias e Regionais
+  const renderStep2 = () => {
+    // Calcular estatísticas gerais
+    const totalSubsecretarias = subsecretarias.length
+    const totalRegionais = subsecretarias.reduce((acc, sub) => acc + (sub.regionais?.length || 0), 0)
+    const totalSchools = subsecretarias.reduce((acc, sub) => acc + (sub.totalSchools || 0), 0)
+    const subsWithResponsible = subsecretarias.filter(s => s.subsecretarioId).length
+    const regsWithResponsible = subsecretarias.reduce((acc, sub) => 
+      acc + (sub.regionais?.filter(r => r.secretarioRegionalId).length || 0), 0)
+
+    return (
+      <div className='d-flex flex-column'>
+        {/* Header com resumo estatístico */}
+        <div className='alert alert-primary d-flex align-items-center mb-6'>
+          <i className='fas fa-sitemap fs-2 me-4'></i>
+          <div className='flex-grow-1'>
+            <h5 className='mb-1'>Estrutura Organizacional</h5>
+            <span className='fs-7'>
+              Configure as subsecretarias e regionais do cliente. Cada subsecretaria pode ter um <strong>Subsecretário</strong> e cada regional um <strong>Secretário Regional</strong>.
+            </span>
+          </div>
+        </div>
+
+        {/* Cards de estatísticas */}
+        <div className='row g-3 mb-6'>
+          <div className='col-6 col-md-3'>
+            <div className='card card-flush h-100'>
+              <div className='card-body d-flex flex-column align-items-center py-4'>
+                <div className='symbol symbol-40px mb-2'>
+                  <div className='symbol-label bg-light-primary'>
+                    <i className='fas fa-building text-primary fs-4'></i>
+                  </div>
+                </div>
+                <div className='fs-2 fw-bold text-gray-800'>{totalSubsecretarias}</div>
+                <div className='text-muted fs-8'>Subsecretarias</div>
+              </div>
+            </div>
+          </div>
+          <div className='col-6 col-md-3'>
+            <div className='card card-flush h-100'>
+              <div className='card-body d-flex flex-column align-items-center py-4'>
+                <div className='symbol symbol-40px mb-2'>
+                  <div className='symbol-label bg-light-warning'>
+                    <i className='fas fa-map-marker-alt text-warning fs-4'></i>
+                  </div>
+                </div>
+                <div className='fs-2 fw-bold text-gray-800'>{totalRegionais}</div>
+                <div className='text-muted fs-8'>Regionais</div>
+              </div>
+            </div>
+          </div>
+          <div className='col-6 col-md-3'>
+            <div className='card card-flush h-100'>
+              <div className='card-body d-flex flex-column align-items-center py-4'>
+                <div className='symbol symbol-40px mb-2'>
+                  <div className='symbol-label bg-light-success'>
+                    <i className='fas fa-school text-success fs-4'></i>
+                  </div>
+                </div>
+                <div className='fs-2 fw-bold text-gray-800'>{totalSchools}</div>
+                <div className='text-muted fs-8'>Escolas</div>
+              </div>
+            </div>
+          </div>
+          <div className='col-6 col-md-3'>
+            <div className='card card-flush h-100'>
+              <div className='card-body d-flex flex-column align-items-center py-4'>
+                <div className='symbol symbol-40px mb-2'>
+                  <div className='symbol-label bg-light-info'>
+                    <i className='fas fa-user-tie text-info fs-4'></i>
+                  </div>
+                </div>
+                <div className='fs-2 fw-bold text-gray-800'>{subsWithResponsible + regsWithResponsible}</div>
+                <div className='text-muted fs-8'>Responsáveis</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {renderSubsecretariasRegionais()}
+      </div>
+    )
+  }
+
   const renderSubsecretariasRegionais = () => {
-      return (
-       <div className='mb-7'>
-         <div className='d-flex justify-content-between align-items-center mb-4'>
-           <label className='fw-bold fs-4 mb-0'>Subsecretarias</label>
-           <button type='button' className='btn btn-sm btn-primary' onClick={() => setShowSubsecretariaModal(true)}>
-             <i className='fas fa-plus me-1'></i> Nova subsecretaria
-           </button>
-         </div>
-         <div className='row g-4'>
-           {subsecretarias.map((sub: SubsecretariaDto, subIndex: number) => (
-             <div key={`sub-${subIndex}-${sub.name}`} className='col-12 col-md-6'>
-               <div className='card shadow-sm h-100 border border-primary'>
-                 <div className='card-header d-flex justify-content-between align-items-center bg-primary bg-opacity-10'>
-                   <span className='fw-semibold fs-5 text-primary'>{sub.name}</span>
-                   <button type='button' className='btn btn-icon btn-sm btn-light-danger' title='Remover subsecretaria' onClick={() => handleRemoveSubsecretaria(sub.name)}>
-                     <i className='fas fa-trash'></i>
-                   </button>
-                 </div>
-                 <div className='card-body'>
-                   <div className='mb-2 fw-semibold text-gray-700'>Regionais vinculadas:</div>
-                   {(!sub.regionais || sub.regionais.length === 0) && (
-                     <div className='text-gray-500 mb-2'>Nenhuma regional cadastrada.</div>
-                   )}
-                   <ul className='list-group mb-3'>
-                     {(sub.regionais || []).map((reg: RegionalDto, regIndex: number) => (
-                       <li key={`reg-${subIndex}-${regIndex}-${reg.name}`} className='list-group-item d-flex justify-content-between align-items-center px-2 py-1 border-0 bg-light bg-opacity-75'>
-                         <span className='text-gray-800'>{reg.name}</span>
-                         <button type='button' className='btn btn-icon btn-xs btn-light-danger' title='Remover regional' onClick={() => handleRemoveRegional(sub.name, reg.name)}>
-                           <i className='fas fa-trash'></i>
-                         </button>
-                       </li>
-                     ))}
-                   </ul>
-                   <button type='button' className='btn btn-sm btn-light-primary w-100' onClick={() => { setShowRegionalModal(true); setRegionalModalSubsecretariaName(sub.name) }}>
-                     <i className='fas fa-plus me-1'></i> Adicionar regional
-                   </button>
-                 </div>
-               </div>
-             </div>
-           ))}
-         </div>
-       </div>
-     )
+    return (
+      <div className='mb-7'>
+        <div className='d-flex justify-content-between align-items-center mb-5'>
+          <div className='d-flex align-items-center gap-2'>
+            <label className='fw-bold fs-4 mb-0 text-gray-800'>Subsecretarias</label>
+            <span className='badge badge-primary'>{subsecretarias.length}</span>
+          </div>
+          <button 
+            type='button' 
+            className='btn btn-sm btn-primary' 
+            onClick={() => { setEditingSubsecretaria(null); setShowSubsecretariaModal(true) }}
+          >
+            <i className='fas fa-plus me-1'></i> Nova subsecretaria
+          </button>
+        </div>
+
+        {subsecretarias.length === 0 && (
+          <div className='card border border-dashed border-gray-300'>
+            <div className='card-body text-center py-10'>
+              <i className='fas fa-sitemap fs-2x text-gray-400 mb-4 d-block'></i>
+              <h5 className='text-gray-700 mb-2'>Nenhuma subsecretaria cadastrada</h5>
+              <p className='text-muted mb-4'>
+                Adicione subsecretarias para organizar a estrutura hierárquica do cliente
+              </p>
+              <button 
+                type='button' 
+                className='btn btn-sm btn-light-primary'
+                onClick={() => { setEditingSubsecretaria(null); setShowSubsecretariaModal(true) }}
+              >
+                <i className='fas fa-plus me-1'></i> Adicionar primeira subsecretaria
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className='d-flex flex-column gap-5'>
+          {subsecretarias.map((sub: SubsecretariaDto, subIndex: number) => {
+            const regionaisCount = sub.regionais?.length || 0
+            const schoolsCount = sub.totalSchools || sub.regionais?.reduce((acc, r) => acc + (r.schoolCount || 0), 0) || 0
+            const hasResponsible = !!sub.subsecretarioId
+            
+            return (
+              <div key={`sub-${sub.id || subIndex}-${sub.name}`} className='card shadow-sm'>
+                {/* Header da Subsecretaria */}
+                <div className='card-header min-h-auto py-5 px-6'>
+                  <div className='d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center w-100 gap-4'>
+                    {/* Info principal */}
+                    <div className='d-flex align-items-center gap-4'>
+                      <div className='symbol symbol-50px symbol-circle'>
+                        <div className='symbol-label bg-primary'>
+                          <i className='fas fa-building text-white fs-3'></i>
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className='mb-1 text-gray-900'>{sub.name}</h4>
+                        {sub.subsecretarioName ? (
+                          <span className='text-primary fw-semibold fs-7'>
+                            <i className='fas fa-user-tie me-2'></i>
+                            {sub.subsecretarioName}
+                          </span>
+                        ) : (
+                          <span className='text-muted fs-7'>
+                            <i className='fas fa-user-slash me-2'></i>
+                            Sem subsecretário
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Estatísticas e ações */}
+                    <div className='d-flex align-items-center gap-5'>
+                      {/* Badges de estatísticas */}
+                      <div className='d-flex gap-3'>
+                        <div className='border border-dashed border-gray-300 rounded py-2 px-3 text-center'>
+                          <div className='fs-5 fw-bold text-warning'>{regionaisCount}</div>
+                          <div className='text-muted fs-9'>Regionais</div>
+                        </div>
+                        <div className='border border-dashed border-gray-300 rounded py-2 px-3 text-center'>
+                          <div className='fs-5 fw-bold text-success'>{schoolsCount}</div>
+                          <div className='text-muted fs-9'>Escolas</div>
+                        </div>
+                      </div>
+                      
+                      {/* Ações */}
+                      <div className='d-flex gap-2'>
+                        <button 
+                          type='button' 
+                          className='btn btn-icon btn-sm btn-light-primary' 
+                          title='Editar subsecretaria' 
+                          onClick={() => handleEditSubsecretaria(sub)}
+                        >
+                          <i className='fas fa-pen fs-7'></i>
+                        </button>
+                        <button 
+                          type='button' 
+                          className='btn btn-icon btn-sm btn-light-danger' 
+                          title='Remover subsecretaria' 
+                          onClick={() => handleRemoveSubsecretaria(sub.name)}
+                        >
+                          <i className='fas fa-trash fs-7'></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Separator */}
+                <div className='separator'></div>
+                
+                {/* Body - Regionais */}
+                <div className='card-body px-6 py-5'>
+                  <div className='d-flex justify-content-between align-items-center mb-4'>
+                    <h6 className='mb-0 text-gray-700'>
+                      <i className='fas fa-map-marker-alt me-2 text-warning'></i>
+                      Regionais
+                    </h6>
+                    <button 
+                      type='button' 
+                      className='btn btn-sm btn-light-warning' 
+                      onClick={() => { 
+                        setEditingRegional(null)
+                        setShowRegionalModal(true)
+                        setRegionalModalSubsecretariaName(sub.name) 
+                      }}
+                    >
+                      <i className='fas fa-plus me-1'></i> Adicionar
+                    </button>
+                  </div>
+                  
+                  {(!sub.regionais || sub.regionais.length === 0) ? (
+                    <div className='notice d-flex bg-light-warning rounded border-warning border border-dashed p-5'>
+                      <i className='fas fa-map-marked-alt fs-2x text-warning me-4'></i>
+                      <div className='d-flex flex-column'>
+                        <span className='text-gray-700 fw-semibold'>Nenhuma regional cadastrada</span>
+                        <span className='text-muted fs-7'>Clique em "Adicionar" para criar a primeira regional desta subsecretaria</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className='table-responsive'>
+                      <table className='table table-row-dashed table-row-gray-300 align-middle gs-0 gy-3'>
+                        <thead>
+                          <tr className='fw-bold text-muted fs-7'>
+                            <th className='min-w-150px'>Regional</th>
+                            <th className='min-w-120px'>Responsável</th>
+                            <th className='min-w-80px text-center'>Escolas</th>
+                            <th className='text-end min-w-80px'>Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(sub.regionais || []).map((reg: RegionalDto, regIndex: number) => {
+                            const regSchools = reg.schoolCount || 0
+                            
+                            return (
+                              <tr key={`reg-${sub.id || subIndex}-${reg.id || regIndex}-${reg.name}`}>
+                                <td>
+                                  <div className='d-flex align-items-center'>
+                                    <div className='symbol symbol-35px me-3'>
+                                      <div className='symbol-label bg-light-warning'>
+                                        <i className='fas fa-map-pin text-warning fs-7'></i>
+                                      </div>
+                                    </div>
+                                    <span className='text-gray-800 fw-semibold'>{reg.name}</span>
+                                  </div>
+                                </td>
+                                <td>
+                                  {reg.secretarioRegionalName ? (
+                                    <span className='text-success fw-medium'>
+                                      <i className='fas fa-user-check me-1'></i>
+                                      {reg.secretarioRegionalName}
+                                    </span>
+                                  ) : (
+                                    <span className='text-muted fst-italic fs-7'>
+                                      <i className='fas fa-user-slash me-1'></i>
+                                      Não definido
+                                    </span>
+                                  )}
+                                </td>
+                                <td className='text-center'>
+                                  <span className='badge badge-light-success'>{regSchools}</span>
+                                </td>
+                                <td className='text-end'>
+                                  <button 
+                                    type='button' 
+                                    className='btn btn-icon btn-sm btn-light-primary me-1' 
+                                    title='Editar regional' 
+                                    onClick={() => handleEditRegional(reg, sub.name)}
+                                  >
+                                    <i className='fas fa-pen fs-7'></i>
+                                  </button>
+                                  <button 
+                                    type='button' 
+                                    className='btn btn-icon btn-sm btn-light-danger' 
+                                    title='Remover regional' 
+                                    onClick={() => handleRemoveRegional(sub.name, reg.name)}
+                                  >
+                                    <i className='fas fa-trash fs-7'></i>
+                                  </button>
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
   }
 
   const renderContentFieldset = () => {
     return (
-        <>
+      <>
         <div className='separator my-5'></div>
-      <div className='mb-7'>
-        <div className='row'>
-          <div className='col-12'>
-            <label className='form-label fw-bold required mb-4'>Produtos</label>
-            {isLoadingProducts && (
-              <div className='d-flex align-items-center text-muted fs-7'>
-                <span className='spinner-border spinner-border-sm me-2'></span>
-                Carregando produtos...
-              </div>
-            )}
-            <div className='row g-3'>
-              {!isLoadingProducts && allProducts.map(product => (
-                <div className='col-12 col-sm-6 col-md-4 col-lg-3' key={product.id}>
-                  <div className='form-check form-check-custom form-check-solid h-100'>
-                    <input
-                      className='form-check-input'
-                      type='checkbox'
-                      name='selectedProducts'
-                      value={product.id}
-                      id={`product-${product.id}`}
-                      checked={formik.values.selectedProducts.includes(product.id)}
-                      onChange={formik.handleChange}
-                    />
-                    <label className='form-check-label fw-semibold text-gray-700' htmlFor={`product-${product.id}`}>
-                      {product.name}
-                    </label>
-                  </div>
+        <div className='mb-7'>
+          <div className='row'>
+            <div className='col-12'>
+              <label className='form-label fw-bold required mb-4'>Produtos</label>
+              {isLoadingProducts && (
+                <div className='d-flex align-items-center text-muted fs-7'>
+                  <span className='spinner-border spinner-border-sm me-2'></span>
+                  Carregando produtos...
                 </div>
-              ))}
+              )}
+              <div className='row g-3'>
+                {!isLoadingProducts && allProducts.map(product => (
+                  <div className='col-12 col-sm-6 col-md-4 col-lg-3' key={product.id}>
+                    <div className='form-check form-check-custom form-check-solid h-100'>
+                      <input
+                        className='form-check-input'
+                        type='checkbox'
+                        name='selectedProducts'
+                        value={product.id}
+                        id={`product-${product.id}`}
+                        checked={formik.values.selectedProducts.includes(product.id)}
+                        onChange={formik.handleChange}
+                      />
+                      <label className='form-check-label fw-semibold text-gray-700' htmlFor={`product-${product.id}`}>
+                        {product.name}
+                      </label>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className='mb-7'>
-        <div className='row'>
-          <div className='col-12'>
-            <label className='form-label fw-bold required mb-4'>Conteúdos</label>
-            {isLoadingContents && (
-              <div className='d-flex align-items-center text-muted fs-7'>
-                <span className='spinner-border spinner-border-sm me-2'></span>
-                Buscando conteúdos...
-              </div>
-            )}
-            {!isLoadingContents && formik.values.selectedProducts.length === 0 && (
-              <div className='alert alert-info d-flex align-items-center'>
-                <i className='fas fa-info-circle me-2'></i>
-                <span>Selecione um produto para ver os conteúdos disponíveis.</span>
-              </div>
-            )}
-            {!isLoadingContents && availableContents.length === 0 && formik.values.selectedProducts.length > 0 && (
-              <div className='alert alert-warning d-flex align-items-center'>
-                <i className='fas fa-exclamation-triangle me-2'></i>
-                <span>Nenhum conteúdo compatível encontrado.</span>
-              </div>
-            )}
-            <div className='row g-3'>
-              {!isLoadingContents && availableContents.map(content => (
-                <div className='col-12 col-sm-6 col-md-4 col-lg-3' key={content.id}>
-                  <div className='form-check form-check-custom form-check-solid h-100'>
-                    <input
-                      className='form-check-input'
-                      type='checkbox'
-                      name='selectedContents'
-                      value={content.id}
-                      id={`content-${content.id}`}
-                      checked={formik.values.selectedContents.includes(content.id)}
-                      onChange={formik.handleChange}
-                    />
-                    <label className='form-check-label fw-semibold text-gray-700' htmlFor={`content-${content.id}`}>
-                      {content.name}
-                    </label>
-                  </div>
+        <div className='mb-7'>
+          <div className='row'>
+            <div className='col-12'>
+              <label className='form-label fw-bold required mb-4'>Conteúdos</label>
+              {isLoadingContents && (
+                <div className='d-flex align-items-center text-muted fs-7'>
+                  <span className='spinner-border spinner-border-sm me-2'></span>
+                  Buscando conteúdos...
                 </div>
-              ))}
+              )}
+              {!isLoadingContents && formik.values.selectedProducts.length === 0 && (
+                <div className='alert alert-info d-flex align-items-center'>
+                  <i className='fas fa-info-circle me-2'></i>
+                  <span>Selecione um produto para ver os conteúdos disponíveis.</span>
+                </div>
+              )}
+              {!isLoadingContents && availableContents.length === 0 && formik.values.selectedProducts.length > 0 && (
+                <div className='alert alert-warning d-flex align-items-center'>
+                  <i className='fas fa-exclamation-triangle me-2'></i>
+                  <span>Nenhum conteúdo compatível encontrado.</span>
+                </div>
+              )}
+              <div className='row g-3'>
+                {!isLoadingContents && availableContents.map(content => (
+                  <div className='col-12 col-sm-6 col-md-4 col-lg-3' key={content.id}>
+                    <div className='form-check form-check-custom form-check-solid h-100'>
+                      <input
+                        className='form-check-input'
+                        type='checkbox'
+                        name='selectedContents'
+                        value={content.id}
+                        id={`content-${content.id}`}
+                        checked={formik.values.selectedContents.includes(content.id)}
+                        onChange={formik.handleChange}
+                      />
+                      <label className='form-check-label fw-semibold text-gray-700' htmlFor={`content-${content.id}`}>
+                        {content.name}
+                      </label>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
-      </div>
       </>
     )
+  }
+
+  // Validação da etapa atual
+  const validateCurrentStep = async (): Promise<boolean> => {
+    if (currentStep === 1) {
+      // Validar campos obrigatórios da etapa 1
+      const errors = await formik.validateForm()
+      const step1Fields = ['name', 'partner', 'contacts', 'validity', 'signatureDate', 'selectedProducts', 'selectedContents']
+      const step1Errors = step1Fields.filter(field => errors[field as keyof typeof errors])
+      
+      if (step1Errors.length > 0) {
+        // Marcar campos como tocados para mostrar erros
+        step1Fields.forEach(field => formik.setFieldTouched(field, true))
+        return false
+      }
+    }
+    return true
+  }
+
+  // Navegação entre etapas
+  const handleNextStep = async () => {
+    const isValid = await validateCurrentStep()
+    if (isValid && currentStep < FORM_STEPS.length) {
+      setCurrentStep(currentStep + 1)
+    }
+  }
+
+  const handlePrevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1)
+    }
   }
 
   return (
     <>
       <form id='kt_modal_add_client_form' className='form' onSubmit={formik.handleSubmit} noValidate>
-        <div className='d-flex flex-column me-n7 pe-7'>
-          {renderBasicFieldset('name', 'Client name', 'Full name')}
-          {renderBasicFieldset('description', 'Description', 'Description', false)}
-          
-          {renderSelectFieldset('partner', 'Parceiro ', isLoadingPartners ? 'Carregando...' : 'Selecione um parceiro...', partnerOptions)}
-          {renderSelectFieldset('contacts', 'Contato ', isLoadingContacts ? 'Carregando...' : 'Selecione um contato...', contactOptions)}
-          {renderSelectFieldset('macroRegionId', 'Macro Região', isLoadingMacroRegions ? 'Carregando...' : 'Selecione uma macro região...', macroRegionOptions, false, false)}
-          
-          {/*{renderSelectFieldset('contract', 'Contract', 'Select a contract...', [{ value: '1', label: 'Contrato 1' }])}*/}
-          
-          {renderCalendarField('validity', 'Validade', 'Selecione a data de validade', true)}
-          {renderCalendarField('signatureDate', 'Signature date', 'Select date', true)}
-          {renderCalendarField('implantationDate', 'Implantation date', 'Select date', false)}
-          
-          {renderBasicFieldset('totalAccounts', 'Number of accounts', 'Accounts...', false, 'number')}
-          {renderContentFieldset()}
+        {/* Indicador de Etapas */}
+        <StepIndicator 
+          steps={FORM_STEPS} 
+          currentStep={currentStep}
+          onStepClick={(step) => {
+            // Permitir voltar para etapas anteriores
+            if (step < currentStep) {
+              setCurrentStep(step)
+            }
+          }}
+        />
 
-          {renderSubsecretariasRegionais()}
+        {/* Conteúdo da Etapa */}
+        <div className='card card-flush mb-5'>
+          <div className='card-body'>
+            {currentStep === 1 && renderStep1()}
+            {currentStep === 2 && renderStep2()}
+          </div>
         </div>
 
-        <div className='text-center pt-15'>
-          <button
-            type='submit'
-            className='btn btn-primary'
-            data-kt-users-modal-action='submit'
-            disabled={formik.isSubmitting || isUserLoading}
-          >
-            <span className='indicator-label'>Submit</span>
-            {(formik.isSubmitting || isUserLoading) && (
-              <span className='indicator-progress'>
-                Please wait...{' '}
-                <span className='spinner-border spinner-border-sm align-middle ms-2'></span>
-              </span>
+        {/* Botões de Navegação */}
+        <div className='d-flex justify-content-between pt-5'>
+          <div>
+            {currentStep > 1 && (
+              <button
+                type='button'
+                className='btn btn-light-primary'
+                onClick={handlePrevStep}
+              >
+                <i className='fas fa-arrow-left me-2'></i>
+                Voltar
+              </button>
             )}
-          </button>
+          </div>
+
+          <div>
+            {currentStep < FORM_STEPS.length ? (
+              <button
+                type='button'
+                className='btn btn-primary'
+                onClick={handleNextStep}
+              >
+                Próximo
+                <i className='fas fa-arrow-right ms-2'></i>
+              </button>
+            ) : (
+              <button
+                type='submit'
+                className='btn btn-success'
+                disabled={formik.isSubmitting || isUserLoading}
+              >
+                <span className='indicator-label'>
+                  <i className='fas fa-check me-2'></i>
+                  Salvar Cliente
+                </span>
+                {(formik.isSubmitting || isUserLoading) && (
+                  <span className='indicator-progress'>
+                    Salvando...{' '}
+                    <span className='spinner-border spinner-border-sm align-middle ms-2'></span>
+                  </span>
+                )}
+              </button>
+            )}
+          </div>
         </div>
       </form>
 
+      {/* Modal para criar/editar Subsecretaria */}
       <CreateOptionModal
         show={showSubsecretariaModal}
-        title='Criar nova subsecretaria'
+        title={editingSubsecretaria ? 'Editar Subsecretaria' : 'Criar nova Subsecretaria'}
         placeholder='Nome da subsecretaria'
-        onClose={() => setShowSubsecretariaModal(false)}
-        onCreate={(newValue) => handleCreateSubsecretaria(newValue)}
+        onClose={() => { 
+          setShowSubsecretariaModal(false)
+          setEditingSubsecretaria(null)
+        }}
+        onCreate={(name, subsecretarioId) => handleCreateSubsecretaria(name, subsecretarioId)}
+        secretarioOptions={subsecretarioOptions}
+        secretarioLabel='Subsecretário'
+        secretarioPlaceholder='Selecione o subsecretário responsável...'
+        isLoadingSecretarios={isLoadingSubsecretarios}
+        editMode={!!editingSubsecretaria}
+        editData={editingSubsecretaria ? {
+          name: editingSubsecretaria.name,
+          secretarioId: editingSubsecretaria.subsecretarioId
+        } : undefined}
       />
 
+      {/* Modal para criar/editar Regional */}
       <CreateOptionModal
         show={showRegionalModal}
-        title={`Criar nova regional para: ${subsecretarias.find(s => s.name === regionalModalSubsecretariaName)?.name || 'Subsecretaria'}`}
+        title={editingRegional 
+          ? `Editar Regional: ${editingRegional.regional.name}` 
+          : `Criar nova Regional para: ${regionalModalSubsecretariaName}`}
         placeholder='Nome da regional'
-        onClose={() => { setShowRegionalModal(false); setRegionalModalSubsecretariaName('') }}
-        onCreate={(regionalName: string) => {
-          const subName: string = regionalModalSubsecretariaName || subsecretarias[0]?.name || ''
+        onClose={() => { 
+          setShowRegionalModal(false)
+          setRegionalModalSubsecretariaName('')
+          setEditingRegional(null)
+        }}
+        onCreate={(name, secretarioRegionalId) => {
+          const subName = regionalModalSubsecretariaName || subsecretarias[0]?.name || ''
           if (!subName) {
             alert('Erro: Nenhuma subsecretaria selecionada para vincular a regional.')
-            return;
+            return
           }
-          handleCreateRegional(regionalName, subName)
+          handleCreateRegional(name, subName, secretarioRegionalId)
         }}
+        secretarioOptions={secretarioRegionalOptions}
+        secretarioLabel='Secretário Regional'
+        secretarioPlaceholder='Selecione o secretário regional responsável...'
+        isLoadingSecretarios={isLoadingSecretariosRegionais}
+        editMode={!!editingRegional}
+        editData={editingRegional ? {
+          name: editingRegional.regional.name,
+          secretarioId: editingRegional.regional.secretarioRegionalId
+        } : undefined}
       />
     </>
   )

@@ -10,12 +10,14 @@ import { SchoolType } from '@interfaces/School';
 import { SchoolUsersList } from '../school-list/SchoolUsersListImproved';
 import { SchoolClassesList } from '../school-list/SchoolClassesList';
 import clsx from 'clsx';
+import { useRole } from '@contexts/RoleContext';
 
 const SchoolEdit = () => {
   const [schoolItem, setSchoolItem] = useState<SchoolType>();
   const [activeTab, setActiveTab] = useState<'info' | 'users' | 'classes'>('info');
   const navigate = useNavigate();
   const { id } = useParams();
+  const { isReadOnly } = useRole();
 
   useEffect(() => {
     if (id) {
@@ -102,17 +104,17 @@ const SchoolEdit = () => {
             <div className='tab-content'>
               {/* Tab Informações Gerais */}
               <div className={clsx('tab-pane fade', { 'show active': activeTab === 'info' })}>
-                <SchoolCreateForm schoolItem={schoolItem} onFormSubmit={handleFormSubmit} />
+                <SchoolCreateForm schoolItem={schoolItem} onFormSubmit={handleFormSubmit} readOnly={isReadOnly()} />
               </div>
 
               {/* Tab Usuários */}
               <div className={clsx('tab-pane fade', { 'show active': activeTab === 'users' })}>
-                {id && <SchoolUsersList schoolId={id} />}
+                {id && <SchoolUsersList schoolId={id} readOnly={isReadOnly()} />}
               </div>
 
               {/* Tab Turmas */}
               <div className={clsx('tab-pane fade', { 'show active': activeTab === 'classes' })}>
-                {id && <SchoolClassesList schoolId={id} />}
+                {id && <SchoolClassesList schoolId={id} readOnly={isReadOnly()} />}
               </div>
             </div>
           </div>

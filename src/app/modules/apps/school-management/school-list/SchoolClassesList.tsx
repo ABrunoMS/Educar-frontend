@@ -12,9 +12,10 @@ import { useNavigate } from 'react-router-dom';
 
 interface SchoolClassesListProps {
   schoolId: string;
+  readOnly?: boolean;
 }
 
-const SchoolClassesList: React.FC<SchoolClassesListProps> = ({ schoolId }) => {
+const SchoolClassesList: React.FC<SchoolClassesListProps> = ({ schoolId, readOnly = false }) => {
   const { page, pageSize } = usePagination();
   const navigate = useNavigate();
   const [expandedClassId, setExpandedClassId] = useState<string | null>(null);

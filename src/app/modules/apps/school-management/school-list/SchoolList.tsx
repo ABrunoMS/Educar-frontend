@@ -17,10 +17,12 @@ import { ListTable } from '@components/list-view/table/ListTable'
 import { ToolbarWrapper } from '@metronic/layout/components/toolbar'
 import { Content } from '@metronic/layout/components/content'
 import { getClients } from '@services/Clients'
+import { useRole } from '@contexts/RoleContext'
 
 const SchoolListContent = () => {
   const {page, pageSize, setPage} = usePagination();
   const {state} = useQueryRequest();
+  const { canEdit, isReadOnly } = useRole();
   const searchFromContext = state.search || '';
   const debouncedSearch = useDebounce(searchFromContext, 300);
   const [deleteId, setDeleteId] = useState<ID>();
@@ -68,6 +70,7 @@ const SchoolListContent = () => {
           editPath='/apps/school-management/school'
           id={props.data[props.row.index].id}
           callbackFunction={deleteActionCallback}
+          readOnly={isReadOnly()}
         />
       ),
     },

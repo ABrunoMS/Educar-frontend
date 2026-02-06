@@ -65,6 +65,8 @@ const AuthInit: FC<WithChildren> = ({ children }) => {
         if (auth?.access_token) {
           // 1. CHAMADA CORRIGIDA: Não passamos mais o token como argumento
           const user = await getUserByToken();
+          console.log('[AuthInit] User from API:', user);
+          console.log('[AuthInit] User roles from API:', user?.roles);
 
           if (user?.roles) {
             setCurrentUser(user);
@@ -72,14 +74,17 @@ const AuthInit: FC<WithChildren> = ({ children }) => {
             // Map roles array from backend/Keycloak into frontend roles
             // Keep casing as in generated roles but accept any case from backend
             // Use mapping helper to normalize role names coming from token/Keycloak
-            const { mapRoleString } = await import('@contexts/roles.generated')
+            const { mapRoleString, Role } = await import('@contexts/roles.generated')
             const mappedRoles = user.roles
               .map((r: string) => mapRoleString(r))
-              .filter(Boolean) as Array<'Admin' | 'AgenteComercial' | 'Diretor' | 'Distribuidor' | 'Secretario' | 'Teacher' | 'TeacherEducar' | 'Student'>
+              .filter(Boolean) as Role[]
+
+            console.log('[AuthInit] Mapped roles:', mappedRoles);
 
             // if setRoles exists, set full array; otherwise fallback to setRole with first mapped value
             if (setRoles) {
               setRoles(mappedRoles.length ? mappedRoles : ['Student'])
+              console.log('[AuthInit] setRoles called with:', mappedRoles.length ? mappedRoles : ['Student']);
             } else if (setRole) {
               setRole(mappedRoles.length ? mappedRoles[0] : 'Student')
             }

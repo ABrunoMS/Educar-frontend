@@ -8,16 +8,18 @@ import { Content } from '../../../../../_metronic/layout/components/content'
 // 2. Importar os componentes das abas
 import { ClientCreateForm } from './components/ClientCreateForm'
 import { ClientUsersList } from '../clients-list/ClientUsersList' 
+import { ClientStructure } from './components/ClientStructure'
 
 // 3. Importar a API e o Tipo
-import { getClientById } from '../clients-list/core/_requests' // <-- Sua API de cliente
-import { ClientType } from '@interfaces/Client' // <-- Importar o tipo
+import { getClientById, updateClient } from '../clients-list/core/_requests' // <-- Sua API de cliente
+import { ClientType, SubsecretariaDto } from '@interfaces/Client' // <-- Importar o tipo
 
 // 4. Renomeamos o 'ClientCreate' para 'ClientPageLayout'
 const ClientPageLayout = () => {
   const { id } = useParams<{ id: string }>() // <-- Pega o 'id' da URL (ex: /clients/edit/:id)
   const [clientToEdit, setClientToEdit] = useState<ClientType | undefined>(undefined)
   const [isLoading, setIsLoading] = useState(false)
+  const [isSavingStructure, setIsSavingStructure] = useState(false)
   
   // Define se estamos em modo de edição baseado na presença do ID
   const isEditMode = !!id
@@ -39,6 +41,23 @@ const ClientPageLayout = () => {
         })
     }
   }, [id, isEditMode]) // Roda sempre que o ID mudar
+
+  // Handler para mudanças na estrutura organizacional
+  const handleSubsecretariasChange = async (subsecretarias: SubsecretariaDto[]) => {
+    if (!clientToEdit || !id) return
+    
+    setIsSavingStructure(true)
+    try {
+      const updatedClient = { ...clientToEdit, subsecretarias }
+      await updateClient(updatedClient)
+      setClientToEdit(updatedClient)
+    } catch (err) {
+      console.error('Falha ao salvar estrutura:', err)
+      alert("Erro ao salvar estrutura organizacional.")
+    } finally {
+      setIsSavingStructure(false)
+    }
+  }
 
   // 6. Renderização de Loading (enquanto busca o cliente no modo edição)
   if (isEditMode && isLoading) {
@@ -84,6 +103,20 @@ const ClientPageLayout = () => {
             Usuários do Cliente
           </a>
         </li>
+
+        {/* Aba 3: Estrutura Organizacional (Condicional) */}
+        <li className='nav-item' role='presentation'>
+          <a
+            className={clsx('nav-link', { disabled: !isEditMode })}
+            data-bs-toggle={isEditMode ? 'tab' : ''}
+            href='#kt_tab_pane_client_structure'
+            aria-selected='false'
+            role='tab'
+            title={!isEditMode ? 'Salve o cliente para acessar a estrutura organizacional' : 'Estrutura Organizacional'}
+          >
+            Estrutura Organizacional
+          </a>
+        </li>
       </ul>
 
       {/* Conteúdo das Abas */}
@@ -116,6 +149,32 @@ const ClientPageLayout = () => {
             <div className='p-9 text-center text-muted'>
               <p className='fs-5'>
                 Salve o cliente primeiro para poder gerenciar os usuários.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Conteúdo Aba 3: Estrutura Organizacional */}
+        <div className='tab-pane fade' id='kt_tab_pane_client_structure' role='tabpanel'>
+          {isEditMode && clientToEdit && clientToEdit.id ? (
+            <div className='p-9'>
+              {isSavingStructure && (
+                <div className='alert alert-info d-flex align-items-center mb-5'>
+                  <span className='spinner-border spinner-border-sm me-2'></span>
+                  Salvando alterações...
+                </div>
+              )}
+              <ClientStructure
+                clientId={clientToEdit.id}
+                subsecretarias={clientToEdit.subsecretarias || []}
+                onSubsecretariasChange={handleSubsecretariasChange}
+                readOnly={false}
+              />
+            </div>
+          ) : (
+            <div className='p-9 text-center text-muted'>
+              <p className='fs-5'>
+                Salve o cliente primeiro para acessar a estrutura organizacional.
               </p>
             </div>
           )}

@@ -8,12 +8,14 @@ import { useAuth } from '../../../../auth';
 import { getSchools } from '@services/Schools';
 import { getAccountsBySchool } from '@services/Accounts';
 import { createClass, updateClass } from '@services/Classes';
+import { getGrades } from '@services/Grades';
 import { isNotEmpty } from '@metronic/helpers';
 
 type Props = {
   isUserLoading?: boolean;
   classItem?: Class;
   onFormSubmit: () => void;
+  readOnly?: boolean;
 };
 
 const initialClass: Class = {
@@ -30,18 +32,6 @@ const initialClass: Class = {
   teacherIds: [],
   studentIds: []
 };
-
-const schoolYearOptions: SelectOptions[] = [
-  { value: '1', label: '1º Ano' },
-  { value: '2', label: '2º Ano' },
-  { value: '3', label: '3º Ano' },
-  { value: '4', label: '4º Ano' },
-  { value: '5', label: '5º Ano' },
-  { value: '6', label: '6º Ano' },
-  { value: '7', label: '7º Ano' },
-  { value: '8', label: '8º Ano' },
-  { value: '9', label: '9º Ano' },
-];
 
 const schoolShiftOptions: SelectOptions[] = [
   { value: 'morning', label: 'Matutino' },
@@ -70,11 +60,12 @@ const editClassSchema = Yup.object().shape({
 });
 
 
-const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, onFormSubmit }) => {
+const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, onFormSubmit, readOnly = false }) => {
   const { currentUser } = useAuth();
   const [schoolOptions, setSchoolOptions] = useState<SelectOptions[]>([]);
   const [teacherOptions, setTeacherOptions] = useState<SelectOptions[]>([]);
   const [studentOptions, setStudentOptions] = useState<SelectOptions[]>([]);
+  const [schoolYearOptions, setSchoolYearOptions] = useState<SelectOptions[]>([]);
 
   const formik = useFormik({
     initialValues: {
@@ -110,6 +101,23 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
       }
     },
   });
+
+  // Carregar anos letivos do backend
+  useEffect(() => {
+    const fetchGrades = async () => {
+      try {
+        const res = await getGrades();
+        const options = res.data.data.map((grade: any) => ({
+          value: grade.name,
+          label: grade.name,
+        }));
+        setSchoolYearOptions(options);
+      } catch (error) {
+        console.error('Erro ao carregar anos letivos:', error);
+      }
+    };
+    fetchGrades();
+  }, []);
 
   // Carregar escolas
   useEffect(() => {
@@ -342,22 +350,31 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
         </div>
         {/* Botões */}
         <div className="card-footer d-flex justify-content-end py-6 px-9">
-          <button type="button" className="btn btn-light me-2" onClick={onFormSubmit}>
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={isUserLoading || formik.isSubmitting || !formik.isValid}
-          >
-            <span className="indicator-label">Salvar</span>
-            {formik.isSubmitting && (
-              <span className="indicator-progress">
-                Aguarde...{' '}
-                <span className="spinner-border spinner-border-sm align-middle ms-2"></span>
-              </span>
-            )}
-          </button>
+          {readOnly ? (
+            <div className='alert alert-info mb-0'>
+              <i className='fas fa-info-circle me-2'></i>
+              Você está visualizando esta turma em modo somente leitura.
+            </div>
+          ) : (
+            <>
+              <button type="button" className="btn btn-light me-2" onClick={onFormSubmit}>
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={isUserLoading || formik.isSubmitting || !formik.isValid}
+              >
+                <span className="indicator-label">Salvar</span>
+                {formik.isSubmitting && (
+                  <span className="indicator-progress">
+                    Aguarde...{' '}
+                    <span className="spinner-border spinner-border-sm align-middle ms-2"></span>
+                  </span>
+                )}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </form>

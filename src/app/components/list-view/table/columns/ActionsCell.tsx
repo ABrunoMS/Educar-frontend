@@ -10,16 +10,29 @@ import { deleteUser } from '../../core/_requests'
 type Props = {
   id: ID,
   editPath: string,
-  callbackFunction: (id: ID) => void
+  callbackFunction: (id: ID) => void,
+  readOnly?: boolean  // Se true, mostra apenas visualização
 }
 
-const ActionsCell: FC<Props> = ({id, editPath, callbackFunction}) => {
+const ActionsCell: FC<Props> = ({id, editPath, callbackFunction, readOnly = false}) => {
   const {query} = useQueryResponse()
   const queryClient = useQueryClient()
 
   useEffect(() => {
     MenuComponent.reinitialization()
   }, [])
+
+  // Se for apenas visualização, mostra apenas o botão de ver
+  if (readOnly) {
+    return (
+      <Link
+        to={`${editPath}/${id}`}
+        className='btn btn-light btn-active-light-primary btn-sm'
+      >
+        <i className="bi bi-eye fs-5 me-2"></i>Visualizar
+      </Link>
+    )
+  }
 
   return (
     <>

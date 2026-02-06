@@ -22,6 +22,7 @@ type Props = {
   school?: School
   schoolItem?: SchoolType
   onFormSubmit?: () => void
+  readOnly?: boolean
 }
 
 const initialSchool: School = {
@@ -36,7 +37,7 @@ const initialSchool: School = {
   contractStartDate: ''
 }
 
-const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onFormSubmit }) => {
+const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onFormSubmit, readOnly = false }) => {
   // --- Estados ---
   const [clientOptions, setClientOptions] = useState<SelectOptions[]>([]);
   const [addressOptions, setAddressOptions] = useState<SelectOptions[]>([]);
@@ -394,12 +395,20 @@ const SchoolCreateForm: FC<Props> = ({ school, schoolItem, isUserLoading, onForm
         </div>
 
         <div className='text-center pt-15'>
-          <button type='submit' className='btn btn-primary' data-kt-users-modal-action='submit'>
-            <span className='indicator-label'>Salvar</span>
-            {(formik.isSubmitting || isUserLoading) && (
-              <span className='indicator-progress'>Aguarde... <span className='spinner-border spinner-border-sm align-middle ms-2'></span></span>
-            )}
-          </button>
+          {!readOnly && (
+            <button type='submit' className='btn btn-primary' data-kt-users-modal-action='submit'>
+              <span className='indicator-label'>Salvar</span>
+              {(formik.isSubmitting || isUserLoading) && (
+                <span className='indicator-progress'>Aguarde... <span className='spinner-border spinner-border-sm align-middle ms-2'></span></span>
+              )}
+            </button>
+          )}
+          {readOnly && (
+            <div className='alert alert-info'>
+              <i className='fas fa-info-circle me-2'></i>
+              Você está visualizando esta escola em modo somente leitura.
+            </div>
+          )}
         </div>
       </form>
 
