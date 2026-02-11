@@ -75,7 +75,7 @@ const SchoolUsersList: React.FC<SchoolUsersListProps> = ({ schoolId, readOnly = 
   const usersAll: Account[] = data?.data?.data || [];
   const teachers = usersAll.filter(u => u.role === 'Teacher');
   const students = usersAll.filter(u => u.role === 'Student');
-  const admins = usersAll.filter(u => u.role === 'Admin' || u.role === 'Administrator');
+  const admins = usersAll.filter(u => u.role === 'Admin');
 
   return (
     <>

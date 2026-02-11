@@ -71,70 +71,15 @@ const LessonStepPage: FC = () => {
     const loadLessonData = async () => {
       console.log('Carregando dados da aula com ID:', lessonId);
       
-      if (!lessonId) {
-        console.warn('ID da aula não encontrado na rota');
-        setIsLoading(false);
-        return;
-      }
-
+      if (!lessonId) return;
       setIsLoading(true);
       
-      // Primeiro, definir dados específicos baseados no ID da aula
-/*let mockData: LessonData;
-      
-      if (lessonId === 'aula-portugues-concordancia') {
-        mockData = {
-          Name: 'Aula de Português - Concordância',
-          Description: 'Concordância nominal e verbal',
-          UsageTemplate: '2º Trimestre', 
-          Type: 'Português',
-          MaxPlayers: 35,
-          TotalQuestSteps: 0,
-          CombatDifficulty: 'Baixo Desempenho',
-        };
-      } else if (lessonId === 'aula-matematica-fracoes') {
-        mockData = {
-          Name: 'Aula de Matemática - Frações',
-          Description: 'Introdução ao conceito de frações',
-          UsageTemplate: 'Ensino Fundamental', 
-          Type: 'Matemática',
-          MaxPlayers: 30,
-          TotalQuestSteps: 0,
-          CombatDifficulty: 'Fácil',
-        };
-      } else if (lessonId === 'aula-ciencias-sistema-solar') {
-        mockData = {
-          Name: 'Aula de Ciências - Sistema Solar',
-          Description: 'Explorando o sistema solar',
-          UsageTemplate: 'Ensino Fundamental', 
-          Type: 'Ciências',
-          MaxPlayers: 25,
-          TotalQuestSteps: 0,
-          CombatDifficulty: 'Fácil',
-        };
-      } else {
-        // Fallback genérico
-        mockData = {
-          Name: lessonId, // Usar o ID como nome se for necessário
-          Description: 'Aula criada no sistema educativo',
-          UsageTemplate: 'Ensino Regular', 
-          Type: 'Educativa',
-          MaxPlayers: 30,
-          TotalQuestSteps: 0,
-          CombatDifficulty: 'Médio',
-        };
-      }*/
-
       try {
-        console.log('Tentando buscar aula no backend...');
         const response = await getQuestById(lessonId);
-        console.log('Dados da aula carregados do backend:', response.data);
         
-        // Usar dados do backend se disponível
         if (response.data && response.data.id) {
-          console.log('Usando dados do backend:', response.data);
-          // Mapear campos do backend para o formato esperado pelo frontend
           const backend = response.data as Quest;
+          
           setLessonData({
                name: backend.name || '',
                description: backend.description || '',
@@ -145,114 +90,142 @@ const LessonStepPage: FC = () => {
                combatDifficulty: backend.combatDifficulty || '',
                discipline: (backend.subject as any)?.name || 'Não definida',
                schoolYear: (backend.grade as any)?.name || 'Não definida',
-               bncc: backend.proficiencies 
-                  ? backend.proficiencies.map((p: any) => p.description || p.name || p.code) 
-                  : [],
-       });
+               bncc: backend.proficiencies ? backend.proficiencies.map((p: any) => p.description || p.code) : [],
+          });
           
-          // Carregar as etapas se existirem
+          // --- CORREÇÃO: Helper que aceita String ou Número ---
+          const getFrontendQuestionType = (backendType: number | string): string => {
+              // Se vier String do backend (ex: "SingleChoice")
+              if (typeof backendType === 'string') {
+                  if (backendType === 'Text') return 'text';
+                  if (backendType === 'Video') return 'video';
+                  // Retorna a própria string se for compatível (MultipleChoice, etc)
+                  return backendType;
+              }
+
+              // Se vier Número (ex: 5)
+              switch (backendType) {
+                case 1: return 'text';           
+                case 2: return 'video';          
+                case 3: return 'MultipleChoice';
+                case 4: return 'TrueOrFalse';
+                case 5: return 'SingleChoice';
+                case 6: return 'Dissertative';
+                case 7: return 'ColumnFill';
+                case 8: return 'AlwaysCorrect';
+                case 9: return 'Ordering';       
+                case 10: return 'MatchTwoRows';
+                default: return 'MultipleChoice';
+              }
+          };
+
           const questSteps = backend.questSteps || [];
-          console.log('QuestSteps do backend:', questSteps);
           
           if (Array.isArray(questSteps) && questSteps.length > 0) {
-            console.log('Mapeando', questSteps.length, 'etapas...');
-            const mappedSteps: PageStep[] = questSteps.map((questStep: QuestStep, index: number) => {
-              console.log(`Etapa ${index + 1}:`, questStep.name, '- Contents:', questStep.contents?.length || 0);
-              if (questStep.contents && questStep.contents.length > 0) {
-                console.log('  Contents completos:', JSON.stringify(questStep.contents, null, 2));
-              }
-              
-              return {
-              id: questStep.id || null,
-              title: questStep.name || '',
-              type: questStep.questStepType || 'Npc',
-              active: questStep.isActive ?? true,
-              sequence: questStep.order || (index + 1),
-              character: questStep.npcType || 'Passive',
-              statement: questStep.description || '',
-              questions: (questStep.contents || [])
-                .sort((a, b) => (a.sequence || 0) - (b.sequence || 0)) // Ordenar por sequence
-                .map((content, qIndex) => {
-                // Backend agora tem campos separados para title e description
-                const isInformative = content.questStepContentType === 'Informative';
-                
-                return {
-                  id: content.id || Date.now() + qIndex,
-                  activityType: content.questStepContentType || 'Exercise',
-                  sequence: content.sequence || (qIndex + 1),
-                  questionType: content.questionType || 'MultipleChoice',
-                  weight: content.weight || 1,
-                  isActive: content.isActive ?? true,
-                  contentImage: '', // TODO: Mapear se existir
-                  description: content.description || '',
-                  title: content.title || content.description || 'Questão',
-                  comments: '', // TODO: Mapear se existir
-                  options: (() => {
-                    const ea = content.expectedAnswers || {} as any
-                    const qt = ea.questionType || content.questionType
+            const mappedSteps: PageStep[] = questSteps.map((questStep: any, index: number) => {
+              const contents = questStep.contents || questStep.Contents || [];
 
-                    switch (qt) {
-                      case 'MultipleChoice':
-                      case 'TrueOrFalse':
-                        return (ea.options || []).map((opt: any, oIndex: number) => ({
-                          id: Date.now() + oIndex,
-                          image: '',
-                          text: opt.description,
-                          isCorrect: opt.is_correct
-                        }))
-                      case 'SingleChoice':
-                        return (ea.option ? [{ id: Date.now(), image: '', text: ea.option, isCorrect: true }] : [])
-                      case 'Ordering':
-                        return (ea.items || []).map((it: string, i: number) => ({ id: `${Date.now()}_${i}`, image: '', text: it, isCorrect: false }))
-                      case 'ColumnFill':
-                        // Represent pairs as options with 'left -> right' text for display
-                        if (ea.matches && typeof ea.matches === 'object') {
-                          return Object.entries(ea.matches).map(([k, v], i) => ({ id: `${Date.now()}_${i}`, image: '', text: `${k} → ${v}`, isCorrect: false }))
-                        }
-                        return []
-                      case 'MatchTwoRows':
-                        // Flatten left items for display
-                        if (Array.isArray(ea.left)) {
-                          return (ea.left || []).map((l: string, i: number) => ({ id: `${Date.now()}_${i}`, image: '', text: l, isCorrect: false }))
-                        }
-                        return []
-                      default:
-                        return (ea.options || []).map((opt: any, oIndex: number) => ({
-                          id: Date.now() + oIndex,
-                          image: '',
-                          text: opt.description,
-                          isCorrect: opt.is_correct
-                        }))
+              return {
+                id: questStep.id || null,
+                title: questStep.name || '',
+                // Aceita string "Npc" ou número 1
+                type: (questStep.questStepType === 'Npc' || questStep.questStepType === 1) ? 'Npc' : 'Npc', 
+                active: questStep.isActive ?? true,
+                sequence: questStep.order || (index + 1),
+                character: (questStep.npcType === 'Passive' || questStep.npcType === 1) ? 'Passive' : 'Passive',
+                statement: questStep.description || '',
+                questions: contents
+                  .sort((a: any, b: any) => (a.sequence || 0) - (b.sequence || 0))
+                  .map((content: any, qIndex: number) => {
+                    
+                    // 1. Identificação do Tipo (Trata String e Number)
+                    const contentTypeVal = content.questStepContentType ?? content.QuestStepContentType;
+                    const itemTypeVal = content.questStepContentItemType ?? content.QuestStepContentItemType;
+                    
+                    // Verifica se é informativo (pode vir 1 ou "Informative")
+                    const isInformative = contentTypeVal === 1 || contentTypeVal === 'Informative'; 
+                    
+                    let activityType = 'Exercise';
+                    let questionType = 'MultipleChoice';
+
+                    if (isInformative) {
+                        activityType = 'Informative';
+                        // Se for Video (2 ou "Video")
+                        const isVideo = itemTypeVal === 2 || itemTypeVal === 'Video';
+                        questionType = isVideo ? 'video' : 'text'; 
+                    } else {
+                        questionType = getFrontendQuestionType(itemTypeVal);
                     }
-                  })(),
-                  // attach possible custom fields for frontend editing
-                  orderingItems: ((content.expectedAnswers as any)?.items) || undefined,
-                  correctOrder: ((content.expectedAnswers as any)?.correctOrder) || undefined,
-                  columnFillMatches: ((content.expectedAnswers as any)?.matches) ? Object.entries((content.expectedAnswers as any).matches).map(([l, r]) => ({ left: l, right: String(r) })) : undefined,
-                  matchLeft: ((content.expectedAnswers as any)?.left) || undefined,
-                  matchRight: ((content.expectedAnswers as any)?.right) || undefined,
-                  matchPairs: ((content.expectedAnswers as any)?.matches) ? Object.entries((content.expectedAnswers as any).matches).map(([l, r]) => ({ leftIndex: Number(l), rightIndex: Number(r) })) : undefined,
-                  shuffleAnswers: false,
-                  alwaysCorrect: false,
-                };
-              })
-            }});
-          setSteps(mappedSteps);
+
+                    // 2. Recuperar Itens (Respostas)
+                    const rawItems = content.items || content.Items || [];
+                    
+                    let options: any[] = [];
+                    let orderingItems: string[] | undefined;
+                    let columnFillMatches: any[] | undefined;
+                    
+                    // Arrays vazios para Match (se precisar no futuro)
+                    let matchLeft: string[] | undefined;
+                    let matchRight: string[] | undefined;
+                    let matchPairs: any[] | undefined;
+
+                    if (questionType === 'Dissertative') {
+                        options = []; 
+                    } 
+                    else if (questionType === 'Ordering') {
+                        orderingItems = rawItems
+                            .sort((a: any, b: any) => a.order - b.order)
+                            .map((i: any) => i.title || i.textContent);
+                        options = [];
+                    }
+                    else if (questionType === 'ColumnFill') {
+                        columnFillMatches = rawItems.map((item: any) => ({
+                            left: item.title,       
+                            right: item.textContent 
+                        }));
+                        options = []; 
+                    }
+                    else {
+                        // MultipleChoice, SingleChoice, TrueOrFalse
+                        options = rawItems.map((item: any, oIndex: number) => ({
+                            id: item.id || Date.now() + oIndex,
+                            image: '', 
+                            text: item.title || item.textContent, 
+                            isCorrect: item.isCorrect
+                        }));
+                    }
+
+                    return {
+                      id: content.id || Date.now() + qIndex,
+                      activityType: activityType,
+                      sequence: content.sequence || (qIndex + 1),
+                      questionType: questionType,
+                      weight: content.weight || 1,
+                      isActive: content.isActive ?? true,
+                      contentImage: '', 
+                      description: content.description || content.textContent || '', 
+                      title: content.title || 'Questão',
+                      comments: '',
+                      options: options,
+                      orderingItems: orderingItems,
+                      columnFillMatches: columnFillMatches,
+                      matchLeft: matchLeft,
+                      matchRight: matchRight,
+                      matchPairs: matchPairs,
+                      shuffleAnswers: false,
+                      alwaysCorrect: false,
+                    };
+                  })
+              };
+            });
+            setSteps(mappedSteps);
           } else {
-            // Aula criada pela primeira vez: garantir que steps fique vazio
             setSteps([]);
-            console.log('Nenhuma etapa encontrada para esta aula, steps inicializado vazio');
           }
-        } else {
-          console.log('Backend retornou dados vazios, usando fallback');
-        
         }
       } catch (error) {
         console.error('Erro ao carregar dados da aula', error);
-        
-        
       } finally {
-        console.log('Finalizando carregamento, setIsLoading(false)');
         setIsLoading(false);
       }
     };
@@ -547,151 +520,182 @@ const handleSaveQuestion = (newQuestionData: Partial<Question>) => {
       console.log('IDs de etapas existentes para deletar:', existingStepIds);
       
       // Monta o payload de todas as etapas com seus conteúdos
-      const stepsPayload = steps.map((step, index) => {
-        console.log(`\n--- Processando etapa ${index + 1}/${steps.length} ---`);
-        console.log('Etapa título:', step.title);
-        console.log('Total de questões:', step.questions?.length || 0);
+  const ContentTypeEnum = {
+      None: 0,
+      Informative: 1,
+      Exercise: 2
+    };
 
-        // Monta o ExpectedAnswers para cada questão
+    const ItemTypeEnum = {
+      None: 0,
+      Text: 1,
+      Video: 2,
+      MultipleChoice: 3,
+      TrueOrFalse: 4,
+      SingleChoice: 5,
+      Dissertative: 6,
+      ColumnFill: 7,
+      AlwaysCorrect: 8,
+      Ordering: 9,      // Agora tem número oficial!
+      MatchTwoRows: 10  // Agora tem número oficial!
+    };
+
+  const QuestStepTypeEnum = {
+        Npc: 1 // Assumindo que 1 = Npc
+    };
+
+  const NpcTypeEnum = {
+        Passive: 1 // Assumindo que 1 = Passive
+    };
+
+  const NpcBehaviourEnum = {
+        StandStill: 1 // Assumindo que 1 = StandStill
+    };
+
+    // Helper para converter string do Front para Inteiro do Back
+    const getBackendItemType = (frontType: string, isInformative: boolean): number => {
+      if (isInformative) {
+         // Se o front diz que é 'video', manda 2. Se for 'text' (ou qualquer outra coisa), manda 1.
+         return frontType === 'video' ? ItemTypeEnum.Video : ItemTypeEnum.Text;
+      }
+
+      switch (frontType) {
+        case 'MultipleChoice': return ItemTypeEnum.MultipleChoice; // 3
+        case 'TrueOrFalse': return ItemTypeEnum.TrueOrFalse;       // 4
+        case 'SingleChoice': return ItemTypeEnum.SingleChoice;     // 5
+        case 'Dissertative': return ItemTypeEnum.Dissertative;     // 6
+        case 'ColumnFill': return ItemTypeEnum.ColumnFill;         // 7
+        case 'AlwaysCorrect': return ItemTypeEnum.AlwaysCorrect;   // 8
+        case 'Ordering': return ItemTypeEnum.Ordering;             // 9
+        case 'MatchTwoRows': return ItemTypeEnum.MatchTwoRows;     // 10
+        default: return ItemTypeEnum.None;
+      }
+    };
+
+    // 2. Monta o Payload
+    const stepsPayload = steps.map((step, index) => {
+        console.log(`\n--- Processando etapa ${index + 1}/${steps.length} ---`);
+        
         const contents = (step.questions || []).map((question) => {
-          console.log('  -> Mapeando questão:', question.title);
-          console.log('  -> activityType:', question.activityType);
-          console.log('  -> questionType:', question.questionType);
           
-          // Para conteúdo informativo, usa AlwaysCorrect (qualquer resposta é válida)
-          if (question.activityType === 'Informative') {
-            return {
-              questStepContentType: 'Informative',
-              questionType: 'AlwaysCorrect',
-              title: question.title || 'Título',
-              description: question.description || 'Conteúdo informativo',
-              weight: 1, // Backend requires weight > 0
-              isActive: question.isActive ?? true,
-              sequence: question.sequence || 1,
-              expectedAnswers: {
-                questionType: 'AlwaysCorrect'
+          const isInformative = question.activityType === 'Informative';
+          const contentTypeInt = isInformative ? ContentTypeEnum.Informative : ContentTypeEnum.Exercise;
+          const itemTypeInt = getBackendItemType(question.questionType, isInformative);
+
+          // Lista unificada de items (antigo ExpectedAnswers)
+          let itemsPayload: any[] = [];
+
+          if (isInformative) {
+              // --- CENÁRIO: INFORMATIVO (Texto ou Vídeo) ---
+              itemsPayload.push({
+                  itemType: itemTypeInt,
+                  order: 1,
+                  title: question.title, 
+                  // Se for Texto, o conteúdo vai em textContent. Se for Vídeo, a URL vai em videoUrl
+                  textContent: itemTypeInt === ItemTypeEnum.Text ? question.description : null,
+                  videoUrl: itemTypeInt === ItemTypeEnum.Video ? question.description : null, // Assumindo que a URL tá na description
+                  videoProvider: itemTypeInt === ItemTypeEnum.Video ? 'YouTube' : null, // Exemplo
+                  isCorrect: null
+              });
+          } else {
+              // --- CENÁRIO: EXERCÍCIOS ---
+
+              // 1. Múltipla Escolha / Single / TrueOrFalse
+              if (['MultipleChoice', 'SingleChoice', 'TrueOrFalse'].includes(question.questionType)) {
+                  itemsPayload = (question.options || []).map((opt, i) => ({
+                      itemType: itemTypeInt,
+                      order: i + 1,
+                      title: opt.text,        // O texto da opção
+                      textContent: null,      // Geralmente null para opções simples
+                      isCorrect: opt.isCorrect,
+                      videoUrl: null
+                  }));
               }
-            };
+              
+              // 2. Dissertativa
+              else if (question.questionType === 'Dissertative') {
+                  itemsPayload.push({
+                      itemType: itemTypeInt,
+                      order: 1,
+                      title: "Resposta Esperada",
+                      textContent: question.description || "", // O gabarito ou texto de apoio
+                      isCorrect: true,
+                      videoUrl: null
+                  });
+              }
+
+              // 3. Column Fill (Preencher Lacunas)
+              else if (question.questionType === 'ColumnFill') {
+                   // Mapeia pares chave-valor
+                   if (question.columnFillMatches) {
+                       itemsPayload = question.columnFillMatches.map((pair, i) => ({
+                           itemType: itemTypeInt,
+                           order: i + 1,
+                           title: pair.left,       // Lado Esquerdo (Chave)
+                           textContent: pair.right, // Lado Direito (Resposta/Valor)
+                           isCorrect: true,
+                           videoUrl: null
+                       }));
+                   } else if (question.options) {
+                       // Fallback se estiver usando options
+                       itemsPayload = question.options.map((opt, i) => ({
+                           itemType: itemTypeInt,
+                           order: i + 1,
+                           title: String(i),
+                           textContent: opt.text,
+                           isCorrect: true,
+                           videoUrl: null
+                       }));
+                   }
+              }
+
+              // 4. Ordenação (Ordering) - Tratamento genérico pois não tem Enum específico na lista 0-8
+              else if (question.questionType === 'Ordering') {
+                   const itemsList = question.orderingItems || (question.options || []).map(o => o.text);
+                   itemsPayload = itemsList.map((text, i) => ({
+                      itemType: itemTypeInt, // Vai ser 0 (None)
+                      order: i + 1,          // A ordem correta é definida pelo índice aqui
+                      title: text,
+                      textContent: null,
+                      isCorrect: true,
+                      videoUrl: null
+                   }));
+              }
+              
+              // 5. MatchTwoRows - Tratamento genérico
+              else if (question.questionType === 'MatchTwoRows') {
+                  // Lógica customizada se necessário, ou enviar como None
+                  // Implemente conforme necessidade do back para esse tipo específico
+              }
           }
-          
-          // IMPORTANTE: O backend requer o campo "questionType" no expectedAnswers para deserialização
-          let expectedAnswers: any;
-          
-          switch (question.questionType) {
-            case 'Dissertative':
-              expectedAnswers = { 
-                questionType: 'Dissertative',
-                text: question.description || question.title || 'Resposta esperada' // Backend valida que text não pode ser vazio
-              };
-              break;
-            case 'Ordering':
-              expectedAnswers = {
-                questionType: 'Ordering',
-                items: question.orderingItems && question.orderingItems.length > 0 ? question.orderingItems : (question.options || []).map(o => o.text),
-                correctOrder: question.correctOrder || (question.orderingItems ? question.orderingItems.map((_, i) => i) : (question.options || []).map((_, i) => i))
-              };
-              break;
-            case 'ColumnFill':
-              // Convert array of pairs to object { left: right }
-              const matchesObj: Record<string, string> = {};
-              if (question.columnFillMatches && question.columnFillMatches.length > 0) {
-                question.columnFillMatches.forEach(p => { matchesObj[p.left] = p.right; });
-              }
-              expectedAnswers = {
-                questionType: 'ColumnFill',
-                matches: matchesObj
-              };
-              break;
-            case 'MatchTwoRows':
-              // left/right arrays and optional mapping
-              const leftArr = question.matchLeft || (question.options || []).map(o => o.text)
-              const rightArr = question.matchRight || []
-              const mapping: Record<number, number> = {}
-              if (question.matchPairs && question.matchPairs.length > 0) {
-                question.matchPairs.forEach(p => { mapping[p.leftIndex] = p.rightIndex })
-              }
-              expectedAnswers = {
-                questionType: 'MatchTwoRows',
-                left: leftArr,
-                right: rightArr,
-                matches: mapping
-              };
-              break;
-            case 'MultipleChoice':
-              const mcOptions = (question.options || []).map(opt => ({
-                description: opt.text || 'Opção sem descrição', // Backend valida que description não pode ser vazio
-                is_correct: opt.isCorrect || false
-              }));
-              // Backend valida que deve ter pelo menos uma opção correta
-              const hasCorrectOption = mcOptions.some(opt => opt.is_correct);
-              if (!hasCorrectOption && mcOptions.length > 0) {
-                mcOptions[0].is_correct = true; // Marca a primeira como correta se nenhuma estiver marcada
-              }
-              expectedAnswers = {
-                questionType: 'MultipleChoice',
-                options: mcOptions
-              };
-              break;
-            case 'TrueOrFalse':
-              expectedAnswers = {
-                questionType: 'TrueOrFalse',
-                options: (question.options || []).map(opt => ({
-                  description: opt.text || 'Opção sem descrição',
-                  is_correct: opt.isCorrect || false
-                }))
-              };
-              break;
-            case 'SingleChoice':
-              expectedAnswers = {
-                questionType: 'SingleChoice',
-                option: question.options && question.options.length > 0 
-                  ? (question.options[0].text || 'Opção sem descrição')
-                  : 'Opção sem descrição' // Backend valida que option não pode ser vazio
-              };
-              break;
-            default:
-              expectedAnswers = {
-                questionType: 'MultipleChoice',
-                options: (question.options || []).map(opt => ({
-                  description: opt.text || 'Opção sem descrição',
-                  is_correct: opt.isCorrect || false
-                }))
-              };
-          }
-          
+
+          // Retorna estrutura do CONTENT (conforme imagem do JSON)
           return {
-            questStepContentType: question.activityType || 'Exercise',
-            questionType: question.questionType || 'MultipleChoice',
-            title: question.title || 'Título',
-            description: question.description || question.title || 'Pergunta sem descrição',
+            questStepContentType: contentTypeInt,
+            questStepContentItemType: itemTypeInt,
+            title: question.title || 'Título da Questão', // Novo campo Title no Content
+            description: question.title || '',
             weight: question.weight || 1,
             isActive: question.isActive ?? true,
             sequence: question.sequence || 1,
-            expectedAnswers: expectedAnswers
+            items: itemsPayload // A lista "items" substitui o "expectedAnswers"
           };
         });
 
-        console.log(`  -> Total de contents mapeados: ${contents.length}`);
-        console.log(`  -> Contents:`, JSON.stringify(contents, null, 2));
-
-        // Retorna o payload da etapa no formato esperado pelo bulk endpoint
-        const stepPayload = {
+        // Retorna estrutura do STEP
+        return {
           name: step.title,
           description: step.statement || step.title || 'Descrição da etapa',
           order: step.sequence,
-          npcType: step.character || 'Passive',
-          npcBehaviour: 'StandStill',
-          type: step.type || 'Npc', // Note: aqui é "type", não "questStepType" para o FullQuestStepDto
-          isActive: step.active ?? true,
+          npcType: NpcTypeEnum.Passive,
+          npcBehaviour: NpcBehaviourEnum.StandStill,
+          type: QuestStepTypeEnum.Npc,
           contents: contents,
           npcIds: [],
           mediaIds: [],
           itemIds: []
         };
-        
-        console.log(`  -> Payload da etapa completo:`, JSON.stringify(stepPayload, null, 2));
-        return stepPayload;
-      });
+    });
 
       console.log('\n=== PAYLOAD COMPLETO PARA BULK ===');
       console.log(JSON.stringify({ questId: lessonId, steps: stepsPayload }, null, 2));
