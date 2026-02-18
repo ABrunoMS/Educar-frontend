@@ -226,12 +226,12 @@ const LessonListContent: React.FC<Props> = ({ isTemplateView }) => {
             <strong>Filtros aplicados:</strong>
             {selectedSubject && (
               <div className='text-muted fs-7'>
-                Matéria: {subjects.find((s: any) => (s.id || s.Id) === selectedSubject)?.name || subjects.find((s: any) => (s.id || s.Id) === selectedSubject)?.Name}
+                Matéria: {subjects.find((s: any) => (s.id || s.Id) === selectedSubject)?.name || subjects.find((s: any) => (s.id || s.Id) === selectedSubject)?.name}
               </div>
             )}
             {selectedGrade && (
               <div className='text-muted fs-7'>
-                Ano: {grades.find((g: any) => (g.id || g.Id) === selectedGrade)?.name || grades.find((g: any) => (g.id || g.Id) === selectedGrade)?.Name}
+                Ano: {grades.find((g: any) => (g.id || g.Id) === selectedGrade)?.name || grades.find((g: any) => (g.id || g.Id) === selectedGrade)?.name}
               </div>
             )}
             {selectedProduct && (

@@ -39,8 +39,8 @@ const SidebarMenuMain = () => {
         fontIcon='bi-app-indicator'
       />
 
-      <RoleBasedMenuItem rolesAllowed={['Teacher']}>
-        <SidebarMenuItemWithSub
+     <RoleBasedMenuItem rolesAllowed={['Teacher']}>
+       { /* <SidebarMenuItemWithSub
           to='/apps/grade-management/'
           title='Notas'
           fontIcon='bi-archive'
@@ -59,6 +59,7 @@ const SidebarMenuMain = () => {
             hasBullet
           />
         </SidebarMenuItemWithSub>
+        */}
 
         <SidebarMenuItemWithSub
           to='/apps/class-management/'
@@ -108,7 +109,7 @@ const SidebarMenuMain = () => {
             <SidebarMenuItem
               to='/apps/lesson-management/templates'
               icon='abstract-28'
-              title='Aulas Template'
+              title='Aulas Modelo'
               hasBullet
             />
           </RoleBasedMenuItem>
@@ -276,7 +277,7 @@ const SidebarMenuMain = () => {
           <SidebarMenuItem
             to='/apps/lesson-management/templates'
             icon='abstract-28'
-            title='Aulas Template'
+            title='Aulas Modelo'
             hasBullet
          />
         </SidebarMenuItemWithSub>

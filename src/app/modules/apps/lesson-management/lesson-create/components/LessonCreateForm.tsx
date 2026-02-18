@@ -185,9 +185,26 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
     contentId: Yup.string().required('Conteúdo é obrigatório'),
   });
 
+  const ItemTypeMap: Record<string, number> = {
+        'None': 0, 'Text': 1, 'Video': 2, 'MultipleChoice': 3,
+        'TrueOrFalse': 4, 'SingleChoice': 5, 'Dissertative': 6,
+        'ColumnFill': 7, 'AlwaysCorrect': 8, 'Ordering': 9, 'MatchTwoRows': 10
+    };
+
+    const ContentTypeMap: Record<string, number> = {
+        'None': 0, 'Informative': 1, 'Exercise': 2
+    };
+
+    // Helper seguro: aceita número (já convertido) ou string (precisa converter)
+    const toInt = (value: any, map: Record<string, number>, defaultVal: number = 0): number => {
+        if (typeof value === 'number') return value;
+        if (typeof value === 'string' && map[value] !== undefined) return map[value];
+        return defaultVal;
+    };
+
   const formik = useFormik({
     initialValues: {
-      name: activeData?.name ? (sourceTemplateId ? `${activeData.name} (Cópia)` : activeData.name) : '',
+      name: activeData?.name ? (sourceTemplateId ? `${activeData.name} (Modelo)` : activeData.name) : '',
       description: activeData?.description || '',
       discipline: initialDisciplineId,
       schoolYear: initialSchoolYearId,
@@ -201,52 +218,118 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
     },
     validationSchema,
     enableReinitialize: true,
-    onSubmit: async (values, { setSubmitting }) => {
-      try {
-        setSubmitting(true);
-        const validBnccIds = values.bncc || [];
-        const questData: any = {
-          id: isEditing ? initialLesson?.id : undefined,
-          name: values.name,
-          description: values.description,
-          usageTemplate: values.usageTemplate,
-          type: values.type,
-          maxPlayers: values.maxPlayers,
-          combatDifficulty: values.combatDifficulty,
-          subjectId: values.discipline,
-          gradeId: values.schoolYear,
-          productId: values.productId,
-          contentId: values.contentId,
-          bnccIds: validBnccIds, 
-          questSteps: activeData?.questSteps || [],
-        };
+ onSubmit: async (values, { setSubmitting }) => {
+  try {
+    setSubmitting(true);
+    const validBnccIds = values.bncc || [];
+    
+    // 1. Prepara os dados básicos
+    const questData: any = {
+      id: isEditing ? initialLesson?.id : undefined,
+      name: values.name,
+      description: values.description,
+      usageTemplate: values.usageTemplate,
+      type: values.type,
+      maxPlayers: values.maxPlayers,
+      combatDifficulty: values.combatDifficulty,
+      subjectId: values.discipline,
+      gradeId: values.schoolYear,
+      productId: values.productId,
+      contentId: values.contentId,
+      bnccIds: validBnccIds, 
+    };
 
-        if (isEditing && initialLesson?.id) {
-          await updateQuest(initialLesson.id, questData);
-          alert('Aula atualizada com sucesso!');
-          navigate(`../steps/${initialLesson.id}`);
-        } else {
-          delete questData.id;
-          if (questData.questSteps && questData.questSteps.length > 0) {
-            questData.questSteps = questData.questSteps.map((step: any) => ({
-              ...step,
-              id: undefined,
-              questId: undefined,
-              contents: step.contents.map((content: any) => ({ ...content, id: undefined }))
-            }));
-          }
-          const response = await createQuest(questData);
-          const newId = response.data.id;
-          alert('Aula criada com sucesso!');
-          navigate(`../steps/${newId}`);
+    if (isEditing && initialLesson?.id) {
+      // --- MODO EDIÇÃO ---
+      questData.questSteps = []; 
+      await updateQuest(initialLesson.id, questData);
+      alert('Aula atualizada com sucesso!');
+      navigate(`../steps/${initialLesson.id}`);
+    } else {
+      // --- MODO CRIAÇÃO (IMPORTAR MODELO) ---
+      delete questData.id;
+
+      // === DIAGNÓSTICO ===
+      console.log('--- DIAGNÓSTICO DE IMPORTAÇÃO ---');
+      console.log('Objeto activeData:', activeData);
+      
+      // Tenta ler steps de várias formas possíveis (camelCase ou PascalCase)
+      const rawSteps = activeData?.questSteps || (activeData as any)?.QuestSteps || [];
+      console.log(`Etapas encontradas no modelo: ${rawSteps.length}`, rawSteps);
+
+      if (rawSteps.length > 0) {
+        questData.steps = rawSteps.map((step: any) => {
+            // Tenta ler contents de várias formas
+            const rawContents = step.contents || step.Contents || [];
+            
+            return {
+              name: step.name || step.Name,
+              description: step.description || step.Description || step.name || 'Etapa',
+              order: step.order || step.Order,
+              
+              // Converte Enums de Step
+              npcType: (step.npcType === 'Passive' || step.npcType === 1 || step.NpcType === 1) ? 1 : 0,
+              npcBehaviour: 1, // StandStill default
+              questStepType: 1, // Npc default
+
+              contents: rawContents.map((content: any) => {
+                // Tenta ler items de várias formas
+                const rawItems = content.items || content.Items || [];
+                
+                // Mapeamento de Enums seguro
+                const cTypeVal = content.questStepContentType ?? content.QuestStepContentType;
+                const cItemVal = content.questStepContentItemType ?? content.QuestStepContentItemType;
+
+                return {
+                    title: content.title || content.Title || 'Conteúdo',
+                    description: content.description || content.Description || content.title || 'Descrição', 
+                    weight: content.weight || content.Weight || 1,
+                    isActive: content.isActive ?? content.IsActive ?? true,
+                    sequence: content.sequence || content.Sequence || 1,
+                    
+                    // Converte Enums de Content
+                    questStepContentType: toInt(cTypeVal, ContentTypeMap, 2),
+                    questStepContentItemType: toInt(cItemVal, ItemTypeMap, 0),
+
+                    items: rawItems.map((item: any) => {
+                        const iTypeVal = item.itemType || item.ItemType;
+                        return {
+                            order: item.order || item.Order || 1,
+                            title: item.title || item.Title || item.textContent, // Importante: título da resposta
+                            isCorrect: item.isCorrect ?? item.IsCorrect ?? false,
+                            textContent: item.textContent || item.TextContent,
+                            videoUrl: item.videoUrl || item.VideoUrl,
+                            
+                            // Converte Enum de Item
+                            itemType: toInt(iTypeVal, ItemTypeMap, 3)
+                        };
+                    })
+                };
+              })
+            };
+        });
+      } else {
+        questData.steps = [];
+        if (sourceTemplateId) {
+            console.warn('ALERTA: O ID do template existe, mas nenhuma etapa foi encontrada no objeto carregado.');
         }
-      } catch (error) {
-        console.error('Erro ao salvar:', error);
-        alert('Erro ao salvar aula. Verifique os dados.');
-      } finally {
-        setSubmitting(false);
       }
-    },
+
+      console.log('Payload Final Enviado:', JSON.stringify(questData, null, 2));
+
+      const response = await createQuest(questData);
+      const newId = response.data.id;
+      
+      alert('Aula criada com sucesso!');
+      navigate(`../steps/${newId}`);
+    }
+  } catch (error) {
+    console.error('Erro ao salvar:', error);
+    alert('Erro ao salvar aula. Verifique o console.');
+  } finally {
+    setSubmitting(false);
+  }
+},
   });
 
   // --- LÓGICA CRÍTICA: FILTRAR CONTEÚDOS ---
