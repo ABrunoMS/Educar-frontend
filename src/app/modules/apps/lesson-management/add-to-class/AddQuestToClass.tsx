@@ -12,7 +12,7 @@ import clsx from 'clsx';
 import { useAuth } from '../../../../../../src/app/modules/auth';
 
 const addQuestSchema = Yup.object().shape({
-  classId: Yup.string().required('Selecione uma turma'),
+  classIds: Yup.array().of(Yup.string()).min(1, 'Selecione pelo menos uma turma'),
   questId: Yup.string().required('Selecione uma aula'),
   startDate: Yup.date().required('Data de início é obrigatória'),
   expirationDate: Yup.date()
@@ -42,7 +42,7 @@ const AddQuestToClass: FC = () => {
 
   const formik = useFormik({
     initialValues: {
-      classId: '',
+      classIds: [] as string[],
       questId: '',
       startDate: new Date().toISOString().split('T')[0],
       expirationDate: new Date().toISOString().split('T')[0],
@@ -56,14 +56,20 @@ const AddQuestToClass: FC = () => {
         const expirationDate = new Date(values.expirationDate);
         expirationDate.setHours(23, 59, 59, 999);
 
-        await createClassQuest({
-          classId: values.classId,
-          questId: values.questId,
-          startDate: startDate.toISOString(),
-          expirationDate: expirationDate.toISOString(),
-        });
+        // Criar ClassQuest para cada turma selecionada
+        const promises = values.classIds.map((classId) =>
+          createClassQuest({
+            classId,
+            questId: values.questId,
+            startDate: startDate.toISOString(),
+            expirationDate: expirationDate.toISOString(),
+          })
+        );
 
-        toast.success('Aula adicionada à turma com sucesso!');
+        await Promise.all(promises);
+
+        const turmasCount = values.classIds.length;
+        toast.success(`Aula adicionada a ${turmasCount} turma${turmasCount > 1 ? 's' : ''} com sucesso!`);
 
         resetForm();
         setFilterYear('');
@@ -74,7 +80,7 @@ const AddQuestToClass: FC = () => {
         const errorMessage =
           error.response?.data?.title ||
           error.response?.data?.message ||
-          'Erro ao adicionar aula à turma.';
+          'Erro ao adicionar aula às turmas.';
         toast.error(errorMessage);
         console.error('Erro ao adicionar aula:', error);
       } finally {
@@ -239,22 +245,48 @@ const AddQuestToClass: FC = () => {
 
           <div className='separator mb-8'></div>
 
-          {/* Seleção de Turma */}
+          {/* Seleção de Turmas (múltiplas) */}
           <div className='mb-10 fv-row'>
+            <label className='form-label'>Turmas *</label>
+            {formik.values.classIds && formik.values.classIds.length > 0 && (
+              <div className='mb-4'>
+                <div className='d-flex flex-wrap gap-2'>
+                  {formik.values.classIds.map((classId: string) => {
+                    const classItem = classOptions.find((opt) => opt.value === classId);
+                    return classItem ? (
+                      <span key={classId} className='badge badge-light badge-lg d-inline-flex align-items-center gap-2'>
+                        {classItem.label}
+                        <button
+                          type='button'
+                          className='btn btn-sm btn-icon btn-active-color-primary p-0'
+                          onClick={() => {
+                            const updated = formik.values.classIds.filter((id: string) => id !== classId);
+                            formik.setFieldValue('classIds', updated);
+                          }}
+                        >
+                          <i className='bi bi-x fs-3'></i>
+                        </button>
+                      </span>
+                    ) : null;
+                  })}
+                </div>
+              </div>
+            )}
             <AsyncSelectField
-              label='Turma *'
-              fieldName='classId'
-              placeholder='Digite para buscar uma turma...'
+              label='Buscar Turmas'
+              fieldName='classIds'
+              placeholder='Digite para buscar turmas...'
               loadOptions={(inputValue, callback) => {
                 loadClassOptions(inputValue).then(callback);
               }}
               formik={formik}
               defaultOptions={classOptions}
+              isMulti={true}
             />
-            {formik.touched.classId && formik.errors.classId && (
+            {formik.touched.classIds && formik.errors.classIds && (
               <div className='fv-plugins-message-container'>
                 <div className='fv-help-block'>
-                  <span role='alert'>{formik.errors.classId}</span>
+                  <span role='alert'>{formik.errors.classIds as string}</span>
                 </div>
               </div>
             )}
@@ -341,7 +373,7 @@ const AddQuestToClass: FC = () => {
                   <span className='ms-2'>Adicionando...</span>
                 </>
               ) : (
-                'Adicionar Aula à Turma'
+                `Adicionar Aula ${formik.values.classIds.length > 1 ? `às ${formik.values.classIds.length} Turmas` : 'à Turma'}`
               )}
             </button>
           </div>
