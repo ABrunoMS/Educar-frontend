@@ -8,7 +8,7 @@ export type Role = GeneratedRole
 const READ_ONLY_ROLES: Role[] = ['Subsecretario', 'SecretarioRegional', 'Secretario']
 
 // Roles com permissão de edição
-const EDITOR_ROLES: Role[] = ['Admin', 'AgenteComercial', 'Distribuidor', 'Diretor']
+const EDITOR_ROLES: Role[] = ['Admin', 'AgenteComercial', 'Distribuidor', 'Diretor', 'Teacher', 'TeacherEducar']
 
 // Define the structure of the context
 interface RoleContextType {
