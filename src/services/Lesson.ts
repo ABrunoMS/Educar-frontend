@@ -36,7 +36,7 @@ export const getLessonById = (id: string): Promise<{ data: LessonType }> => {
  * @returns Promessa com a resposta contendo o ID da Quest criada.
  */
 export const createQuest = (data: any): Promise<{ data: { id: string } }> => {
-  return axios.post(QUESTS_URL, data);
+  return axios.post(`${API_URL}/api/Quests/full`, data);
 };
 
 /**
