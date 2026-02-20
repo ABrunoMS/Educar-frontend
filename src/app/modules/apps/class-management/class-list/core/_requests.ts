@@ -26,7 +26,9 @@ export const getList = async (
   filter: string,
   search: string,
   clientId?: string,
-  schoolId?: string
+  schoolId?: string,
+  regionalId?: string,
+  subsecretariaId?: string
 ): Promise<PaginatedResponseWithPage<Class>> => {
   // A tipagem da resposta da API é PaginatedResponse<Class>
   const response: AxiosResponse<PaginatedResponse<Class>> = await axios.get(
@@ -37,7 +39,9 @@ export const getList = async (
         PageSize: pageSize,
         search,
         ...(clientId && { ClientId: clientId }),
-        ...(schoolId && { SchoolId: schoolId })
+        ...(schoolId && { SchoolId: schoolId }),
+        ...(regionalId && { RegionalId: regionalId }),
+        ...(subsecretariaId && { SubsecretariaId: subsecretariaId })
       },
     }
   );

@@ -124,7 +124,7 @@ const ClassCreateForm: FC<Props> = ({ classItem = initialClass, isUserLoading, o
     if (!currentUser) return;
 
     if (currentUser.roles?.includes('Admin')) {
-      getSchools().then((res) => {
+      getSchools({}).then((res) => {
         const options = res.data.data.map((school: any) => ({
           value: school.id,
           label: school.name,

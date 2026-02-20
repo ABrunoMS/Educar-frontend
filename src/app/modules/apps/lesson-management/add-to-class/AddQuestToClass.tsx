@@ -86,7 +86,7 @@ const AddQuestToClass: FC = () => {
   // --- 1. CARREGAR TURMAS (Filtrar se o professor está nela) ---
   const loadClassOptions = async (inputValue: string) => {
     try {
-      const response = await getClasses(1, 1000);
+      const response = await getClasses({ page: 1, pageSize: 1000 });
       let classes: any[] = [];
 
       if (response.data && 'data' in response.data && Array.isArray(response.data.data)) {

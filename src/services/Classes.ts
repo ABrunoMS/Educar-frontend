@@ -16,9 +16,25 @@ export const getClassById = (id: string) => {
   return axios.get<Class>(`${CLASSES_URL}/${id}`);
 };
 
-export const getClasses = (page = 1, pageSize = 10) => {
+export const getClasses = (params?: {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  clientId?: string;
+  schoolId?: string;
+  regionalId?: string;
+  subsecretariaId?: string;
+}) => {
   return axios.get<{ data: Class[]; payload: { pagination: { totalCount: number } } }>(`${CLASSES_URL}`, {
-    params: { PageNumber: page, PageSize: pageSize },
+    params: { 
+      PageNumber: params?.page || 1, 
+      PageSize: params?.pageSize || 10,
+      search: params?.search,
+      ClientId: params?.clientId,
+      SchoolId: params?.schoolId,
+      RegionalId: params?.regionalId,
+      SubsecretariaId: params?.subsecretariaId,
+    },
   });
 }
 

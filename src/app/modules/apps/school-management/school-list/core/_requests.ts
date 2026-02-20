@@ -13,7 +13,9 @@ export const getList = async (
   sortOrder: 'asc' | 'desc',
   filter: string,
   search: string,
-  clientId?: string
+  clientId?: string,
+  regionalId?: string,
+  subsecretariaId?: string
 ): Promise<PaginatedResponse<SchoolType>> => {
   const response: AxiosResponse<PaginatedResponse<SchoolType>> = await axios.get(
     `${GET_SCHOOL_LIST_URL}`,
@@ -22,7 +24,9 @@ export const getList = async (
         PageNumber: page, 
         PageSize: pageSize,
         search,
-        ...(clientId && { ClientId: clientId })
+        ...(clientId && { ClientId: clientId }),
+        ...(regionalId && { RegionalId: regionalId }),
+        ...(subsecretariaId && { SubsecretariaId: subsecretariaId })
       },
     }
   );
