@@ -24,6 +24,19 @@ const ClientPageLayout = () => {
   // Define se estamos em modo de edição baseado na presença do ID
   const isEditMode = !!id
 
+  // Função para recarregar os dados do cliente
+  const reloadClientData = () => {
+    if (id) {
+      getClientById(id)
+        .then((clientData) => {
+          setClientToEdit(clientData)
+        })
+        .catch((err) => {
+          console.error('Falha ao recarregar cliente:', err)
+        })
+    }
+  }
+
   // 5. Efeito para buscar o cliente se estivermos em modo de edição
   useEffect(() => {
     if (isEditMode) {
@@ -143,7 +156,11 @@ const ClientPageLayout = () => {
         {/* Conteúdo Aba 2: Usuários */}
         <div className='tab-pane fade' id='kt_tab_pane_client_users' role='tabpanel'>
           {isEditMode && clientToEdit && clientToEdit.id ? (
-            <ClientUsersList clientId={clientToEdit.id} />
+            <ClientUsersList 
+              clientId={clientToEdit.id} 
+              totalAccounts={clientToEdit.totalAccounts}
+              onUsersChange={reloadClientData}
+            />
           ) : (
             // Mensagem para o modo de criação
             <div className='p-9 text-center text-muted'>
