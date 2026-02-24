@@ -16,6 +16,7 @@ export function getAccounts(params?: {
   role?: string;
   regionalId?: string;
   subsecretariaId?: string;
+  withoutClient?: boolean;
 }) {
   return axios.get<PaginatedResponse<Account>>(ACCOUNTS_URL, {
     params: { 
@@ -26,6 +27,21 @@ export function getAccounts(params?: {
       Role: params?.role,
       RegionalId: params?.regionalId,
       SubsecretariaId: params?.subsecretariaId,
+      WithoutClient: params?.withoutClient,
+    },
+  });
+}
+
+/**
+ * Busca usuários que não estão vinculados a nenhum cliente.
+ */
+export function getAccountsWithoutClient(page = 1, pageSize = 100, search?: string) {
+  return axios.get<PaginatedResponse<Account>>(ACCOUNTS_URL, {
+    params: { 
+      PageNumber: page, 
+      PageSize: pageSize,
+      search: search,
+      WithoutClient: true,
     },
   });
 }

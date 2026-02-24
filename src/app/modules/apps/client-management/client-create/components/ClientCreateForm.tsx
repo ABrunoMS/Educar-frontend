@@ -1,4 +1,4 @@
-import React, { FC, useState, useEffect, useMemo } from 'react'
+import React, { FC, useState, useEffect, useMemo, useRef } from 'react'
 import * as Yup from 'yup'
 import { useFormik } from 'formik'
 import clsx from 'clsx'
@@ -13,8 +13,9 @@ import { StepIndicator, Step } from './StepIndicator'
 import { getMacroRegions } from '@services/MacroRegions'
 import { isNotEmpty } from '@metronic/helpers'
 import Flatpickr from 'react-flatpickr'
-import "flatpickr/dist/themes/material_green.css";
+import './flatpickr-custom.css'
 import { getAccountsByRole } from '@services/Accounts'
+import { Portuguese } from 'flatpickr/dist/l10n/pt'
 
 type Props = {
   isUserLoading?: boolean
@@ -539,21 +540,34 @@ const ClientCreateForm: FC<Props> = ({ client, isUserLoading }) => {
     return (
       <div className='mb-7'>
         <label className={clsx('fw-bold fs-6 mb-2', { 'required': required })}>{label}</label>
-        <Flatpickr
-          className='form-control form-control-solid'
-          placeholder={placeholder || ''}
-          value={safeValue}
-          onChange={(date: Date[]) => {
-            if (date && date.length > 0) {
-              updateCalendarValue(date[0], fieldName)
-            } else {
-              updateCalendarValue(null, fieldName)
-            }
-          }}
-          options={{
-            dateFormat: "d/m/Y",
-          }}
-        />
+        <div className='position-relative'>
+          <Flatpickr
+            className='form-control form-control-solid pe-12'
+            placeholder={placeholder || 'Selecione uma data...'}
+            value={safeValue}
+            onChange={(date: Date[]) => {
+              if (date && date.length > 0) {
+                updateCalendarValue(date[0], fieldName)
+              } else {
+                updateCalendarValue(null, fieldName)
+              }
+            }}
+            options={{
+              dateFormat: "d/m/Y",
+              locale: Portuguese,
+              allowInput: true,
+              disableMobile: true,
+            }}
+          />
+          <span className='position-absolute translate-middle-y top-50 end-0 me-4 pointer-events-none'>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </span>
+        </div>
         {formik.getFieldMeta(fieldName).touched && formik.getFieldMeta(fieldName).error && (
           <div className='fv-plugins-message-container'>
             <div className='fv-help-block'>
