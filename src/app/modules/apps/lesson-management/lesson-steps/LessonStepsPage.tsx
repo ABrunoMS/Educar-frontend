@@ -65,6 +65,9 @@ const LessonStepPage: FC = () => {
   const [isLoading, setIsLoading] = useState(true); // Estado para controlar carregamento dos dados
   const [editingBncc, setEditingBncc] = useState(false);
   const [bnccOptions, setBnccOptions] = useState(bnccOptionsMock);
+  
+  // Estado para modal de adicionar à turma
+  const [showAddToClassModal, setShowAddToClassModal] = useState(false);
 
   // Carregar dados da aula quando o componente montar
   useEffect(() => {
@@ -706,8 +709,8 @@ const handleSaveQuestion = (newQuestionData: Partial<Question>) => {
       console.log('\n=== SALVAMENTO CONCLUÍDO COM SUCESSO ===');
       console.log('Novas etapas criadas:', response.data);
       
-      alert('Aula e todas as questões foram salvas com sucesso!');
-      navigate('/apps/lesson-management/lessons');
+      // Mostrar modal perguntando se deseja adicionar à turma
+      setShowAddToClassModal(true);
     } catch (error: any) {
       console.error('❌ ERRO DETALHADO AO SALVAR:', error);
       console.error('Resposta do servidor:', error.response?.data);
@@ -727,6 +730,16 @@ const handleSaveQuestion = (newQuestionData: Partial<Question>) => {
       }
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Handler para confirmar ou não adicionar a uma turma
+  const handleAddToClassConfirm = (confirm: boolean) => {
+    setShowAddToClassModal(false);
+    if (confirm && lessonId) {
+      navigate(`/apps/lesson-management/add-to-class?questId=${lessonId}`);
+    } else {
+      navigate('/apps/lesson-management/lessons');
     }
   };
 
@@ -1098,6 +1111,49 @@ const handleSaveQuestion = (newQuestionData: Partial<Question>) => {
             stepTitle={steps.find(s => s.id === currentStepId)?.title || 'Etapa'}
             defaultSequence={nextQuestionSequence}
           />
+        )}
+
+        {/* Modal de confirmação para adicionar a uma turma */}
+        {showAddToClassModal && (
+          <div className="modal fade show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Aula Salva com Sucesso!</h5>
+                </div>
+                <div className="modal-body">
+                  <div className="text-center mb-5">
+                    <i className="ki-duotone ki-check-circle fs-5x text-success">
+                      <span className="path1"></span>
+                      <span className="path2"></span>
+                    </i>
+                  </div>
+                  <p className="text-center fs-5">
+                    Deseja adicionar esta aula a uma turma agora?
+                  </p>
+                  <p className="text-center text-muted fs-7">
+                    Você poderá escolher a turma e definir as datas de disponibilidade.
+                  </p>
+                </div>
+                <div className="modal-footer d-flex justify-content-center gap-3">
+                  <button 
+                    type="button" 
+                    className="btn btn-light btn-lg"
+                    onClick={() => handleAddToClassConfirm(false)}
+                  >
+                    Não, voltar para aulas
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-primary btn-lg"
+                    onClick={() => handleAddToClassConfirm(true)}
+                  >
+                    Sim, adicionar à turma
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
