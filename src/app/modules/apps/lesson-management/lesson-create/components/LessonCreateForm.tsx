@@ -16,8 +16,6 @@ import { getSubjects } from '@services/Subjects';
 import { getClientById } from '@services/Clients'; 
 import { useAuth } from '../../../../auth/core/Auth';
 import { getGrades } from '@services/Grades';
-import { getClasses } from '@services/Classes';
-import { createClassQuest, getClassQuests, deleteClassQuest } from '@services/ClassQuest';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -46,13 +44,11 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
   const [bnccOptions, setBnccOptions] = useState<OptionType[]>([]);
   const [disciplines, setDisciplines] = useState<OptionType[]>([]);
   const [schoolYears, setSchoolYears] = useState<OptionType[]>([]);
-  const [classOptions, setClassOptions] = useState<OptionType[]>([]);
 
   // Loadings
   const [isLoadingBncc, setIsLoadingBncc] = useState(false);
   const [isLoadingDisciplines, setIsLoadingDisciplines] = useState(false);
   const [isLoadingSchoolYears, setIsLoadingSchoolYears] = useState(false);
-  const [isLoadingClasses, setIsLoadingClasses] = useState(false);
 
   // Produtos e Conteúdos
   const [allProducts, setAllProducts] = useState<ProductDto[]>([]);
@@ -136,43 +132,6 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
     fetchData();
   }, [currentUser]);
 
-  // 1.5. CARREGAR TURMAS (baseado na role do usuário)
-  useEffect(() => {
-    const fetchClasses = async () => {
-      if (!currentUser) return;
-      
-      setIsLoadingClasses(true);
-      try {
-        const isAdmin = hasAnyRole(['Admin']);
-        
-        if (isAdmin) {
-          // Admin: carrega todas as turmas
-          const response = await getClasses({ pageSize: 1000 });
-          const classList = response.data.data || [];
-          setClassOptions(classList.map((c: any) => ({ value: c.id, label: c.name })));
-        } else {
-          // Professor: carrega turmas das escolas vinculadas
-          const userSchools = currentUser.schools || [];
-          if (userSchools.length > 0) {
-            const schoolId = userSchools[0]?.id || (currentUser as any).schoolId;
-            if (schoolId) {
-              const response = await getClasses({ schoolId, pageSize: 1000 });
-              const classList = response.data.data || [];
-              setClassOptions(classList.map((c: any) => ({ value: c.id, label: c.name })));
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Erro ao carregar turmas:', error);
-        setClassOptions([]);
-      } finally {
-        setIsLoadingClasses(false);
-      }
-    };
-    
-    fetchClasses();
-  }, [currentUser, hasAnyRole]);
-
   // 2. CARREGAR TEMPLATE
   useEffect(() => {
     if (sourceTemplateId) {
@@ -222,7 +181,6 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
     maxPlayers: Yup.number().min(1).required('Máximo obrigatório'),
     combatDifficulty: Yup.string().required('Dificuldade obrigatória'),
     bncc: Yup.array(),
-    classIds: Yup.array(),
     productId: Yup.string().required('Produto é obrigatório'),
     contentId: Yup.string().required('Conteúdo é obrigatório'),
   });
@@ -255,7 +213,6 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
       maxPlayers: activeData?.maxPlayers || 2,
       combatDifficulty: activeData?.combatDifficulty || 'Passive',
       bncc: (isEditing && initialLesson?.proficiencies) ? initialLesson.proficiencies.map((p: any) => p.id || p.Id) : initialBnccIds,
-      classIds: [] as string[],
       productId: activeData?.productId || getIdFromField(activeData?.product) || '',
       contentId: activeData?.contentId || getIdFromField(activeData?.content) || '',
     },
@@ -286,41 +243,6 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
       // --- MODO EDIÇÃO ---
       questData.questSteps = []; 
       await updateQuest(initialLesson.id, questData);
-      
-      // Gerenciar turmas associadas (ClassQuests)
-      if (values.classIds && values.classIds.length > 0) {
-        try {
-          // Buscar ClassQuests existentes
-          const existingResponse = await getClassQuests(undefined, initialLesson.id);
-          const existingClassQuests = existingResponse.data.data || existingResponse.data || [];
-          const existingClassIds = existingClassQuests.map((cq: any) => cq.classId);
-          
-          // Remover turmas que não estão mais selecionadas
-          for (const cq of existingClassQuests) {
-            if (!values.classIds.includes(cq.classId)) {
-              await deleteClassQuest(cq.id);
-            }
-          }
-          
-          // Adicionar novas turmas
-          const now = new Date();
-          const oneYearLater = new Date();
-          oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
-          
-          for (const classId of values.classIds) {
-            if (!existingClassIds.includes(classId)) {
-              await createClassQuest({
-                classId,
-                questId: initialLesson.id,
-                startDate: now.toISOString(),
-                expirationDate: oneYearLater.toISOString()
-              });
-            }
-          }
-        } catch (error) {
-          console.error('Erro ao atualizar turmas:', error);
-        }
-      }
       
       alert('Aula atualizada com sucesso!');
       navigate(`../steps/${initialLesson.id}`);
@@ -398,26 +320,6 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
 
       const response = await createQuest(questData);
       const newId = response.data.id;
-      
-      // Criar ClassQuests para turmas selecionadas
-      if (values.classIds && values.classIds.length > 0) {
-        try {
-          const now = new Date();
-          const oneYearLater = new Date();
-          oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
-          
-          for (const classId of values.classIds) {
-            await createClassQuest({
-              classId,
-              questId: newId,
-              startDate: now.toISOString(),
-              expirationDate: oneYearLater.toISOString()
-            });
-          }
-        } catch (error) {
-          console.error('Erro ao vincular turmas:', error);
-        }
-      }
       
       alert('Aula criada com sucesso!');
       navigate(`../steps/${newId}`);
@@ -530,24 +432,6 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
       .catch(() => setBnccOptions([]))
       .finally(() => setIsLoadingBncc(false));
   }, [isEditing, initialLesson]);
-
-  // --- CARREGAR TURMAS EXISTENTES (modo edição) ---
-  useEffect(() => {
-    const loadExistingClasses = async () => {
-      if (!isEditing || !initialLesson?.id) return;
-      
-      try {
-        const response = await getClassQuests(undefined, initialLesson.id);
-        const existingClassQuests = response.data.data || response.data || [];
-        const classIds = existingClassQuests.map((cq: any) => cq.classId);
-        formik.setFieldValue('classIds', classIds);
-      } catch (error) {
-        console.error('Erro ao carregar turmas existentes:', error);
-      }
-    };
-    
-    loadExistingClasses();
-  }, [isEditing, initialLesson?.id]);
 
   if (isLoadingTemplate) {
       return <div className="text-center p-10"><h3>Carregando modelo de aula...</h3></div>;
@@ -702,39 +586,6 @@ const LessonCreateForm: React.FC<Props> = ({ lesson: initialLesson, isEditing = 
               defaultOptions={bnccOptions}
               loadOptions={(inputValue, callback) => { const filtered = bnccOptions.filter((opt) => opt.label.toLowerCase().includes(inputValue.toLowerCase())); callback(filtered); }}
               isDisabled={isLoadingBncc}
-            />
-          </div>
-        </div>
-
-        {/* TURMAS (OPCIONAL) */}
-        <div className="card mb-5">
-          <div className="card-body p-9">
-            <h3 className="card-title mb-2">Turmas</h3>
-            <p className="text-muted fs-7 mb-7">Opcional - Vincule esta aula a uma ou mais turmas</p>
-            {formik.values.classIds && formik.values.classIds.length > 0 && (
-              <div className="mb-5">
-                <div className="d-flex flex-wrap gap-2">
-                  {formik.values.classIds.map((classId: string) => {
-                    const classItem = classOptions.find((opt) => opt.value === classId);
-                    return classItem ? (
-                      <span key={classId} className="badge badge-light badge-lg d-inline-flex align-items-center gap-2">
-                        {classItem.label}
-                        <button type="button" className="btn btn-sm btn-icon btn-active-color-primary p-0" onClick={() => { const updated = formik.values.classIds.filter((id: string) => id !== classId); formik.setFieldValue('classIds', updated); }}><i className="bi bi-x fs-3"></i></button>
-                      </span>
-                    ) : null;
-                  })}
-                </div>
-              </div>
-            )}
-            <AsyncSelectField
-              fieldName="classIds"
-              label="Buscar Turmas"
-              placeholder="Digite para buscar turmas..."
-              isMulti
-              formik={formik as FormikProps<any>}
-              defaultOptions={classOptions}
-              loadOptions={(inputValue, callback) => { const filtered = classOptions.filter((opt) => opt.label.toLowerCase().includes(inputValue.toLowerCase())); callback(filtered); }}
-              isDisabled={isLoadingClasses}
             />
           </div>
         </div>

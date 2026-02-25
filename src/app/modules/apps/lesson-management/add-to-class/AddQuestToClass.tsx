@@ -1,7 +1,8 @@
 import React, { FC, useState } from 'react';
 import { useQueryClient } from 'react-query';
+import { useSearchParams } from 'react-router-dom';
 import { getClasses } from '@services/Classes';
-import { getQuests } from '@services/Lesson';
+import { getQuests, getQuestById } from '@services/Lesson';
 import { createClassQuest } from '@services/ClassQuest';
 import AsyncSelectField from '@components/form/AsyncSelectField';
 import { useFormik } from 'formik';
@@ -23,6 +24,8 @@ const addQuestSchema = Yup.object().shape({
 const AddQuestToClass: FC = () => {
   const { currentUser } = useAuth(); // Hook para pegar o ID do professor
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const preSelectedQuestId = searchParams.get('questId');
   
   // Filtros manuais
   const [filterYear, setFilterYear] = useState<string>('');
@@ -43,11 +46,12 @@ const AddQuestToClass: FC = () => {
   const formik = useFormik({
     initialValues: {
       classIds: [] as string[],
-      questId: '',
+      questId: preSelectedQuestId || '',
       startDate: new Date().toISOString().split('T')[0],
       expirationDate: new Date().toISOString().split('T')[0],
     },
     validationSchema: addQuestSchema,
+    enableReinitialize: true,
     onSubmit: async (values, { setSubmitting, resetForm }) => {
       try {
         const startDate = new Date(values.startDate);
@@ -88,6 +92,28 @@ const AddQuestToClass: FC = () => {
       }
     },
   });
+
+  // Carregar aula pré-selecionada via URL parameter
+  React.useEffect(() => {
+    if (preSelectedQuestId) {
+      getQuestById(preSelectedQuestId)
+        .then((response) => {
+          const quest = response.data;
+          const questOption = { value: quest.id, label: quest.name || 'Sem nome' };
+          setQuestOptions((prev) => {
+            const exists = prev.some((opt) => opt.value === quest.id);
+            if (!exists) {
+              return [questOption, ...prev];
+            }
+            return prev;
+          });
+        })
+        .catch((error) => {
+          console.error('Erro ao carregar aula pré-selecionada:', error);
+          toast.error('Erro ao carregar aula. Verifique se ela existe.');
+        });
+    }
+  }, [preSelectedQuestId]);
 
   // --- 1. CARREGAR TURMAS (Filtrar se o professor está nela) ---
   const loadClassOptions = async (inputValue: string) => {
